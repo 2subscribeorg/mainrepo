@@ -32,3 +32,10 @@ ios/
 test-results/
 playwright-report/
 coverage/
+
+# Documentation (keep locally, don't commit)
+*.md
+
+# Cloudflare
+.wrangler/
+wrangler.toml
