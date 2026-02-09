@@ -5,7 +5,7 @@ export const FEATURE_FLAGS = {
   FIREBASE_AUTH: false,
   FIREBASE_STORAGE: false,
   PLAID_INTEGRATION: false,
-  STRIPE_BILLING: false,
+  PADDLE_BILLING: true,
   PUSH_NOTIFICATIONS: false,
 } as const
 

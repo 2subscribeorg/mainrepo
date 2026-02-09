@@ -1,8 +1,10 @@
 import type { ID, Category } from '@/domain/models'
-import type { ICategoriesRepo } from '../interfaces/ICategoriesRepo'
+import type { ICategoriesRepo, DataChangeCallback } from '../interfaces/ICategoriesRepo'
 import { getDB } from './db'
 
 export class MockCategoriesRepo implements ICategoriesRepo {
+  private listeners: Map<number, DataChangeCallback<Category>> = new Map()
+  private listenerIdCounter = 0
   async list(): Promise<Category[]> {
     const db = await getDB()
     return (await db.getAll('categories')) as Category[]
@@ -17,11 +19,13 @@ export class MockCategoriesRepo implements ICategoriesRepo {
   async upsert(c: Category): Promise<void> {
     const db = await getDB()
     await db.put('categories', c)
+    await this.notifyListeners()
   }
 
   async remove(id: ID): Promise<void> {
     const db = await getDB()
     await db.delete('categories', id)
+    await this.notifyListeners()
   }
 
   async resolveForMerchant(merchant: string): Promise<Category | null> {
@@ -59,6 +63,31 @@ export class MockCategoriesRepo implements ICategoriesRepo {
     if (tx) {
       tx.categoryId = categoryId
       await db.put('transactions', tx)
+    }
+  }
+
+  // Phase 2 ready - Observable pattern
+  subscribe(callback: DataChangeCallback<Category>): () => void {
+    const listenerId = this.listenerIdCounter++
+    this.listeners.set(listenerId, callback)
+    
+    // Immediately call with current data
+    this.list().then(callback)
+    
+    // Return unsubscribe function
+    return () => {
+      this.listeners.delete(listenerId)
+    }
+  }
+
+  get supportsRealtime(): boolean {
+    return false
+  }
+
+  private async notifyListeners(): Promise<void> {
+    const data = await this.list()
+    for (const callback of this.listeners.values()) {
+      callback(data)
     }
   }
 }

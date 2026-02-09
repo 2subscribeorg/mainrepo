@@ -1,0 +1,260 @@
+/* Design System Tokens */
+
+:root {
+  /* ===== SEMANTIC COLOR TOKENS ===== */
+  
+  /* Status Colors - Success */
+  --color-success-bg: #ECFDF5;
+  --color-success-bg-hover: #D1FAE5;
+  --color-success-border: #A7F3D0;
+  --color-success-text: #065F46;
+  --color-success-text-emphasis: #047857;
+  
+  /* Status Colors - Warning */
+  --color-warning-bg: #FFFBEB;
+  --color-warning-bg-hover: #FEF3C7;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+  --color-warning-text-emphasis: #B45309;
+  
+  /* Status Colors - Error */
+  --color-error-bg: #FEF2F2;
+  --color-error-bg-hover: #FEE2E2;
+  --color-error-border: #FECACA;
+  --color-error-text: #991B1B;
+  --color-error-text-emphasis: #DC2626;
+  
+  /* Status Colors - Info */
+  --color-info-bg: #EFF6FF;
+  --color-info-bg-hover: #DBEAFE;
+  --color-info-border: #BFDBFE;
+  --color-info-text: #1E40AF;
+  --color-info-text-emphasis: #2563EB;
+  
+  /* Surface Variations */
+  --color-surface-elevated: #FAFAFA;
+  --color-surface-overlay: rgba(255, 255, 255, 0.8);
+  --color-surface-overlay-dark: rgba(255, 255, 255, 0.95);
+  --color-surface-backdrop: rgba(0, 0, 0, 0.5);
+  --color-surface-backdrop-light: rgba(0, 0, 0, 0.3);
+  
+  /* Text Variations */
+  --color-text-muted: #9CA3AF;
+  --color-text-disabled: #D1D5DB;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: var(--color-primary);
+  --color-text-link-hover: #4A2FB0;
+  
+  /* Border Variations */
+  --color-border-light: rgba(15, 23, 42, 0.08);
+  --color-border-medium: rgba(15, 23, 42, 0.12);
+  --color-border-strong: rgba(15, 23, 42, 0.24);
+  --color-border-focus: var(--color-primary);
+  
+  /* Interactive State Colors */
+  --color-interactive-hover: rgba(93, 63, 211, 0.08);
+  --color-interactive-active: rgba(93, 63, 211, 0.16);
+  --color-interactive-disabled: #F3F4F6;
+  
+  /* ===== SIZE TOKENS ===== */
+  
+  /* Touch Target Sizes - Minimum 44px for mobile accessibility */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+  --touch-target-large: 56px;
+  
+  /* Icon Sizes */
+  --size-icon-xs: 12px;
+  --size-icon-sm: 16px;
+  --size-icon-md: 20px;
+  --size-icon-lg: 24px;
+  --size-icon-xl: 32px;
+  
+  /* Avatar Sizes */
+  --size-avatar-xs: 24px;
+  --size-avatar-sm: 32px;
+  --size-avatar-md: 40px;
+  --size-avatar-lg: 48px;
+  --size-avatar-xl: 64px;
+  
+  /* Badge Sizes */
+  --size-badge-sm: 16px;
+  --size-badge-md: 20px;
+  --size-badge-lg: 24px;
+  
+  /* ===== SPACING SCALE ===== */
+  /* 8px base unit for consistent rhythm */
+  --space-0: 0;
+  --space-1: 4px;   /* 0.25rem */
+  --space-2: 8px;   /* 0.5rem - minimum spacing between elements */
+  --space-3: 12px;  /* 0.75rem */
+  --space-4: 16px;  /* 1rem */
+  --space-5: 20px;  /* 1.25rem */
+  --space-6: 24px;  /* 1.5rem */
+  --space-8: 32px;  /* 2rem */
+  --space-10: 40px; /* 2.5rem */
+  --space-12: 48px; /* 3rem */
+  --space-16: 64px; /* 4rem */
+  --space-20: 80px; /* 5rem */
+  
+  /* Interactive Element Padding - Ensures minimum touch target */
+  --padding-touch-sm: 8px 12px;
+  --padding-touch-md: 12px 16px;
+  --padding-touch-lg: 16px 24px;
+  
+  /* Component Padding */
+  --padding-card-sm: var(--space-4);
+  --padding-card-md: var(--space-5);
+  --padding-card-lg: var(--space-6);
+  
+  /* ===== BORDER RADIUS ===== */
+  /* Consistent rounded corners */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* ===== TYPOGRAPHY SCALE ===== */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* ===== SHADOWS ===== */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
+  
+  /* ===== TRANSITION DURATIONS ===== */
+  /* Consistent timing */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+  
+  /* ===== Z-INDEX SCALE ===== */
+  /* Layering system */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+  --z-tooltip: 70;
+  --z-maximum: 9999;
+}
+
+/* Utility Classes for Touch Targets */
+.touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-target-comfortable {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+}
+
+.touch-target-large {
+  min-height: var(--touch-target-large);
+  min-width: var(--touch-target-large);
+}
+
+/* Utility Classes for Spacing */
+.gap-minimum {
+  gap: var(--space-2);
+}
+
+.gap-comfortable {
+  gap: var(--space-4);
+}
+
+.gap-spacious {
+  gap: var(--space-6);
+}
+
+/* Interactive States - Consistent feedback */
+.interactive {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-fast) ease, 
+              opacity var(--duration-fast) ease;
+}
+
+.interactive:active {
+  transform: scale(0.98);
+}
+
+.interactive:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Touch Feedback - Visual response to touch */
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+.touch-feedback::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+  pointer-events: none;
+}
+
+.touch-feedback:active::after {
+  opacity: 1;
+}
+
+/* Swipeable Element - Visual indicator */
+.swipeable {
+  touch-action: pan-y;
+  position: relative;
+  transition: transform var(--duration-base) ease;
+}
+
+.swipeable-indicator {
+  position: absolute;
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity var(--duration-base) ease;
+  pointer-events: none;
+}
+
+.swipeable:active .swipeable-indicator {
+  opacity: 0.5;
+}

@@ -22,10 +22,6 @@ export interface DBSchema {
     value: unknown
     indexes: { priority: number }
   }
-  budgetConfig: {
-    key: string
-    value: unknown
-  }
   transactionCategoryOverrides: {
     key: string
     value: { transactionId: string; categoryId: string }
@@ -63,10 +59,6 @@ export async function getDB(): Promise<IDBPDatabase> {
         rulesStore.createIndex('priority', 'priority', { unique: false })
       }
 
-      // Budget config store
-      if (!db.objectStoreNames.contains('budgetConfig')) {
-        db.createObjectStore('budgetConfig')
-      }
 
       // Transaction category overrides
       if (!db.objectStoreNames.contains('transactionCategoryOverrides')) {
@@ -81,7 +73,7 @@ export async function getDB(): Promise<IDBPDatabase> {
 export async function clearDB(): Promise<void> {
   const db = await getDB()
   const tx = db.transaction(
-    ['subscriptions', 'transactions', 'categories', 'merchantRules', 'budgetConfig', 'transactionCategoryOverrides'],
+    ['subscriptions', 'transactions', 'categories', 'merchantRules', 'transactionCategoryOverrides'],
     'readwrite'
   )
   
@@ -90,7 +82,6 @@ export async function clearDB(): Promise<void> {
     tx.objectStore('transactions').clear(),
     tx.objectStore('categories').clear(),
     tx.objectStore('merchantRules').clear(),
-    tx.objectStore('budgetConfig').clear(),
     tx.objectStore('transactionCategoryOverrides').clear(),
   ])
   

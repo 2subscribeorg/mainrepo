@@ -4,17 +4,14 @@
     <header class="bg-white shadow-sm">
       <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-primary-600">2Subscribe</h1>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">{{ authStore.user?.name }}</span>
-            <button
-              v-if="!authStore.isSuperAdmin"
-              @click="authStore.toggleSuperAdmin"
-              class="text-xs text-gray-400 hover:text-gray-600"
-              title="Enable superadmin"
-            >
-              👤
-            </button>
+          <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold text-blue-600">2Subscribe</h1>
+          </div>
+          
+          <div class="flex items-center gap-4">
+            <!-- User Profile Component -->
+            <UserProfile />
+            
           </div>
         </div>
       </div>
@@ -30,8 +27,8 @@
               <p class="text-sm text-yellow-700">{{ notification.message }}</p>
             </div>
             <button
+              class="ml-4 text-yellow-600 hover:text-yellow-800 transition-colors"
               @click="notificationsStore.markAsRead(notification.id)"
-              class="ml-4 text-yellow-600 hover:text-yellow-800"
             >
               ✕
             </button>
@@ -51,7 +48,7 @@
             class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors"
             :class="
               $route.path === link.path || $route.path.startsWith(link.path + '/')
-                ? 'border-primary-500 text-primary-600'
+                ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
             "
           >
@@ -70,24 +67,23 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
+import UserProfile from '@/components/settings/UserProfile.vue'
 
-const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
+
+// Environment flags
+const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
+const isProduction = import.meta.env.PROD
 
 const navLinks = computed(() => {
   const links = [
     { path: '/', label: 'Dashboard' },
-    { path: '/subscriptions', label: 'Subscriptions' },
-    { path: '/budgets', label: 'Budgets' },
+    { path: '/transactions', label: 'Transactions' },
     { path: '/categories', label: 'Categories' },
     { path: '/settings', label: 'Settings' },
   ]
 
-  if (authStore.isSuperAdmin) {
-    links.push({ path: '/admin', label: 'Admin' })
-  }
 
   return links
 })

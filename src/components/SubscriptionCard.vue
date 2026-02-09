@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+    class="rounded-lg border border-border-light bg-surface shadow-sm hover:shadow-lg transition-fast hover:-translate-y-1 cursor-pointer card-animated gpu-accelerated"
     @click="$emit('click')"
   >
     <div class="flex items-start justify-between">
@@ -10,13 +10,13 @@
             class="h-3 w-3 rounded-full"
             :style="{ backgroundColor: categoryColor }"
           />
-          <h3 class="font-semibold text-gray-900">{{ subscription.merchantName }}</h3>
+          <h3 class="font-semibold text-text-primary">{{ subscription.merchantName }}</h3>
         </div>
-        <p class="mt-1 text-sm text-gray-500">{{ categoryName }}</p>
+        <p class="mt-1 text-sm text-text-secondary">{{ categoryName }}</p>
       </div>
       <div class="text-right">
-        <p class="text-lg font-bold text-gray-900">{{ formattedAmount }}</p>
-        <p class="text-xs text-gray-500">{{ formattedRecurrence }}</p>
+        <p class="text-lg font-bold text-text-primary">{{ formattedAmount }}</p>
+        <p class="text-xs text-text-secondary">{{ formattedRecurrence }}</p>
       </div>
     </div>
     <div class="mt-3 flex items-center justify-between text-sm">
@@ -26,7 +26,7 @@
       >
         {{ subscription.status }}
       </span>
-      <span class="text-gray-500">Next: {{ formattedNextDate }}</span>
+      <span class="text-text-secondary">Next: {{ formattedNextDate }}</span>
     </div>
   </div>
 </template>
@@ -61,13 +61,13 @@ const formattedNextDate = computed(() => formatRelativeDate(props.subscription.n
 const statusClass = computed(() => {
   switch (props.subscription.status) {
     case 'active':
-      return 'bg-green-100 text-green-800'
+      return 'bg-success-bg text-success-text'
     case 'paused':
-      return 'bg-yellow-100 text-yellow-800'
+      return 'bg-warning-bg text-warning-text'
     case 'cancelled':
-      return 'bg-red-100 text-red-800'
+      return 'bg-error-bg text-error-text'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-surface-elevated text-text-primary'
   }
 })
 </script>

@@ -1,9 +1,17 @@
 <template>
-  <div class="flex items-center justify-center" :class="containerClass">
+  <div 
+    class="flex items-center justify-center fade-in" 
+    :class="containerClass"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading content"
+  >
     <div
-      class="animate-spin rounded-full border-b-2 border-primary-600"
+      class="spinner rounded-full border-b-2 border-blue-600"
       :class="sizeClass"
+      aria-hidden="true"
     />
+    <span class="sr-only">Loading, please wait...</span>
   </div>
 </template>
 
@@ -36,3 +44,15 @@ const containerClass = computed(() => {
   return props.fullScreen ? 'min-h-screen' : 'py-8'
 })
 </script>
+
+<style scoped>
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

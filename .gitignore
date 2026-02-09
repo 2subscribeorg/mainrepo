@@ -36,6 +36,5 @@ coverage/
 # Documentation (keep locally, don't commit)
 *.md
 
-# Cloudflare
-.wrangler/
-wrangler.toml
+# Admin Dashboard (exclude from deployment)
+# admin-dashboard/

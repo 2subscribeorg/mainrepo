@@ -1,6 +1,14 @@
 /**
- * XSS Prevention & Input Sanitization
- * Protects against malicious input in Phase 1 and Phase 2
+ * XSS Prevention & Input Sanitization Utilities
+ * 
+ * These utilities are used for:
+ * 1. Zod schema transforms (automatic sanitization in forms)
+ * 2. Search queries and URL parameters
+ * 3. Backend API inputs
+ * 4. Any non-form text processing
+ * 
+ * Note: For form inputs, use Zod schemas which automatically call these functions.
+ * Do NOT manually call these in components - let Zod handle it.
  */
 
 /**
@@ -24,9 +32,11 @@ export function sanitizeHtml(input: string): string {
 export function sanitizeMerchantName(name: string): string {
   return name
     .trim()
-    .replace(/[<>]/g, '') // Remove HTML brackets
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-    .substring(0, 100) // Max length
+    .trim() // Trim again after removals
 }
 
 /**
@@ -35,9 +45,11 @@ export function sanitizeMerchantName(name: string): string {
 export function sanitizeCategoryName(name: string): string {
   return name
     .trim()
-    .replace(/[<>]/g, '')
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    .substring(0, 50)
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+    .trim() // Trim again after removals
 }
 
 /**
@@ -47,9 +59,11 @@ export function sanitizeMerchantPattern(pattern: string): string {
   return pattern
     .trim()
     .toLowerCase()
-    .replace(/[<>]/g, '')
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    .substring(0, 50)
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+    .trim() // Trim again after removals
 }
 
 /**
@@ -77,19 +91,6 @@ export function sanitizeAmount(input: number | string): number {
   return Math.round(num * 100) / 100
 }
 
-/**
- * Sanitize hex color
- * Ensures valid hex format or returns default
- */
-export function sanitizeHexColor(color: string, defaultColor = '#9E9E9E'): string {
-  const cleaned = color.trim().toUpperCase()
-  
-  if (/^#[0-9A-F]{6}$/.test(cleaned)) {
-    return cleaned
-  }
-  
-  return defaultColor
-}
 
 /**
  * Sanitize ID (UUID format)

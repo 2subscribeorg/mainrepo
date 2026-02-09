@@ -16,12 +16,6 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
     notifications.value.unshift(newNotification)
 
-    // Auto-dismiss after 10 seconds for budget breaches
-    if (notification.type === 'budget_breach') {
-      setTimeout(() => {
-        markAsRead(newNotification.id)
-      }, 10000)
-    }
   }
 
   function markAsRead(id: string) {

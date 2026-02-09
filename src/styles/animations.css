@@ -1,0 +1,541 @@
+/* Animation Utilities and Patterns */
+
+/* ===== CSS CUSTOM PROPERTIES ===== */
+:root {
+  /* Easing Functions */
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0.0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Duration Variables */
+  --duration-micro: 150ms;
+  --duration-standard: 250ms;
+  --duration-complex: 350ms;
+  --duration-emphasis: 500ms;
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== BUTTON ANIMATIONS ===== */
+.btn-animated {
+  transition: transform var(--duration-micro) var(--ease-out),
+              box-shadow var(--duration-micro) var(--ease-out),
+              background-color var(--duration-micro) var(--ease-out);
+}
+
+.btn-animated:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-animated:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== MODAL ANIMATIONS ===== */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modalFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.modal-enter {
+  animation: modalFadeIn var(--duration-standard) var(--ease-out);
+}
+
+.modal-leave {
+  animation: modalFadeOut var(--duration-micro) var(--ease-in);
+}
+
+/* ===== SLIDE ANIMATIONS ===== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp var(--duration-standard) var(--ease-out);
+}
+
+.slide-down {
+  animation: slideDown var(--duration-standard) var(--ease-out);
+}
+
+.slide-in-right {
+  animation: slideInRight var(--duration-standard) var(--ease-out);
+}
+
+.slide-in-left {
+  animation: slideInLeft var(--duration-standard) var(--ease-out);
+}
+
+/* ===== FADE ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.fade-in {
+  animation: fadeIn var(--duration-standard) var(--ease-out);
+}
+
+.fade-out {
+  animation: fadeOut var(--duration-micro) var(--ease-in);
+}
+
+/* ===== LOADING STATES ===== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  animation: pulse 2s var(--ease-in-out) infinite;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ===== LIST STAGGER ANIMATIONS ===== */
+.stagger-item {
+  opacity: 0;
+  animation: slideUp var(--duration-standard) var(--ease-out) forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+
+/* ===== HOVER EFFECTS ===== */
+.hover-lift {
+  transition: transform var(--duration-micro) var(--ease-out),
+              box-shadow var(--duration-micro) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.hover-scale {
+  transition: transform var(--duration-micro) var(--ease-out);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* ===== LINK UNDERLINE ANIMATION ===== */
+.link-animated {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-animated::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--duration-standard) var(--ease-out);
+}
+
+.link-animated:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ===== TOAST NOTIFICATIONS ===== */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn var(--duration-standard) var(--ease-spring);
+}
+
+.toast-leave {
+  animation: toastSlideOut var(--duration-micro) var(--ease-in);
+}
+
+/* ===== CARD ANIMATIONS ===== */
+.card-animated {
+  transition: transform var(--duration-micro) var(--ease-out),
+              box-shadow var(--duration-micro) var(--ease-out);
+}
+
+.card-animated:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== FORM INPUTS ===== */
+.input-animated {
+  transition: border-color var(--duration-micro) var(--ease-out),
+              box-shadow var(--duration-micro) var(--ease-out);
+}
+
+.input-animated:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== DROPDOWN/MENU ANIMATIONS ===== */
+@keyframes dropdownOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownClose {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+.dropdown-enter {
+  animation: dropdownOpen var(--duration-micro) var(--ease-out);
+}
+
+.dropdown-leave {
+  animation: dropdownClose var(--duration-micro) var(--ease-in);
+}
+
+/* ===== PAGE TRANSITIONS ===== */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--duration-complex) var(--ease-in-out),
+              transform var(--duration-complex) var(--ease-in-out);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* ===== TRANSACTION ITEM STYLES ===== */
+.transaction-item-enter-active {
+  transition: all var(--duration-standard) var(--ease-out);
+}
+
+.transaction-item-leave-active {
+  transition: all var(--duration-micro) var(--ease-in);
+}
+
+.transaction-item-move {
+  transition: transform var(--duration-standard) var(--ease-out);
+}
+
+.transaction-item-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.transaction-item-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* ===== TRANSITION GROUP STYLES ===== */
+.category-card-enter-active {
+  transition: all var(--duration-standard) var(--ease-out);
+}
+
+.category-card-leave-active {
+  transition: all var(--duration-micro) var(--ease-in);
+}
+
+.category-card-move {
+  transition: transform var(--duration-standard) var(--ease-out);
+}
+
+.category-card-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.category-card-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+/* Modal transitions for Vue Transition component */
+.modal-enter-active,
+.modal-leave-active {
+  transition: all var(--duration-standard) var(--ease-out);
+}
+
+.modal-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.modal-backdrop-enter-active,
+.modal-backdrop-leave-active {
+  transition: opacity var(--duration-standard) var(--ease-out);
+}
+
+.modal-backdrop-enter-from,
+.modal-backdrop-leave-to {
+  opacity: 0;
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* Remove will-change after animation */
+.animation-complete {
+  will-change: auto;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.transition-all {
+  transition: all var(--duration-standard) var(--ease-out);
+}
+
+.transition-transform {
+  transition: transform var(--duration-standard) var(--ease-out);
+}
+
+.transition-opacity {
+  transition: opacity var(--duration-standard) var(--ease-out);
+}
+
+.transition-colors {
+  transition: color var(--duration-standard) var(--ease-out),
+              background-color var(--duration-standard) var(--ease-out),
+              border-color var(--duration-standard) var(--ease-out);
+}
+
+/* ===== COMPONENT-SPECIFIC ANIMATIONS ===== */
+
+/* Category Cards */
+.category-card-enter {
+  animation: slideUp var(--duration-standard) var(--ease-out);
+}
+
+.category-card-hover {
+  transition: transform var(--duration-micro) var(--ease-out),
+              box-shadow var(--duration-micro) var(--ease-out);
+}
+
+.category-card-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* Transaction Items */
+.transaction-item-enter {
+  animation: slideInLeft var(--duration-standard) var(--ease-out);
+}
+
+.transaction-item-hover {
+  transition: background-color var(--duration-micro) var(--ease-out),
+              transform var(--duration-micro) var(--ease-out);
+}
+
+.transaction-item-hover:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+  transform: translateX(4px);
+}
+
+/* Modal Backdrop */
+.modal-backdrop-enter {
+  animation: fadeIn var(--duration-standard) var(--ease-out);
+}
+
+.modal-backdrop-leave {
+  animation: fadeOut var(--duration-micro) var(--ease-in);
+}
+
+/* Form Validation */
+.validation-error-enter {
+  animation: slideDown var(--duration-micro) var(--ease-out);
+}
+
+.validation-success-enter {
+  animation: slideUp var(--duration-micro) var(--ease-out);
+}
+
+/* Loading States */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Success/Error States */
+.success-pulse {
+  animation: successPulse 0.6s var(--ease-out);
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.error-shake {
+  animation: errorShake 0.5s var(--ease-out);
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

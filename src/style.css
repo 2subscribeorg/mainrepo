@@ -1,3 +1,9 @@
+/* Import design tokens */
+@import './styles/tokens.css';
+
+/* Import custom animations */
+@import './styles/animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,8 +18,71 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  min-height: 100vh;
 }
 
 #app {
   min-height: 100vh;
+  background-color: transparent;
+}
+
+:root {
+  color-scheme: light;
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-right: env(safe-area-inset-right);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+  --safe-area-left: env(safe-area-inset-left);
+  --mobile-header-height: 56px;
+  --mobile-nav-height: 64px;
+  --mobile-padding: 16px;
+
+  /* Brand palette */
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-primary: #5D3FD3;
+  --color-success: #00D084;
+  --color-danger: #FC4C4C;
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+
+  /* Legacy aliases (until all components migrate) */
+  --color-bg-primary: var(--color-surface);
+  --color-bg-secondary: var(--color-background);
+  --color-income: var(--color-success);
+  --color-expense: var(--color-danger);
+}
+
+.mobile-shell {
+  min-height: 100vh;
+  padding: calc(var(--safe-area-top) + 0px) var(--safe-area-right) calc(var(--safe-area-bottom) + var(--mobile-nav-height)) var(--safe-area-left);
+  background: linear-gradient(180deg, var(--color-background) 0%, #eef2ff 100%);
+}
+
+.mobile-card {
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-5);
+}
+
+button,
+[role='button'],
+.btn {
+  min-height: var(--touch-target-comfortable);
+  min-width: var(--touch-target-comfortable);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-semibold);
+}
+
+input,
+select,
+textarea {
+  min-height: var(--touch-target-comfortable);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  padding: var(--padding-touch-md);
+  border: 1px solid var(--color-border-light);
+  background-color: var(--color-surface);
 }
