@@ -38,3 +38,6 @@ coverage/
 
 # Admin Dashboard (exclude from deployment)
 # admin-dashboard/
+
+# Backend (deployed separately on Railway)
+backend/
