@@ -14,6 +14,12 @@
     <div v-if="loading && connections.length === 0" class="text-center py-8">
       <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
       <p class="mt-2 text-sm text-text-secondary">Loading bank connections...</p>
+      <button 
+        @click="handleRefresh"
+        class="mt-4 text-xs text-primary hover:text-primary/80 font-medium"
+      >
+        🔄 Refresh manually
+      </button>
     </div>
 
     <!-- Empty State -->
@@ -246,12 +252,27 @@ async function handleMockComplete(publicToken: string) {
 
 async function handlePlaidSuccess() {
   // Refresh connections list after successful Plaid connection
-  await bankAccountsStore.fetchConnections()
-  console.log('✅ Bank connected via Plaid backend!')
+  console.log('🔄 Plaid success - refreshing connections...')
+  
+  // Add small delay to ensure backend has saved data
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  try {
+    await bankAccountsStore.fetchConnections()
+    console.log('✅ Bank connected via Plaid backend!')
+    console.log('📊 Current connections:', bankAccountsStore.connections.length)
+  } catch (error) {
+    console.error('❌ Failed to refresh connections:', error)
+  }
 }
 
 function handlePlaidError(error: string) {
   console.error('❌ Plaid connection error:', error)
+}
+
+async function handleRefresh() {
+  console.log('🔄 Manual refresh triggered')
+  await bankAccountsStore.fetchConnections()
 }
 
 async function handleSync(connectionId: string) {
