@@ -53,22 +53,22 @@
       v-if="showBottomNav"
       class="mobile-bottom-nav sticky bottom-0 z-sticky border-t border-border-medium bg-surface-overlay-dark backdrop-blur-md"
     >
-      <div class="grid grid-cols-4 gap-2 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2">
+      <div class="grid grid-cols-4 gap-1 px-3 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3">
         <router-link
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="flex flex-col items-center justify-center gap-1 rounded-2xl text-xs font-medium transition-fast" style="padding: var(--space-2) var(--space-3);"
+          class="flex flex-col items-center justify-center gap-2 rounded-2xl text-sm font-medium transition-fast touch-target" style="padding: var(--space-3) var(--space-2);"
           :class="
             isActive(link.path)
               ? 'bg-primary text-white shadow-lg'
               : 'text-text-secondary hover:bg-interactive-hover'
           "
         >
-          <span>{{ link.label }}</span>
+          <span class="text-center leading-tight">{{ link.label }}</span>
           <span
             v-if="link.badge"
-            class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            class="rounded-full bg-white/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
           >
             {{ link.badge }}
           </span>
@@ -143,3 +143,31 @@ function handleBack() {
   router.back()
 }
 </script>
+
+<style scoped>
+/* Ensure touch targets meet accessibility guidelines (44px minimum) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile bottom navigation enhancements */
+.mobile-bottom-nav {
+  /* Ensure proper spacing for safe areas */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Larger touch targets for better usability */
+@media (max-width: 640px) {
+  .mobile-bottom-nav .touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Enhanced visual feedback */
+.mobile-bottom-nav .touch-target:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+</style>

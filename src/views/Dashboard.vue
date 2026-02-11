@@ -15,21 +15,48 @@
           </div>
         </div>
         <div class="donut-card__body">
-          <div class="donut-card__chart" :style="{ background: donutGradient }">
-            <div class="donut-card__center">
-              <p class="donut-center__value">{{ totalSpending }}</p>
-              <p class="donut-center__label">monthly</p>
+          <!-- Large centered donut chart -->
+          <div class="donut-card__chart-container">
+            <div class="donut-card__chart" :style="{ background: donutGradient }">
+              <div class="donut-card__center">
+                <p class="donut-center__value">{{ totalSpending }}</p>
+                <p class="donut-center__label">monthly</p>
+              </div>
             </div>
           </div>
-          <ul class="donut-card__legend">
-            <li v-for="item in categoryData" :key="item.categoryId" class="legend-item">
-              <span class="legend-dot" :style="{ backgroundColor: item.color }"></span>
-              <div class="legend-text">
-                <p class="legend-name">{{ item.categoryName }}</p>
-                <p class="legend-count">{{ item.formattedAmount }} • {{ item.count }} subscription{{ item.count !== 1 ? 's' : '' }}</p>
+          
+          <!-- Vertical legend list below chart -->
+          <div class="donut-card__legend-container">
+            <div class="legend-list" :class="{ 'legend-list--scrollable': categoryData.length > 4 }">
+              <div 
+                v-for="(item, index) in displayedCategories" 
+                :key="item.categoryId" 
+                class="legend-item"
+                :class="{ 'legend-item--highlighted': highlightedIndex === index }"
+                @click="highlightSegment(index)"
+                @mouseenter="highlightSegment(index)"
+                @mouseleave="clearHighlight"
+              >
+                <span class="legend-dot" :style="{ backgroundColor: item.color }"></span>
+                <div class="legend-content">
+                  <div class="legend-main">
+                    <p class="legend-name">{{ item.categoryName }}</p>
+                    <p class="legend-percentage">{{ Math.round(item.percentage) }}%</p>
+                  </div>
+                  <p class="legend-count">{{ item.formattedAmount }} • {{ item.count }} subscription{{ item.count !== 1 ? 's' : '' }}</p>
+                </div>
               </div>
-            </li>
-          </ul>
+            </div>
+            
+            <!-- See All button for many categories -->
+            <button 
+              v-if="categoryData.length > 4" 
+              class="see-all-button"
+              @click="toggleSeeAll"
+            >
+              {{ showAll ? 'Show Less' : `See All ${categoryData.length} Categories` }}
+            </button>
+          </div>
         </div>
       </div>
       
@@ -60,6 +87,8 @@ const subscriptionsStore = useSubscriptionsStore()
 const transactionsDataStore = useTransactionsDataStore()
 const categoriesStore = useCategoriesStore()
 const loading = ref(true)
+const highlightedIndex = ref<number | null>(null)
+const showAll = ref(false)
 
 // Get all transactions that are marked as subscriptions (with or without categories)
 const subscriptionTransactions = computed(() => 
@@ -101,7 +130,7 @@ const categoryData = computed(() => {
     })
   })
 
-  return Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
+  const result = Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
     if (categoryId === 'uncategorized') {
       return {
         categoryId,
@@ -125,6 +154,15 @@ const categoryData = computed(() => {
       percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
     }
   })
+  
+  return result
+})
+
+const displayedCategories = computed(() => {
+  if (showAll.value) {
+    return categoryData.value
+  }
+  return categoryData.value.slice(0, 4)
 })
 
 const totalSpending = computed(() => {
@@ -154,6 +192,18 @@ function goToTransactions() {
   router.push('/transactions')
 }
 
+function highlightSegment(index: number) {
+  highlightedIndex.value = index
+}
+
+function clearHighlight() {
+  highlightedIndex.value = null
+}
+
+function toggleSeeAll() {
+  showAll.value = !showAll.value
+}
+
 onMounted(async () => {
   try {
     await Promise.all([
@@ -173,11 +223,44 @@ onMounted(async () => {
 .donut-card {
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 32px;
-  padding: 1.5rem;
+  padding: 2rem;
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .donut-card {
+    padding: 1.5rem;
+  }
+  
+  .donut-card__chart {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .donut-card__center {
+    inset: 28%;
+  }
+  
+  .donut-center__value {
+    font-size: 1.25rem;
+  }
+  
+  .donut-card__legend-container {
+    max-width: 100%;
+  }
+  
+  .legend-item {
+    padding: 0.625rem;
+  }
+  
+  .legend-percentage {
+    min-width: 2rem;
+    font-size: 0.8rem;
+  }
 }
 
 .donut-card__header {
@@ -201,16 +284,29 @@ onMounted(async () => {
 
 .donut-card__body {
   display: flex;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+.donut-card__chart-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .donut-card__chart {
-  width: 180px;
-  height: 180px;
+  width: 240px;
+  height: 240px;
   border-radius: 50%;
   position: relative;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 12px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 16px rgba(255, 255, 255, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.donut-card__chart:hover {
+  transform: scale(1.02);
 }
 
 .donut-card__center {
@@ -222,13 +318,14 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.5rem;
 }
 
 .donut-center__value {
   font-weight: 700;
   font-size: 1.5rem;
   color: var(--color-text-primary);
+  line-height: 1.1;
 }
 
 .donut-center__label {
@@ -236,15 +333,23 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-.donut-card__legend {
+.donut-card__legend-container {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 2rem;
+}
+
+.legend-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-height: 280px;
+  gap: 0.75rem;
+}
+
+.legend-list--scrollable {
+  max-height: 240px;
   overflow-y: auto;
   padding-right: 0.5rem;
   
@@ -253,30 +358,30 @@ onMounted(async () => {
   scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
 }
 
-.donut-card__legend::-webkit-scrollbar {
+.legend-list--scrollable::-webkit-scrollbar {
   width: 6px;
 }
 
-.donut-card__legend::-webkit-scrollbar-track {
+.legend-list--scrollable::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.donut-card__legend::-webkit-scrollbar-thumb {
+.legend-list--scrollable::-webkit-scrollbar-thumb {
   background: rgba(99, 102, 241, 0.3);
   border-radius: 3px;
 }
 
-.donut-card__legend::-webkit-scrollbar-thumb:hover {
+.legend-list--scrollable::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.5);
 }
 
-/* Scroll fade indicators */
-.donut-card__body {
+/* Scroll fade indicators for scrollable legend */
+.legend-list--scrollable {
   position: relative;
 }
 
-.donut-card__legend::before,
-.donut-card__legend::after {
+.legend-list--scrollable::before,
+.legend-list--scrollable::after {
   content: '';
   position: sticky;
   left: 0;
@@ -286,13 +391,13 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.donut-card__legend::before {
+.legend-list--scrollable::before {
   top: 0;
   background: linear-gradient(to bottom, var(--color-surface) 0%, transparent 100%);
   margin-bottom: -20px;
 }
 
-.donut-card__legend::after {
+.legend-list--scrollable::after {
   bottom: 0;
   background: linear-gradient(to top, var(--color-surface) 0%, transparent 100%);
   margin-top: -20px;
@@ -302,12 +407,50 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding: 0.875rem;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.legend-item:hover {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(99, 102, 241, 0.15);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.legend-item--highlighted {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .legend-dot {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.legend-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .legend-name {
@@ -318,6 +461,35 @@ onMounted(async () => {
 .legend-count {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
+}
+
+.legend-percentage {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  min-width: 2.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.see-all-button {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.05);
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.see-all-button:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
 }
 
 .action-card {

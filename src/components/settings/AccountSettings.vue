@@ -30,7 +30,9 @@
       <!-- Current Account Info -->
       <div class="p-4 bg-info-bg border border-info-border rounded-lg">
         <p class="text-sm font-medium text-info-text mb-1">Current Email</p>
-        <p class="text-lg text-info-text-emphasis">{{ userEmail }}</p>
+        <div class="min-w-0">
+          <p class="text-lg text-info-text-emphasis truncate" :title="userEmail">{{ userEmail }}</p>
+        </div>
       </div>
 
       <!-- Success Message -->
@@ -270,5 +272,17 @@ function handleCancelDelete() {
 <style scoped>
 .account-settings {
   @apply max-w-2xl;
+}
+
+/* Mobile-optimized email display */
+@media (max-width: 640px) {
+  .account-settings {
+    @apply max-w-full;
+  }
+  
+  .account-settings .truncate {
+    word-break: break-all;
+    overflow-wrap: break-word;
+  }
 }
 </style>

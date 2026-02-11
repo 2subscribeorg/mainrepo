@@ -2,30 +2,30 @@
   <div
     class="rounded-2xl bg-surface shadow-sm border border-border-light hover:shadow-lg transition-fast hover:-translate-y-0.5 transaction-item-hover gpu-accelerated" style="padding: var(--space-4);"
   >
-    <div class="flex items-start justify-between gap-4">
-      <div class="flex flex-1 items-start gap-3">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-info-bg text-sm font-semibold text-info-text shadow-inner">
-          {{ merchantInitial }}
-        </div>
-        <div class="min-w-0 flex-1">
-          <h4 class="text-sm font-semibold text-text-primary truncate">
+    <div class="flex items-start gap-3 min-w-0">
+      <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-info-bg text-sm font-semibold text-info-text shadow-inner">
+        {{ merchantInitial }}
+      </div>
+      <div class="flex flex-1 flex-col min-w-0 gap-1">
+        <div class="flex items-start justify-between gap-2">
+          <h4 class="text-sm font-semibold text-text-primary truncate flex-1 min-w-0">
             {{ transaction.merchantName }}
           </h4>
-          <div class="mt-1 flex items-center gap-2 text-xs text-text-secondary">
-            <span>{{ formattedDate }}</span>
-            <span v-if="transaction.accountId" class="hidden sm:inline">• {{ accountName }}</span>
-            <TransactionBadge
-              v-if="transaction.pending"
-              type="pending"
-              text="Pending"
-            />
+          <div class="flex-shrink-0">
+            <p class="text-base font-semibold" :class="amountColor">
+              {{ formattedAmount }}
+            </p>
           </div>
         </div>
-      </div>
-      <div class="text-right">
-        <p class="text-base font-semibold" :class="amountColor">
-          {{ formattedAmount }}
-        </p>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+          <span>{{ formattedDate }}</span>
+          <span v-if="transaction.accountId" class="hidden sm:inline">• {{ accountName }}</span>
+          <TransactionBadge
+            v-if="transaction.pending"
+            type="pending"
+            text="Pending"
+          />
+        </div>
       </div>
     </div>
 
@@ -60,11 +60,11 @@
             • {{ currentCategoryName || 'No category assigned' }}
           </span>
         </div>
-        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+        <div class="mt-2">
           <select
             :value="transaction.categoryId || ''"
             @change="handleCategoryChange($event)"
-            class="category-dropdown flex-1 rounded-xl border border-[rgba(15,23,42,0.15)] bg-[var(--color-background)] px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+            class="category-dropdown w-full rounded-xl border border-[rgba(15,23,42,0.15)] bg-[var(--color-background)] px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
             size="1"
           >
             <option value="">{{ currentCategoryName ? 'Change category…' : 'Select category…' }}</option>
@@ -313,6 +313,20 @@ const currentCategoryName = computed(() => {
 </script>
 
 <style scoped>
+/* Mobile-optimized layout */
+.transaction-item-hover {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Ensure proper text truncation on mobile */
+@media (max-width: 640px) {
+  .transaction-item-hover {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
 /* Category dropdown with scrollable options for long lists */
 .category-dropdown {
   cursor: pointer;
@@ -321,6 +335,7 @@ const currentCategoryName = computed(() => {
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2.5rem;
+  min-width: 0; /* Prevent flex item overflow */
 }
 
 /* Limit dropdown height when opened (browser-dependent) */

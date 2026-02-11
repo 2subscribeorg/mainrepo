@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="max-w-full overflow-x-hidden">
     <!-- Page Header -->
     <div class="mb-6 space-y-4">
       <div class="flex items-center justify-between">
@@ -74,6 +74,7 @@ import { useTransactions } from '@/composables/useTransactions'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
+import { useAuthStore } from '@/stores/auth'
 import type { Transaction } from '@/domain/models'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import TransactionFilterPanel from '@/components/transactions/TransactionFilterPanel.vue'
@@ -107,6 +108,7 @@ const {
 const subscriptionsStore = useSubscriptionsStore()
 const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
+const authStore = useAuthStore()
 
 // Load transactions on component mount
 onMounted(() => {
@@ -139,7 +141,7 @@ async function handleCategorySelected(categoryId: string) {
       categoryId: categoryId,
       status: 'active' as const,
       source: 'manual' as const,
-      userId: 'user1', // TODO: Get from auth store
+      userId: authStore.userId || '',
       plaidTransactionIds: [selectedTransaction.value.id],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -243,7 +245,7 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
       categoryId: newCategory.id,
       status: 'active' as const,
       source: 'manual' as const,
-      userId: 'user1', // TODO: Get from auth store
+      userId: authStore.userId || '',
       plaidTransactionIds: [selectedTransaction.value.id],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
