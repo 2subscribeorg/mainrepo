@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { Permission, getPermissionsForRole, roleHasPermission } from '@/types/permissions'
 
 /**
  * Authentication composable
@@ -28,14 +29,12 @@ export function useAuth() {
 
   /**
    * Sign in with email and password
+   * Waits for auth state to be updated before resolving
    */
   async function signIn(email: string, password: string) {
     try {
+      // Store now returns promise that resolves when auth state is ready
       await authStore.signIn(email, password)
-      
-      // Wait for auth listener to update user state
-      // Firebase's onAuthStateChanged is asynchronous
-      await new Promise(resolve => setTimeout(resolve, 500))
       
       return { success: true, error: null }
     } catch (e) {
@@ -48,20 +47,24 @@ export function useAuth() {
 
   /**
    * Sign up with email and password
+   * Optionally sends email verification if sendVerification is true
+   * Waits for auth state to be updated before resolving
    */
-  async function signUp(email: string, password: string) {
+  async function signUp(email: string, password: string, sendVerification = false) {
     try {
-      await authStore.signUp(email, password)
+      // Store now returns promise that resolves when auth state is ready
+      const result = await authStore.signUp(email, password, sendVerification)
       
-      // Wait for auth listener to update user state
-      // Firebase's onAuthStateChanged is asynchronous
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      return { success: true, error: null }
+      return { 
+        success: true, 
+        error: null, 
+        needsVerification: result.needsVerification 
+      }
     } catch (e) {
       return {
         success: false,
-        error: e instanceof Error ? e.message : 'Failed to sign up'
+        error: e instanceof Error ? e.message : 'Failed to sign up',
+        needsVerification: false
       }
     }
   }
@@ -157,17 +160,48 @@ export function useAuth() {
   }
 
   /**
-   * Check if user has permission
-   * For now, just checks if authenticated
-   * Can be extended for role-based access control
+   * Check if user has a specific permission
+   * Uses role-based access control with Firebase custom claims
+   * 
+   * @param permission - Permission enum value to check
+   * @returns true if user has the permission, false otherwise
    */
-  function hasPermission(permission?: string): boolean {
+  function hasPermission(permission?: Permission | string): boolean {
     if (!isAuthenticated.value) return false
     if (!permission) return true
     
-    // TODO: Implement permission checking
-    // For now, super admins have all permissions
-    return isSuperAdmin.value
+    const currentUser = user.value
+    if (!currentUser) return false
+
+    // Check custom permissions from Firebase claims first (highest priority)
+    if (currentUser.permissions && currentUser.permissions.includes(permission as string)) {
+      return true
+    }
+
+    // Check role-based permissions
+    const userRole = currentUser.role || 'user'
+    
+    // If permission is a Permission enum, check against role permissions
+    if (Object.values(Permission).includes(permission as Permission)) {
+      return roleHasPermission(userRole, permission as Permission)
+    }
+
+    // Fallback: super admins have all permissions
+    return currentUser.isSuperAdmin
+  }
+
+  /**
+   * Check if user has any of the specified permissions
+   */
+  function hasAnyPermission(...permissions: (Permission | string)[]): boolean {
+    return permissions.some(p => hasPermission(p))
+  }
+
+  /**
+   * Check if user has all of the specified permissions
+   */
+  function hasAllPermissions(...permissions: (Permission | string)[]): boolean {
+    return permissions.every(p => hasPermission(p))
   }
 
   return {
@@ -188,6 +222,9 @@ export function useAuth() {
     updatePassword,
     deleteAccount,
     initAuthListener,
+    // Permissions
     hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
   }
 }

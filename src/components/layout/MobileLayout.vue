@@ -18,6 +18,12 @@
         </div>
         <div class="flex items-center" style="gap: var(--space-3);">
           <slot name="header-actions">
+            <RenewalWarningBadge
+              v-if="warningCount > 0"
+              :count="warningCount"
+              :has-critical="hasCriticalWarnings"
+              @click="showWarningsModal = true"
+            />
             <UserProfile />
           </slot>
         </div>
@@ -53,37 +59,47 @@
       v-if="showBottomNav"
       class="mobile-bottom-nav sticky bottom-0 z-sticky border-t border-border-medium bg-surface-overlay-dark backdrop-blur-md"
     >
-      <div class="grid grid-cols-4 gap-1 px-3 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3">
+      <div class="grid grid-cols-4 gap-0 px-2 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-2">
         <router-link
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="flex flex-col items-center justify-center gap-2 rounded-2xl text-sm font-medium transition-fast touch-target" style="padding: var(--space-3) var(--space-2);"
+          class="flex flex-col items-center justify-center gap-1.5 rounded-xl text-xs font-medium transition-fast touch-target mx-1" 
+          style="padding: var(--space-2) var(--space-1.5); min-height: 52px;"
           :class="
             isActive(link.path)
               ? 'bg-primary text-white shadow-lg'
               : 'text-text-secondary hover:bg-interactive-hover'
           "
         >
-          <span class="text-center leading-tight">{{ link.label }}</span>
+          <span class="text-center leading-none truncate w-full px-1">{{ link.label }}</span>
           <span
             v-if="link.badge"
-            class="rounded-full bg-white/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+            class="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
           >
             {{ link.badge }}
           </span>
         </router-link>
       </div>
     </nav>
+
+    <!-- Renewal Warnings Modal -->
+    <RenewalWarningModal
+      :is-open="showWarningsModal"
+      @close="showWarningsModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UserProfile from '@/components/settings/UserProfile.vue'
+import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
+import RenewalWarningModal from '@/components/RenewalWarningModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
+import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 
 interface NavLink {
   path: string
@@ -115,6 +131,10 @@ const route = useRoute()
 const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 
+// Renewal warnings
+const { warningCount, hasCriticalWarnings } = useRenewalWarnings()
+const showWarningsModal = ref(false)
+
 
 const navLinks = computed(() => {
   const links: NavLink[] = [
@@ -123,7 +143,6 @@ const navLinks = computed(() => {
     { path: '/categories', label: 'Categories' },
     { path: '/settings', label: 'Settings' },
   ]
-
 
   return links
 })
@@ -160,8 +179,8 @@ function handleBack() {
 /* Larger touch targets for better usability */
 @media (max-width: 640px) {
   .mobile-bottom-nav .touch-target {
-    min-height: 48px;
-    min-width: 48px;
+    min-height: 52px;
+    min-width: 44px;
   }
 }
 
@@ -169,5 +188,20 @@ function handleBack() {
 .mobile-bottom-nav .touch-target:active {
   transform: scale(0.95);
   transition: transform 0.1s ease;
+}
+
+/* Fix text overflow and ensure even spacing */
+.mobile-bottom-nav .truncate {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Ensure consistent spacing between items */
+.mobile-bottom-nav .grid > * {
+  display: flex;
+  justify-content: center;
 }
 </style>

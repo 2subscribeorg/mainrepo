@@ -2,6 +2,8 @@ import { watch } from 'vue'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBankTransactionsStore } from '@/stores/bankTransactions'
+import { useTransactionManagement } from '@/composables/useTransactionManagement'
+import type { Subscription } from '@/domain/models'
 
 /**
  * Composable to handle subscription synchronization between tabs and stores
@@ -10,11 +12,12 @@ export function useSubscriptionSync() {
   const subscriptionsStore = useSubscriptionsStore()
   const transactionsStore = useTransactionsStore()
   const bankTransactionsStore = useBankTransactionsStore()
+  const transactionManagement = useTransactionManagement()
 
   /**
    * Sync subscription creation across all relevant stores
    */
-  async function syncSubscriptionCreation(subscription: any) {
+  async function syncSubscriptionCreation(subscription: Subscription): Promise<boolean> {
     try {
       console.log('🔄 Syncing subscription creation:', subscription.merchantName)
       
@@ -25,7 +28,7 @@ export function useSubscriptionSync() {
       await subscriptionsStore.fetchAll()
       
       // Run pattern detection to link existing transactions
-      await transactionsStore.detectPatterns()
+      await transactionManagement.detectPatterns()
       
       console.log('✅ Subscription sync completed')
       return true
@@ -38,7 +41,7 @@ export function useSubscriptionSync() {
   /**
    * Sync subscription updates across stores
    */
-  async function syncSubscriptionUpdate(subscriptionId: string, updates: any) {
+  async function syncSubscriptionUpdate(subscriptionId: string, updates: Partial<Subscription>): Promise<boolean> {
     try {
       console.log('🔄 Syncing subscription update:', subscriptionId)
       
@@ -63,7 +66,7 @@ export function useSubscriptionSync() {
   /**
    * Sync subscription deletion across stores
    */
-  async function syncSubscriptionDeletion(subscriptionId: string) {
+  async function syncSubscriptionDeletion(subscriptionId: string): Promise<boolean> {
     try {
       console.log('🔄 Syncing subscription deletion:', subscriptionId)
       
@@ -84,14 +87,14 @@ export function useSubscriptionSync() {
   /**
    * Watch for subscription changes and trigger pattern matching
    */
-  function setupSubscriptionWatcher() {
+  function setupSubscriptionWatcher(): void {
     watch(
       () => subscriptionsStore.subscriptions.length,
       async (newCount, oldCount) => {
         if (newCount > oldCount) {
           console.log('📊 New subscription detected, running pattern matching...')
           // Run pattern detection to link transactions to new subscription
-          await transactionsStore.detectPatterns()
+          await transactionManagement.detectPatterns()
         }
       }
     )

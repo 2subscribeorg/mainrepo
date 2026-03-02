@@ -7,6 +7,26 @@
     </div>
 
     <div v-else class="mt-6 space-y-6">
+      <!-- Expiring connections banner -->
+      <ConnectionExpirationBanner />
+      
+      <!-- Renewal Warnings Section -->
+      <div v-if="activeWarnings.length > 0" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900">Upcoming Renewals</h3>
+          <span class="text-sm text-gray-500">{{ activeWarnings.length }} warning{{ activeWarnings.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="space-y-3">
+          <RenewalWarningCard
+            v-for="warning in activeWarnings"
+            :key="warning.id"
+            :warning="warning"
+            @dismiss="handleDismissWarning"
+            @view-subscription="handleViewSubscription"
+          />
+        </div>
+      </div>
+
       <div class="donut-card">
         <div class="donut-card__header">
           <div>
@@ -18,6 +38,20 @@
           <!-- Large centered donut chart -->
           <div class="donut-card__chart-container">
             <div class="donut-card__chart" :style="{ background: donutGradient }">
+              <!-- Icons positioned inside donut segments -->
+              <div 
+                v-for="seg in segmentIcons" 
+                :key="seg.categoryId"
+                class="donut-segment-icon"
+                :style="{ left: seg.x + '%', top: seg.y + '%' }"
+              >
+                <component 
+                  v-if="seg.iconComponent" 
+                  :is="seg.iconComponent" 
+                  :size="seg.iconSize" 
+                  class="donut-segment-icon__svg"
+                />
+              </div>
               <div class="donut-card__center">
                 <p class="donut-center__value">{{ totalSpending }}</p>
                 <p class="donut-center__label">monthly</p>
@@ -37,7 +71,14 @@
                 @mouseenter="highlightSegment(index)"
                 @mouseleave="clearHighlight"
               >
-                <span class="legend-dot" :style="{ backgroundColor: item.color }"></span>
+                <div class="legend-visual">
+                  <CategoryIcon 
+                    :icon="item.icon" 
+                    :fallback-color="item.color"
+                    :show-icon="true"
+                    size="md"
+                  />
+                </div>
                 <div class="legend-content">
                   <div class="legend-main">
                     <p class="legend-name">{{ item.categoryName }}</p>
@@ -59,7 +100,43 @@
           </div>
         </div>
       </div>
-      
+
+      <!-- Subscription Suggestions Section -->
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Subscription Insights</h3>
+          <button 
+            @click="showAllSuggestions = !showAllSuggestions"
+            class="text-sm text-blue-600 hover:underline focus:outline-none"
+          >
+            {{ showAllSuggestions ? 'Show Less' : 'View All' }}
+          </button>
+        </div>
+        
+        <div v-if="suggestionsLoading" class="flex justify-center py-4">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        </div>
+        
+        <div v-else-if="suggestionsError" class="text-red-500 text-sm py-2">
+          {{ suggestionsError }}
+        </div>
+        
+        <div v-else-if="suggestions.length === 0" class="text-center py-6 text-gray-500">
+          <p>No subscription suggestions at the moment.</p>
+        </div>
+        
+        <div v-else class="space-y-4">
+          <div v-for="(suggestion, index) in visibleSuggestions" :key="`${suggestion.merchant}-${suggestion.amount}-${index}`">
+            <SubscriptionSuggestionCard 
+              :pattern="suggestion"
+              @confirmed="handleSuggestionConfirmed"
+              @rejected="handleSuggestionRejected"
+              class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="action-card">
         <div class="action-card__content">
           <p class="action-card__label">Marked as subscriptions</p>
@@ -77,18 +154,33 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
+import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useCategoriesStore } from '@/stores/categories'
+import { useBankAccountsStore } from '@/stores/bankAccounts'
+import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
+import ConnectionExpirationBanner from '@/components/ConnectionExpirationBanner.vue'
 import { formatMoney } from '@/utils/formatters'
+import CategoryIcon from '@/components/ui/CategoryIcon.vue'
+import { getIconComponent } from '@/utils/categoryIcons'
+import { SubscriptionDetectionService } from '@/services/SubscriptionDetectionService'
+import type { RecurringPattern } from '@/services/PatternDetector'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
 const transactionsDataStore = useTransactionsDataStore()
+const { activeWarnings, dismissWarning } = useRenewalWarnings()
 const categoriesStore = useCategoriesStore()
+const bankAccountsStore = useBankAccountsStore()
 const loading = ref(true)
 const highlightedIndex = ref<number | null>(null)
 const showAll = ref(false)
+const showAllSuggestions = ref(false)
+const suggestions = ref<RecurringPattern[]>([])
+const suggestionsLoading = ref(false)
+const suggestionsError = ref<string | null>(null)
 
 // Get all transactions that are marked as subscriptions (with or without categories)
 const subscriptionTransactions = computed(() => 
@@ -96,6 +188,74 @@ const subscriptionTransactions = computed(() =>
 )
 
 const totalSubscriptions = computed(() => subscriptionTransactions.value.length)
+
+// Subscription suggestions
+const visibleSuggestions = computed(() => 
+  showAllSuggestions.value ? suggestions.value : suggestions.value.slice(0, 2)
+)
+
+async function handleDismissWarning(warningId: string) {
+  await dismissWarning(warningId)
+}
+
+function handleViewSubscription(subscriptionId: string) {
+  router.push(`/subscriptions/${subscriptionId}`)
+}
+
+async function loadSubscriptionSuggestions() {
+  try {
+    suggestionsLoading.value = true
+    suggestionsError.value = null
+    
+    // Ensure transactions are loaded
+    await transactionsDataStore.fetchTransactions()
+    
+    // Use actual pattern detection service
+    const detectionService = new SubscriptionDetectionService()
+    const bankTransactions = transactionsDataStore.transactions.map((tx) => ({
+      id: tx.id,
+      accountId: tx.accountId ?? '',
+      amount: tx.amount,
+      merchantName: tx.merchantName,
+      date: tx.date,
+      category: tx.category,
+      pending: tx.pending ?? false,
+      transactionType: 'purchase' as const,
+      subscriptionId: tx.subscriptionId,
+      matchedSubscriptionId: tx.subscriptionId,
+      userId: tx.userId,
+      createdAt: tx.createdAt,
+    }))
+    const allPatterns = detectionService.detectPatterns(bankTransactions)
+    
+    // Filter patterns with reasonable confidence
+    suggestions.value = allPatterns.filter(pattern => {
+      return pattern.confidence >= 0.5
+    })
+    
+    console.log(`Found ${suggestions.value.length} subscription suggestions (filtered from ${allPatterns.length} total patterns)`)
+    
+  } catch (err: any) {
+    suggestionsError.value = err.message || 'Failed to load subscription suggestions'
+    console.error('Error loading subscription suggestions:', err)
+  } finally {
+    suggestionsLoading.value = false
+  }
+}
+
+function handleSuggestionConfirmed(suggestion: RecurringPattern) {
+  // Handle confirmation logic here
+  console.log('Confirmed suggestion:', suggestion)
+  // Remove from suggestions
+  suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
+}
+
+function handleSuggestionRejected(suggestion: RecurringPattern) {
+  // Handle rejection logic here
+  console.log('Rejected suggestion:', suggestion)
+  // Remove from suggestions
+  suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
+}
 
 const markedCount = computed(() =>
   transactionsDataStore.transactions.filter((tx) => tx.subscriptionId).length
@@ -139,6 +299,7 @@ const categoryData = computed(() => {
         totalAmount: stats.totalAmount,
         formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
         color: '#9CA3AF',
+        icon: undefined,
         percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
       }
     }
@@ -151,6 +312,7 @@ const categoryData = computed(() => {
       totalAmount: stats.totalAmount,
       formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
       color: category?.colour || '#6366f1',
+      icon: category?.icon,
       percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
     }
   })
@@ -168,6 +330,47 @@ const displayedCategories = computed(() => {
 const totalSpending = computed(() => {
   const total = categoryData.value.reduce((sum, item) => sum + item.totalAmount, 0)
   return formatMoney({ amount: total, currency: 'GBP' })
+})
+
+// Calculate icon positions for each donut segment
+const segmentIcons = computed(() => {
+  if (!categoryData.value.length) return []
+  
+  // Donut ring center is at ~37.5% from center (midpoint between 25% hole and 50% edge)
+  const ringRadius = 37.5
+  
+  return categoryData.value
+    .filter(item => item.icon && item.percentage >= 5) // Only show icons for segments >= 5%
+    .map(item => {
+      // Find this item's start angle by summing all previous percentages
+      let startAngle = 0
+      for (const d of categoryData.value) {
+        if (d.categoryId === item.categoryId) break
+        startAngle += (d.percentage / 100) * 360
+      }
+      const sweepAngle = (item.percentage / 100) * 360
+      const midAngle = startAngle + sweepAngle / 2
+      
+      // Convert to radians (CSS conic-gradient starts at top, going clockwise)
+      // Top = -90deg in standard math coords
+      const radians = ((midAngle - 90) * Math.PI) / 180
+      
+      // Calculate position as percentage of the chart (50% = center)
+      const x = 50 + ringRadius * Math.cos(radians)
+      const y = 50 + ringRadius * Math.sin(radians)
+      
+      // Scale icon size based on segment size
+      const iconSize = sweepAngle > 60 ? 18 : sweepAngle > 30 ? 14 : 12
+      
+      return {
+        categoryId: item.categoryId,
+        icon: item.icon,
+        iconComponent: getIconComponent(item.icon),
+        iconSize,
+        x,
+        y
+      }
+    })
 })
 
 const donutGradient = computed(() => {
@@ -207,9 +410,11 @@ function toggleSeeAll() {
 onMounted(async () => {
   try {
     await Promise.all([
+      loadSubscriptionSuggestions(),
       subscriptionsStore.fetchAll().catch(() => []),
       transactionsDataStore.fetchAll().catch(() => []),
       categoriesStore.fetchAll().catch(() => []),
+      bankAccountsStore.fetchConnections().catch(() => []),
     ])
   } catch (error) {
     console.error('Dashboard loading error:', error)
@@ -307,6 +512,21 @@ onMounted(async () => {
 
 .donut-card__chart:hover {
   transform: scale(1.02);
+}
+
+.donut-segment-icon {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.donut-segment-icon__svg {
+  color: white;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
 .donut-card__center {
@@ -430,12 +650,13 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.legend-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+.legend-visual {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .legend-content {

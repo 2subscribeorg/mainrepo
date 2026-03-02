@@ -11,14 +11,14 @@ import {
 describe('Password Validation', () => {
   describe('validatePassword', () => {
     test('returns empty array for valid strong password', () => {
-      const errors = validatePassword('MyP@ssw0rd!')
+      const errors = validatePassword('MyP@ssw0rd!12')
       expect(errors).toEqual([])
     })
 
     test('returns error for password too short', () => {
       const errors = validatePassword('Ab1!')
       expect(errors.length).toBeGreaterThan(0)
-      expect(errors.some(e => e.includes('8 characters'))).toBe(true)
+      expect(errors.some(e => e.includes('12 characters'))).toBe(true)
     })
 
     test('returns error for password without uppercase', () => {
@@ -49,9 +49,9 @@ describe('Password Validation', () => {
 
   describe('isPasswordValid', () => {
     test('returns true for valid strong password', () => {
-      expect(isPasswordValid('MyP@ssw0rd!')).toBe(true)
-      expect(isPasswordValid('Str0ng!Pass')).toBe(true)
-      expect(isPasswordValid('C0mpl3x#Pwd')).toBe(true)
+      expect(isPasswordValid('MyP@ssw0rd!12')).toBe(true)
+      expect(isPasswordValid('Str0ng!Pass123')).toBe(true)
+      expect(isPasswordValid('C0mpl3x#Pwd123')).toBe(true)
     })
 
     test('returns false for weak passwords', () => {
@@ -86,29 +86,29 @@ describe('Password Validation', () => {
     })
 
     test('calculates Very Strong for password with all 5 requirements', () => {
-      const strength = calculatePasswordStrength('MyP@ssw0rd!')
+      const strength = calculatePasswordStrength('MyP@ssw0rd!12')
       expect(strength.score).toBe(5)
       expect(strength.label).toBe('Very Strong')
       expect(strength.percentage).toBe(100)
     })
 
     test('tracks passed and failed requirements', () => {
-      const strength = calculatePasswordStrength('Abcdefgh')
+      const strength = calculatePasswordStrength('Abcdefghij12')
       expect(strength.passedRequirements).toContain('minLength')
       expect(strength.passedRequirements).toContain('uppercase')
       expect(strength.passedRequirements).toContain('lowercase')
-      expect(strength.failedRequirements).toContain('number')
+      expect(strength.passedRequirements).toContain('number')
       expect(strength.failedRequirements).toContain('special')
     })
 
     test('percentage increases with more requirements met', () => {
       const weak = calculatePasswordStrength('aaaaaaaa')
-      const strong = calculatePasswordStrength('MyP@ssw0rd!')
+      const strong = calculatePasswordStrength('MyP@ssw0rd!12')
       expect(strong.percentage).toBeGreaterThan(weak.percentage)
     })
 
     test('assigns appropriate labels', () => {
-      const veryStrong = calculatePasswordStrength('MyP@ssw0rd!')
+      const veryStrong = calculatePasswordStrength('MyP@ssw0rd!12')
       expect(veryStrong.label).toBe('Very Strong')
       
       const empty = calculatePasswordStrength('')
@@ -135,7 +135,7 @@ describe('Password Validation', () => {
     })
 
     test('returns success color for very strong passwords', () => {
-      const strength = calculatePasswordStrength('MyP@ssw0rd!')
+      const strength = calculatePasswordStrength('MyP@ssw0rd!12')
       const color = getPasswordStrengthColor(strength)
       expect(color).toBe('bg-success')
     })
@@ -161,9 +161,9 @@ describe('Password Validation', () => {
     })
 
     test('returns false for strong unique passwords', () => {
-      expect(isCommonWeakPassword('MyP@ssw0rd!')).toBe(false)
-      expect(isCommonWeakPassword('Str0ng!Pass')).toBe(false)
-      expect(isCommonWeakPassword('C0mpl3x#Pwd')).toBe(false)
+      expect(isCommonWeakPassword('MyP@ssw0rd!12')).toBe(false)
+      expect(isCommonWeakPassword('Str0ng!Pass123')).toBe(false)
+      expect(isCommonWeakPassword('C0mpl3x#Pwd123')).toBe(false)
     })
   })
 
@@ -184,9 +184,11 @@ describe('Password Validation', () => {
 
     test('minLength requirement works correctly', () => {
       const req = PASSWORD_REQUIREMENTS.find(r => r.id === 'minLength')!
-      expect(req.test('1234567')).toBe(false)
-      expect(req.test('12345678')).toBe(true)
-      expect(req.test('123456789')).toBe(true)
+      expect(req.test('123456789')).toBe(false) // 9 chars - should fail
+      expect(req.test('1234567890')).toBe(false) // 10 chars - should fail
+      expect(req.test('12345678901')).toBe(false) // 11 chars - should fail
+      expect(req.test('123456789012')).toBe(true) // 12 chars - should pass
+      expect(req.test('1234567890123')).toBe(true) // 13 chars - should pass
     })
 
     test('uppercase requirement works correctly', () => {
@@ -229,7 +231,7 @@ describe('Password Validation', () => {
     })
 
     test('handles very long passwords', () => {
-      const longPassword = 'MyP@ssw0rd!' + 'a'.repeat(100)
+      const longPassword = 'MyP@ssw0rd!12' + 'a'.repeat(100)
       expect(isPasswordValid(longPassword)).toBe(true)
     })
 
@@ -239,7 +241,7 @@ describe('Password Validation', () => {
     })
 
     test('handles passwords with unicode characters', () => {
-      const password = 'MyP@ss😀0rd!'
+      const password = 'MyP@ss😀0rd!12'
       const strength = calculatePasswordStrength(password)
       expect(strength.score).toBeGreaterThan(0)
     })

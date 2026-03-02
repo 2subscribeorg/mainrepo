@@ -5,10 +5,11 @@ module.exports = {
     browser: true,
   },
   extends: [
-    'eslint:recommended',
-    'plugin:vue/vue3-recommended',
-    'plugin:@typescript-eslint/recommended',
-    'prettier',
+    "eslint:recommended",
+    "plugin:vue/vue3-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+    "plugin:storybook/recommended"
   ],
   parser: 'vue-eslint-parser',
   parserOptions: {

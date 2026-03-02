@@ -10,6 +10,9 @@
     </div>
 
 
+    <!-- Expiration banner (shown when any connection is expiring or disconnected) -->
+    <ConnectionExpirationBanner class="mb-4" />
+
     <!-- Loading State -->
     <div v-if="loading && connections.length === 0" class="text-center py-8">
       <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
@@ -124,8 +127,39 @@
           Last synced: {{ formatDate(connection.lastSynced) }}
         </div>
 
+        <!-- Expiration Warning -->
+        <div
+          v-if="connection.status === 'pending_expiration'"
+          class="mt-3 rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 flex items-center gap-2 text-sm text-warning"
+          role="alert"
+        >
+          <span aria-hidden="true">⏰</span>
+          <span>
+            Connection expires {{ formatExpiry(connection.expiresAt) }}. Reconnect to keep syncing.
+          </span>
+        </div>
+
+        <!-- Disconnected Warning -->
+        <div
+          v-if="connection.status === 'disconnected'"
+          class="mt-3 rounded-lg bg-danger/10 border border-danger/30 px-3 py-2 flex items-center gap-2 text-sm text-danger"
+          role="alert"
+        >
+          <span aria-hidden="true">🔌</span>
+          <span>Connection lost. Reconnect to resume transaction sync.</span>
+        </div>
+
         <!-- Actions -->
         <div class="mt-3 flex gap-2">
+          <!-- Reconnect button for expiring/expired/error states -->
+          <button
+            v-if="usePlaidBackend && needsReconnect(connection.status)"
+            @click="openReconnectionWizard(connection)"
+            class="flex-1 rounded bg-warning/10 px-3 py-1.5 text-sm text-warning hover:bg-warning/20 transition-colors font-medium"
+          >
+            🔗 Reconnect
+          </button>
+
           <button
             :disabled="loading"
             class="flex-1 rounded bg-primary/10 px-3 py-1.5 text-sm text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
@@ -180,21 +214,33 @@
       @complete="handleMockComplete"
       @cancel="showMockModal = false"
     />
+
+    <!-- Bank Reconnection Wizard -->
+    <BankReconnectionWizard
+      :show="showReconnectionWizard"
+      :connection="reconnectionTarget"
+      @close="showReconnectionWizard = false"
+      @success="handleReconnectionSuccess"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
+import ConnectionExpirationBanner from '@/components/ConnectionExpirationBanner.vue'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useTransactionManagement } from '@/composables/useTransactionManagement'
 import { formatMoney } from '@/utils/formatters'
 import MockBankConnectionModal from '@/components/MockBankConnectionModal.vue'
 import PlaidLinkButton from '@/components/PlaidLinkButton.vue'
+import BankReconnectionWizard from '@/components/BankReconnectionWizard.vue'
 
 const bankAccountsStore = useBankAccountsStore()
 const transactionsStore = useTransactionsStore()
 const showMockModal = ref(false)
+const showReconnectionWizard = ref(false)
+const reconnectionTarget = ref<any>(null)
 
 // Check if using Plaid backend
 const usePlaidBackend = import.meta.env.VITE_USE_PLAID_BACKEND === 'true'
@@ -208,8 +254,22 @@ function formatStatus(status: string): string {
     case 'connected': return 'Connected'
     case 'reauth_required': return 'Reauth Required'
     case 'error': return 'Error'
+    case 'pending_expiration': return 'Expires Soon'
+    case 'disconnected': return 'Disconnected'
     default: return status
   }
+}
+
+function needsReconnect(status: string): boolean {
+  return status === 'pending_expiration' || status === 'disconnected' || status === 'reauth_required' || status === 'error'
+}
+
+function formatExpiry(expiresAt?: string): string {
+  if (!expiresAt) return 'soon'
+  const diff = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000)
+  if (diff <= 0) return 'today'
+  if (diff === 1) return 'tomorrow'
+  return `in ${diff} day${diff !== 1 ? 's' : ''}`
 }
 
 function formatDate(isoString: string): string {
@@ -247,11 +307,22 @@ async function handleMockComplete(publicToken: string) {
 async function handlePlaidSuccess() {
   // Refresh connections list after successful Plaid connection
   await bankAccountsStore.fetchConnections()
+  await transactionsStore.fetchTransactions()
   console.log('✅ Bank connected via Plaid backend!')
 }
 
 function handlePlaidError(error: string) {
   console.error('❌ Plaid connection error:', error)
+}
+
+function openReconnectionWizard(connection: any) {
+  reconnectionTarget.value = connection
+  showReconnectionWizard.value = true
+}
+
+async function handleReconnectionSuccess() {
+  await bankAccountsStore.fetchConnections()
+  await transactionsStore.fetchTransactions()
 }
 
 async function handleSync(connectionId: string) {
@@ -303,6 +374,16 @@ onMounted(async () => {
 
 .status-error {
   background-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
+  color: var(--color-danger);
+}
+
+.status-pending_expiration {
+  background-color: color-mix(in srgb, var(--color-warning, #f59e0b) 20%, transparent);
+  color: var(--color-warning, #f59e0b);
+}
+
+.status-disconnected {
+  background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
 }
 </style>

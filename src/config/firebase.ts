@@ -20,6 +20,8 @@ let firestore: Firestore | null = null
 /**
  * Initialize Firebase
  * Safe to call multiple times (only initializes once)
+ * 
+ * @internal - Use bootstrapApp() from config/bootstrap.ts instead
  */
 export function initializeFirebase(): void {
   if (app) return // Already initialized
@@ -27,8 +29,6 @@ export function initializeFirebase(): void {
   app = initializeApp(firebaseConfig)
   auth = getAuth(app)
   firestore = getFirestore(app)
-  
-  console.log('✅ Firebase initialized')
 }
 
 /**

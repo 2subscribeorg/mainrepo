@@ -25,9 +25,9 @@ export interface PasswordStrength {
 export const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
   {
     id: 'minLength',
-    label: 'At least 8 characters',
-    test: (password) => password.length >= 8,
-    errorMessage: 'Password must be at least 8 characters'
+    label: 'At least 12 characters',
+    test: (password) => password.length >= 12,
+    errorMessage: 'Password must be at least 12 characters'
   },
   {
     id: 'uppercase',

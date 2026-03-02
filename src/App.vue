@@ -19,19 +19,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
-import { useAuth } from '@/composables/useAuth'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 
-const { initAuthListener } = useAuth()
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 
 onMounted(async () => {
-  // Initialize Firebase auth listener if in Firebase mode
-  if (isFirebaseMode) {
-    initAuthListener()
-    console.log('🔥 Firebase auth listener initialized')
-  } else {
-    // Seed database on first launch (Mock mode only)
+  // In Firebase mode, auth listener is initialized in bootstrap
+  // In Mock mode, seed database on first launch
+  if (!isFirebaseMode) {
     await seedDatabase()
     console.log('📦 Mock database seeded')
   }

@@ -133,6 +133,7 @@ interface Props {
 interface CategoryFormData {
   name: string
   colour: string
+  icon?: string
 }
 
 const props = defineProps<Props>()
@@ -157,7 +158,8 @@ const warningMessage = ref('')
 const showCategoryModal = ref(false)
 const categoryFormData = ref<CategoryFormData>({
   name: '',
-  colour: '#3B82F6'
+  colour: '#3B82F6',
+  icon: undefined
 })
 const savingCategory = ref(false)
 const categoryValidationErrors = ref<string[]>([])
@@ -179,7 +181,8 @@ function handleCategoryChange(event: Event) {
 function openCategoryModal() {
   categoryFormData.value = {
     name: '',
-    colour: '#3B82F6'
+    colour: '#3B82F6',
+    icon: undefined
   }
   categoryValidationErrors.value = []
   showCategoryModal.value = true
@@ -189,7 +192,8 @@ function closeCategoryModal() {
   showCategoryModal.value = false
   categoryFormData.value = {
     name: '',
-    colour: '#3B82F6'
+    colour: '#3B82F6',
+    icon: undefined
   }
   categoryValidationErrors.value = []
 }
@@ -221,6 +225,7 @@ async function handleSaveCategory() {
       id: `cat_${Date.now()}`,
       name: categoryFormData.value.name.trim(),
       colour: categoryFormData.value.colour,
+      icon: categoryFormData.value.icon,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

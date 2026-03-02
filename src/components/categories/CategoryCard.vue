@@ -20,7 +20,14 @@
     <div class="category-card__content">
       <div class="category-card__header">
         <div class="category-card__info">
-          <div class="category-card__swatch" :style="{ backgroundColor: category.colour || '#CBD5F5' }" />
+          <div class="category-card__visual">
+            <CategoryIcon 
+              :icon="category.icon" 
+              :fallback-color="category.colour || '#CBD5F5'"
+              :show-icon="!!category.icon"
+              size="lg"
+            />
+          </div>
           <div>
             <h3 class="category-card__name">{{ category.name }}</h3>
           </div>
@@ -49,6 +56,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { Category } from '@/domain/models'
 import { formatMoney } from '@/utils/formatters'
 import { useAnimations } from '@/utils/useAnimations'
+import CategoryIcon from '@/components/ui/CategoryIcon.vue'
 
 const props = defineProps<{ category: Category }>()
 const emit = defineEmits<{ 
@@ -192,11 +200,12 @@ onUnmounted(() => {
   gap: var(--space-3);
 }
 
-.category-card__swatch {
+.category-card__visual {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius-full);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6), 0 6px 12px rgba(15, 23, 42, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 

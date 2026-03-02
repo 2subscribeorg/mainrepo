@@ -178,6 +178,60 @@ export const MerchantRuleFormSchema = z.object({
 })
 
 // ============================================================================
+// CATEGORY FORM SCHEMAS
+// ============================================================================
+
+/**
+ * Category name validation schema
+ * Validates category names with proper length and character constraints
+ */
+export const CategoryNameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Category name must be at least 2 characters')
+  .max(50, 'Category name must not exceed 50 characters')
+  .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Category name can only contain letters, numbers, spaces, hyphens, and underscores')
+
+/**
+ * Category color validation schema
+ * Validates hex color format (#RRGGBB)
+ */
+export const CategoryColorSchema = z
+  .string()
+  .regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format. Use hex format (#RRGGBB)')
+
+/**
+ * Category icon validation schema (optional)
+ */
+export const CategoryIconSchema = z
+  .string()
+  .min(1, 'Icon name cannot be empty')
+  .optional()
+
+/**
+ * Category creation form schema
+ */
+export const CategoryFormSchema = z.object({
+  name: CategoryNameSchema,
+  colour: CategoryColorSchema,
+  icon: CategoryIconSchema
+})
+
+/**
+ * Category update form schema (all fields optional except those being updated)
+ */
+export const CategoryUpdateSchema = z.object({
+  name: CategoryNameSchema.optional(),
+  colour: CategoryColorSchema.optional(),
+  icon: CategoryIconSchema
+}).refine((data) => {
+  // At least one field must be provided for update
+  return data.name !== undefined || data.colour !== undefined || data.icon !== undefined
+}, {
+  message: 'At least one field must be provided for update'
+})
+
+// ============================================================================
 // VALIDATION HELPER FUNCTIONS
 // ============================================================================
 
@@ -231,6 +285,20 @@ export function validateMerchantRuleForm(data: unknown) {
 }
 
 /**
+ * Validates category form data
+ */
+export function validateCategoryForm(data: unknown) {
+  return CategoryFormSchema.safeParse(data)
+}
+
+/**
+ * Validates category update data
+ */
+export function validateCategoryUpdate(data: unknown) {
+  return CategoryUpdateSchema.safeParse(data)
+}
+
+/**
  * Helper to extract field-specific errors from Zod validation result
  * Returns an object with field names as keys and error messages as values
  */
@@ -265,3 +333,5 @@ export type ChangeEmailFormData = z.infer<typeof ChangeEmailFormSchema>
 export type ChangePasswordFormData = z.infer<typeof ChangePasswordFormSchema>
 export type SubscriptionFormData = z.infer<typeof SubscriptionFormSchema>
 export type MerchantRuleFormData = z.infer<typeof MerchantRuleFormSchema>
+export type CategoryFormData = z.infer<typeof CategoryFormSchema>
+export type CategoryUpdateData = z.infer<typeof CategoryUpdateSchema>

@@ -2,23 +2,6 @@ export type ID = string
 export type Currency = 'GBP' | 'EUR' | 'USD'
 export type Recurrence = 'monthly' | 'yearly' | 'weekly' | 'biweekly' | 'quarterly' | 'custom'
 
-export interface UserProfile {
-  id: ID
-  email: string
-  displayName?: string
-  photoURL?: string
-  createdAt: string
-  lastLogin?: string
-  subscriptionCount?: number
-  bankConnectionCount?: number
-  transactionCount?: number
-  isActive: boolean
-  preferences?: {
-    theme?: 'light' | 'dark'
-    notifications?: boolean
-    currency?: Currency
-  }
-}
 
 export interface Money {
   amount: number
@@ -29,6 +12,7 @@ export interface Category {
   id: ID
   name: string
   colour?: string
+  icon?: string  // Icon name for visual identification
   // Phase 2 fields
   userId?: ID  // Owner of this category (null = system default)
   createdAt?: string  // ISO timestamp
@@ -227,13 +211,16 @@ export interface BankConnection {
   institutionId: string
   institutionName: string
   accounts: BankAccount[]
-  status: 'connected' | 'reauth_required' | 'error'
+  status: 'connected' | 'error' | 'pending_expiration' | 'disconnected'
   lastSynced?: string
-  error?: string
-  // Phase 2 fields
-  userId?: ID
-  createdAt?: string
-  updatedAt?: string
+  userId: ID
+  createdAt: string
+  updatedAt: string
+  expiresAt?: string  // ISO timestamp when connection expires (90 days from creation)
+  lastSuccessfulSync?: string  // ISO timestamp of last successful transaction sync
+  disconnectedAt?: string  // ISO timestamp when connection was disconnected
+  backfillCompletedAt?: string  // ISO timestamp when backfill was completed after reconnection
+  error?: string  // Error message when status is 'error'
 }
 
 export interface BankTransaction {
@@ -277,11 +264,3 @@ export interface SubscriptionFeedback {
   actualCategoryId?: ID  // Category user assigned (if different)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface FirestoreRules {
-  // All collections require userId match
-  // subscriptions: userId == request.auth.uid
-  // transactions: userId == request.auth.uid
-  // categories: userId == request.auth.uid || userId == null (system)
-  // subscription_feedback: userId == request.auth.uid
-}

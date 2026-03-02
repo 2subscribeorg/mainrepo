@@ -167,9 +167,9 @@ describe('Form Validation Schemas', () => {
   describe('Change Password Form Validation', () => {
     test('validates valid change password data', () => {
       const validForm = {
-        currentPassword: 'OldP@ss123',
-        newPassword: 'NewP@ss456',
-        confirmNewPassword: 'NewP@ss456'
+        currentPassword: 'OldP@ss123456',
+        newPassword: 'NewP@ss456789',
+        confirmNewPassword: 'NewP@ss456789'
       }
 
       const result = validateChangePasswordForm(validForm)

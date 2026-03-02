@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mountModal } from '@/tests/helpers/modalTestUtils'
 import DuplicateSubscriptionModal from '@/components/DuplicateSubscriptionModal.vue'
 import type { DuplicateCheckResult } from '@/services/DuplicateSubscriptionChecker'
 import type { Subscription, Transaction } from '@/domain/models'
@@ -57,17 +57,12 @@ describe('DuplicateSubscriptionModal', () => {
   })
 
   const createWrapper = (props = {}) => {
-    return mount(DuplicateSubscriptionModal, {
+    return mountModal(DuplicateSubscriptionModal, {
       props: {
         isOpen: true,
         duplicateResult: createMockResult(),
         warningMessage: 'You already have an active subscription for "Netflix". Adding this transaction would create a duplicate.',
         ...props
-      },
-      global: {
-        stubs: {
-          // Stub any child components if needed
-        }
       }
     })
   }

@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Transaction } from '@/domain/models'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 
 // Filter configuration interface
-interface TransactionFilterConfig {
+export interface TransactionFilterConfig {
   selectedAccount: string
   subscriptionFilter: 'subscriptions' | 'all'
   dateRange?: {

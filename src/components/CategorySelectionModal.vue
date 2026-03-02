@@ -8,19 +8,34 @@
   >
     <div 
       v-if="show" 
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-backdrop-enter"
+      class="fixed inset-0 z-[100]"
       @keydown.esc="handleEscape"
     >
+      <!-- Backdrop with blur -->
       <div 
-        ref="modalRef"
-        class="bg-[var(--color-surface)] rounded-lg p-6 w-96 max-w-md mx-4 shadow-xl modal-enter gpu-accelerated"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        <h3 id="modal-title" class="text-lg font-semibold text-text-primary mb-4 slide-down">
-          Select Category for {{ merchantName }}
-        </h3>
+        class="fixed inset-0 bg-black/70 backdrop-blur-xl"
+        @click="handleCancel"
+      />
+      
+      <!-- Modal container -->
+      <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <!-- Modal content -->
+        <div 
+          ref="modalRef"
+          class="relative bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh] pointer-events-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+        <!-- Header -->
+        <div class="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <h3 id="modal-title" class="text-lg font-semibold text-text-primary">
+            Select Category for {{ merchantName }}
+          </h3>
+        </div>
+        
+        <!-- Scrollable content -->
+        <div class="px-6 py-4 overflow-y-auto flex-1">
       
       <!-- Existing Categories -->
       <div class="mb-4">
@@ -32,6 +47,7 @@
           v-model="selectedCategoryId" 
           class="w-full border border-[rgba(15,23,42,0.12)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-[var(--color-background)] text-text-primary"
           aria-describedby="category-description"
+          :disabled="isCreatingNew"
         >
           <option value="">Select a category...</option>
           <option 
@@ -45,10 +61,11 @@
         <p id="category-description" class="sr-only">
           Select an existing category from the dropdown list or create a new one below
         </p>
+
       </div>
 
-      <!-- Or Create New -->
-      <div class="mb-4">
+      <!-- Or Create New (hidden when existing category is selected) -->
+      <div v-if="!selectedCategoryId" class="mb-4">
         <div class="flex items-center mb-2">
           <hr class="flex-1 border-[rgba(15,23,42,0.12)]">
           <span class="px-3 text-sm text-text-secondary">or</span>
@@ -105,6 +122,16 @@
             </div>
             </fieldset>
           </div>
+
+          <div>
+            <label class="text-sm font-medium text-text-primary">Icon (Optional)</label>
+            <div class="mt-1">
+              <IconSelector 
+                v-model="newCategoryIcon" 
+                :fallback-color="newCategoryColor"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -121,26 +148,31 @@
         </ul>
       </div>
 
-      <!-- Actions -->
-      <div class="flex justify-end space-x-3 mt-6">
-        <button 
-          @click="handleCancel"
-          class="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors duration-150 btn-animated"
-          aria-label="Cancel category selection"
-        >
-          Cancel
-        </button>
-        <button 
-          @click="handleConfirm"
-          :disabled="!canConfirm"
-          :aria-label="isCreatingNew ? 'Create new category and add merchant' : 'Add merchant to selected category'"
-          class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 btn-animated"
-        >
-          {{ isCreatingNew ? 'Create & Add' : 'Add to Category' }}
-        </button>
+        </div>
+        
+        <!-- Footer with actions -->
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <div class="flex justify-end space-x-3">
+            <button 
+              @click="handleCancel"
+              class="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors duration-150 btn-animated"
+              aria-label="Cancel category selection"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="handleConfirm"
+              :disabled="!canConfirm"
+              :aria-label="isCreatingNew ? 'Create new category and add merchant' : 'Add merchant to selected category'"
+              class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 btn-animated"
+            >
+              {{ isCreatingNew ? 'Create & Add' : 'Add to Category' }}
+            </button>
+          </div>
+        </div>
+        </div>
       </div>
     </div>
-  </div>
   </Transition>
 </template>
 
@@ -149,6 +181,8 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
 import { useTransitions } from '@/utils/useAnimations'
+import IconSelector from '@/components/ui/IconSelector.vue'
+import { getDefaultIconForCategory } from '@/utils/categoryIcons'
 
 interface Props {
   show: boolean
@@ -158,7 +192,7 @@ interface Props {
 
 interface Emits {
   (e: 'confirm', categoryId: string): void
-  (e: 'create-and-confirm', categoryData: { name: string; colour: string }): void
+  (e: 'create-and-confirm', categoryData: { name: string; colour: string; icon?: string }): void
   (e: 'close'): void
   (e: 'cancel'): void
 }
@@ -174,9 +208,10 @@ const previousFocusRef = ref<HTMLElement>()
 const selectedCategoryId = ref('')
 const newCategoryName = ref('')
 const newCategoryColor = ref(DEFAULT_COLORS[0])
+const newCategoryIcon = ref<string | undefined>(undefined)
 
 // Animation utilities
-const modalTransition = useTransitions('modal')
+const { modalTransition } = useTransitions()
 
 // Validation
 const validationErrors = computed(() => {
@@ -200,6 +235,20 @@ const validationErrors = computed(() => {
 })
 
 const isCreatingNew = computed(() => newCategoryName.value.trim().length > 0)
+
+// Smart icon suggestion based on new category name
+watch(newCategoryName, (newName) => {
+  if (!newCategoryIcon.value && newName.trim()) {
+    const suggestedIcon = getDefaultIconForCategory(newName)
+    if (suggestedIcon && suggestedIcon !== 'tag') {
+      newCategoryIcon.value = suggestedIcon
+    }
+  }
+  // Clear existing category selection when typing a new name
+  if (newName.trim()) {
+    selectedCategoryId.value = ''
+  }
+})
 const canConfirm = computed(() => {
   if (isCreatingNew.value) {
     return newCategoryName.value.trim().length >= 2 && 
@@ -223,7 +272,8 @@ function handleConfirm() {
     // Pass raw data - parent will validate with Zod (which auto-sanitizes)
     emit('create-and-confirm', {
       name: newCategoryName.value.trim(),
-      colour: newCategoryColor.value
+      colour: newCategoryColor.value,
+      icon: newCategoryIcon.value
     })
   } else if (selectedCategoryId.value) {
     emit('confirm', selectedCategoryId.value)
@@ -237,6 +287,7 @@ watch(() => props.show, async (show) => {
     selectedCategoryId.value = ''
     newCategoryName.value = ''
     newCategoryColor.value = DEFAULT_COLORS[0]
+    newCategoryIcon.value = undefined
     
     // Store previous focus
     previousFocusRef.value = document.activeElement as HTMLElement

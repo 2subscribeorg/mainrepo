@@ -377,14 +377,15 @@ describe('Categories Tab Integration Test', () => {
     })
 
     it('handles category deletion errors gracefully', async () => {
-      // Arrange: Mock confirm and delete to fail
+      // Arrange: Mock confirm to return true, remove to fail
       const mockConfirm = vi.fn(() => true)
-      const mockAlert = vi.fn()
       global.confirm = mockConfirm
-      global.alert = mockAlert
 
       const mockError = new Error('Failed to delete category')
       vi.spyOn(categoriesStore, 'remove').mockRejectedValue(mockError)
+
+      // Keep category in store so the error branch is taken (not the "deleted despite error" branch)
+      categoriesStore.categories = [...mockCategories]
 
       wrapper = mount(Categories, {
         global: {
@@ -404,10 +405,10 @@ describe('Categories Tab Integration Test', () => {
       // Act: Attempt to delete category
       await wrapper.vm.deleteCategory()
 
-      // Assert: Error should be handled
+      // Assert: Error should be shown in validationErrors (not alert)
       expect(mockConfirm).toHaveBeenCalledWith(`Delete category "${categoryToDelete.name}"?`)
       expect(categoriesStore.remove).toHaveBeenCalledWith(categoryToDelete.id)
-      expect(mockAlert).toHaveBeenCalledWith('Failed to delete category')
+      expect(wrapper.vm.validationErrors).toContain('Failed to delete category: Failed to delete category')
     })
   })
 

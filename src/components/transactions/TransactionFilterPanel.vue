@@ -45,7 +45,7 @@
         <select 
           data-testid="subscription-filter"
           :value="filters.subscriptionFilter"
-          @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value)"
+          @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value as 'all' | 'subscriptions')"
           class="filter-input input-animated"
         >
           <option value="all">All Transactions</option>
@@ -268,7 +268,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import type { BankAccount, Category } from '@/domain/models'
-import type { TransactionFilterConfig } from '@/composables/useTransactionFilters'
+import type { TransactionFilterConfig } from '@/stores/transactions'
 import { useAnimations } from '@/utils/useAnimations'
 
 interface Props {
@@ -282,7 +282,7 @@ interface Props {
 
 interface Emits {
   (e: 'update:selectedAccount', value: string): void
-  (e: 'update:subscriptionFilter', value: string): void
+  (e: 'update:subscriptionFilter', value: 'all' | 'subscriptions'): void
   (e: 'update:merchantSearch', value: string): void
   (e: 'update:dateRange', value: { start: string; end: string }): void
   (e: 'update:amountRange', value: { min: number; max: number }): void
@@ -356,7 +356,7 @@ function toggleCategory(categoryId: string) {
   } else {
     next.add(categoryId)
   }
-  emit('update:categories', Array.from(next))
+  emit('update:categories', Array.from(next) as string[])
 }
 
 const activeFilters = computed(() => {

@@ -62,7 +62,7 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     const validation = validateFirebaseTransactions(rawResults)
     if (!validation.success) {
       console.error('Firebase transaction validation failed:', validation.error)
-      throw new Error(`Invalid transaction data from Firebase: ${validation.error.errors[0]?.message}`)
+      throw new Error(`Invalid transaction data from Firebase: ${validation.error.issues[0]?.message}`)
     }
 
     let results = validation.data
@@ -95,7 +95,7 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     const validation = validateFirebaseTransaction(rawData)
     if (!validation.success) {
       console.error('Firebase transaction validation failed:', validation.error)
-      throw new Error(`Invalid transaction data from Firebase: ${validation.error.errors[0]?.message}`)
+      throw new Error(`Invalid transaction data from Firebase: ${validation.error.issues[0]?.message}`)
     }
     
     const data = validation.data

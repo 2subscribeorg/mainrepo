@@ -75,9 +75,14 @@ const saving = ref(false)
 const successMessage = ref('')
 const showSuccess = ref(false)
 const editingCategory = ref<Category | null>(null)
-const formData = ref({
+const formData = ref<{
+  name: string
+  colour: string
+  icon?: string
+}>({
   name: '',
   colour: DEFAULT_COLORS[0],
+  icon: undefined,
 })
 const validationErrors = ref<string[]>([])
 const modalMode = ref<'create' | 'edit' | null>(null)
@@ -96,6 +101,7 @@ function openCreateModal() {
   formData.value = {
     name: '',
     colour: DEFAULT_COLORS[0],
+    icon: undefined,
   }
   validationErrors.value = []
   modalMode.value = 'create'
@@ -106,6 +112,7 @@ function editCategory(category: Category) {
   formData.value = {
     name: category.name,
     colour: category.colour ?? DEFAULT_COLORS[0],
+    icon: category.icon,
   }
   modalMode.value = 'edit'
 }
@@ -124,6 +131,7 @@ function closeModal() {
   formData.value = {
     name: '',
     colour: DEFAULT_COLORS[0],
+    icon: undefined,
   }
   validationErrors.value = []
   modalMode.value = null
@@ -170,6 +178,11 @@ async function saveCategory() {
       name: validation.data!.name,
       colour: validation.data!.colour || DEFAULT_COLORS[0],
     }
+    
+    // Only add icon field if it has a value (Firestore doesn't accept undefined)
+    if (formData.value.icon) {
+      category.icon = formData.value.icon
+    }
 
     await categoriesStore.save(category)
     closeModal()
@@ -191,14 +204,31 @@ async function deleteCategory() {
   if (!editingCategory.value) return
   if (!confirm(`Delete category "${editingCategory.value.name}"?`)) return
 
+  const categoryName = editingCategory.value.name
+  const categoryId = editingCategory.value.id
+
   try {
-    await categoriesStore.remove(editingCategory.value.id)
+    await categoriesStore.remove(categoryId)
     closeModal()
     
     // Show success message
-    showSuccessMessage(`Category "${editingCategory.value.name}" deleted successfully!`)
-  } catch (_error) {
-    alert('Failed to delete category')
+    showSuccessMessage(`Category "${categoryName}" deleted successfully!`)
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('Category deletion error:', error)
+    
+    // Check if category was actually deleted despite the error
+    const categoryStillExists = categoriesStore.categories.some(c => c.id === categoryId)
+    
+    if (!categoryStillExists) {
+      // Category was deleted successfully despite the error
+      closeModal()
+      showSuccessMessage(`Category "${categoryName}" deleted successfully!`)
+    } else {
+      // Category deletion actually failed
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      validationErrors.value = [`Failed to delete category: ${errorMessage}`]
+    }
   }
 }
 

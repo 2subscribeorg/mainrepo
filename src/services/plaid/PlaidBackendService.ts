@@ -9,6 +9,15 @@
  */
 
 import { getAuth } from 'firebase/auth'
+import {
+  validateUserId,
+  validatePublicToken,
+  validateConnectionId,
+  validateLinkTokenResponse,
+  validateExchangeTokenResponse,
+  validateSyncTransactionsResponse,
+  PlaidValidationError
+} from './validation'
 
 const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001/api'
 
@@ -36,6 +45,9 @@ export class PlaidBackendService {
    */
   async createLinkToken(userId: string): Promise<string> {
     try {
+      // Validate and sanitize input
+      const validatedUserId = validateUserId(userId)
+      
       console.log('🔑 Calling backend to create link token...')
       const token = await this.getAuthToken()
       
@@ -45,7 +57,7 @@ export class PlaidBackendService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: validatedUserId }),
       })
       
       if (!response.ok) {
@@ -54,9 +66,17 @@ export class PlaidBackendService {
       }
       
       const data = await response.json()
+      
+      // Validate response
+      const validatedResponse = validateLinkTokenResponse(data)
+      
       console.log('✅ Link token received from backend')
-      return data.linkToken
+      return validatedResponse.linkToken
     } catch (error: any) {
+      if (error instanceof PlaidValidationError) {
+        console.error('❌ Validation error:', error.message)
+        throw error
+      }
       console.error('❌ Backend createLinkToken error:', error)
       throw new Error(`Failed to create link token: ${error.message}`)
     }
@@ -67,6 +87,10 @@ export class PlaidBackendService {
    */
   async exchangePublicToken(publicToken: string, userId: string): Promise<{ itemId: string }> {
     try {
+      // Validate and sanitize inputs
+      const validatedPublicToken = validatePublicToken(publicToken)
+      const validatedUserId = validateUserId(userId)
+      
       console.log('🔄 Calling backend to exchange token...')
       const token = await this.getAuthToken()
       
@@ -76,7 +100,7 @@ export class PlaidBackendService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ publicToken, userId }),
+        body: JSON.stringify({ publicToken: validatedPublicToken, userId: validatedUserId }),
       })
       
       if (!response.ok) {
@@ -85,9 +109,17 @@ export class PlaidBackendService {
       }
       
       const data = await response.json()
+      
+      // Validate response
+      const validatedResponse = validateExchangeTokenResponse(data)
+      
       console.log('✅ Token exchanged successfully')
-      return { itemId: data.itemId }
+      return validatedResponse
     } catch (error: any) {
+      if (error instanceof PlaidValidationError) {
+        console.error('❌ Validation error:', error.message)
+        throw error
+      }
       console.error('❌ Backend exchangeToken error:', error)
       throw new Error(`Failed to exchange token: ${error.message}`)
     }
@@ -98,6 +130,10 @@ export class PlaidBackendService {
    */
   async syncTransactions(connectionId: string, userId: string): Promise<{ count: number }> {
     try {
+      // Validate and sanitize inputs
+      const validatedConnectionId = validateConnectionId(connectionId)
+      const validatedUserId = validateUserId(userId)
+      
       console.log('🔄 Calling backend to sync transactions...')
       const token = await this.getAuthToken()
       
@@ -107,7 +143,7 @@ export class PlaidBackendService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ connectionId, userId }),
+        body: JSON.stringify({ connectionId: validatedConnectionId, userId: validatedUserId }),
       })
       
       if (!response.ok) {
@@ -116,9 +152,17 @@ export class PlaidBackendService {
       }
       
       const data = await response.json()
-      console.log(`✅ Synced ${data.transactionCount} transactions`)
-      return { count: data.transactionCount }
+      
+      // Validate response
+      const validatedResponse = validateSyncTransactionsResponse(data)
+      
+      console.log(`✅ Synced ${validatedResponse.transactionCount} transactions`)
+      return { count: validatedResponse.transactionCount }
     } catch (error: any) {
+      if (error instanceof PlaidValidationError) {
+        console.error('❌ Validation error:', error.message)
+        throw error
+      }
       console.error('❌ Backend syncTransactions error:', error)
       throw new Error(`Failed to sync transactions: ${error.message}`)
     }
@@ -129,6 +173,10 @@ export class PlaidBackendService {
    */
   async disconnectBank(connectionId: string, userId: string): Promise<void> {
     try {
+      // Validate and sanitize inputs
+      const validatedConnectionId = validateConnectionId(connectionId)
+      const validatedUserId = validateUserId(userId)
+      
       console.log('🔌 Calling backend to disconnect bank...')
       const token = await this.getAuthToken()
       
@@ -138,7 +186,7 @@ export class PlaidBackendService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ connectionId, userId }),
+        body: JSON.stringify({ connectionId: validatedConnectionId, userId: validatedUserId }),
       })
       
       if (!response.ok) {
@@ -148,6 +196,10 @@ export class PlaidBackendService {
       
       console.log('✅ Bank disconnected successfully')
     } catch (error: any) {
+      if (error instanceof PlaidValidationError) {
+        console.error('❌ Validation error:', error.message)
+        throw error
+      }
       console.error('❌ Backend disconnectBank error:', error)
       throw new Error(`Failed to disconnect bank: ${error.message}`)
     }

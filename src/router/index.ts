@@ -11,8 +11,12 @@ const router = createRouter({
       component: () => import('@/views/Auth.vue'),
       beforeEnter: redirectIfAuthenticated,
     },
-    // Firebase Test (public - for testing)
-        // Protected Routes (require authentication)
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('@/pages/VerifyEmail.vue'),
+    },
+    // Protected Routes (require authentication)
     {
       path: '/',
       name: 'dashboard',
@@ -43,11 +47,11 @@ const router = createRouter({
       component: () => import('@/views/PlatformSubscription.vue'),
       beforeEnter: requireAuth,
     },
+    // UI Preview (no auth required)
     {
-      path: '/suggestions',
-      name: 'subscription-suggestions',
-      component: () => import('@/views/SubscriptionSuggestions.vue'),
-      beforeEnter: requireAuth,
+      path: '/preview/dashboard',
+      name: 'dashboard-preview',
+      component: () => import('@/views/DashboardPreview.vue'),
     },
     // Catch-all route - must be last
     {

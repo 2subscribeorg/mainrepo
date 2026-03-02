@@ -173,7 +173,7 @@ async function saveRule() {
   saving.value = true
   try {
     await adminStore.fetchRules()
-    const maxPriority = Math.max(...(adminStore.merchantRules.map((r) => r.priority) || [0]), 0)
+    const maxPriority = Math.max(...(adminStore.merchantRules.map((r: MerchantCategoryRule) => r.priority) || [0]), 0)
 
     // Use validated & sanitized data from Zod schema
     const rule: MerchantCategoryRule = {

@@ -29,6 +29,7 @@ import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
 import { useAnimations } from '@/utils/useAnimations'
+import { useTransactionManagement } from '@/composables/useTransactionManagement'
 
 // TypeScript declarations for global window properties
 declare global {
@@ -49,6 +50,7 @@ const error = ref('')
 const bankStore = useBankAccountsStore()
 const transactionStore = useTransactionsStore()
 const authStore = useAuthStore()
+const { detectPatterns } = useTransactionManagement()
 
 // Use animation utilities
 const { createRipple, prefersReducedMotion } = useAnimations()
@@ -161,7 +163,7 @@ async function handleSuccess(publicToken: string, metadata: any) {
       
       // Detect patterns in the new transactions
       console.log('🔍 Running subscription detection...')
-      await transactionStore.detectPatterns()
+      await detectPatterns()
     }
     
     emit('success')

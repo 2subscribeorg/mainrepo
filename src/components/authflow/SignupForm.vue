@@ -56,9 +56,7 @@
           :disabled="loading"
           @input="validatePassword"
         />
-        <p class="mt-1 text-xs text-text-muted">
-          Password must be at least 8 characters
-        </p>
+        <PasswordStrengthIndicator :password="password" />
       </div>
 
       <!-- Confirm Password Input -->
@@ -108,6 +106,8 @@
 import { ref, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
+import { validatePassword as validatePasswordStrength, isPasswordValid } from '@/utils/passwordValidation'
 
 // Emits
 defineEmits<{
@@ -135,17 +135,7 @@ function validateEmail() {
 }
 
 function validatePassword() {
-  const errors: string[] = []
-  
-  if (password.value.length < 8) {
-    errors.push('Password must be at least 8 characters')
-  }
-  
-  if (password.value.length < 12 && !/\d/.test(password.value)) {
-    errors.push('Consider adding numbers for better security')
-  }
-  
-  return errors
+  return validatePasswordStrength(password.value)
 }
 
 function validateConfirmPassword() {
@@ -176,7 +166,7 @@ const isFormValid = computed(() => {
          password.value && 
          confirmPassword.value && 
          password.value === confirmPassword.value &&
-         password.value.length >= 8
+         isPasswordValid(password.value)
 })
 
 async function handleSubmit() {
@@ -188,13 +178,21 @@ async function handleSubmit() {
     return
   }
 
-  const { success, error } = await signUp(email.value, password.value)
+  // Check if email verification is required
+  const requireVerification = import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION === 'true'
+  
+  const result = await signUp(email.value, password.value, requireVerification)
 
-  if (success) {
-    // Redirect to dashboard
-    router.push('/')
+  if (result?.success) {
+    if (result.needsVerification) {
+      // Redirect to verification page
+      router.push('/verify-email')
+    } else {
+      // Redirect to dashboard
+      router.push('/')
+    }
   } else {
-    errorMessage.value = error || 'Failed to create account'
+    errorMessage.value = result?.error || 'Failed to create account'
   }
 }
 </script>

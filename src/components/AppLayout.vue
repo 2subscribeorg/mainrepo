@@ -84,7 +84,6 @@ const navLinks = computed(() => {
     { path: '/settings', label: 'Settings' },
   ]
 
-
   return links
 })
 

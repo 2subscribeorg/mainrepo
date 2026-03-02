@@ -136,7 +136,7 @@ async function handleCategorySelected(categoryId: string) {
       id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
       merchantName: selectedTransaction.value.merchantName,
       amount: selectedTransaction.value.amount,
-      recurrence: 'monthly', // Default to monthly
+      recurrence: 'monthly' as const, // Default to monthly
       nextPaymentDate: selectedTransaction.value.date,
       categoryId: categoryId,
       status: 'active' as const,
@@ -217,10 +217,10 @@ async function handleLinkToExistingSubscription(transaction: Transaction, data: 
   }
 }
 
-async function handleCreateCategoryAndConfirm(categoryData: { name: string; colour: string }) {
+async function handleCreateCategoryAndConfirm(categoryData: { name: string; colour: string; icon?: string }) {
   if (!selectedTransaction.value) return
   
-  const { name: categoryName, colour: color } = categoryData
+  const { name: categoryName, colour: color, icon } = categoryData
   
   try {
     // First create the new category
@@ -228,6 +228,7 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
       id: `cat_${Date.now()}`, // Generate temporary ID
       name: categoryName,
       colour: color,
+      icon: icon,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -240,7 +241,7 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
       id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
       merchantName: selectedTransaction.value.merchantName,
       amount: selectedTransaction.value.amount,
-      recurrence: 'monthly', // Default to monthly
+      recurrence: 'monthly' as const, // Default to monthly
       nextPaymentDate: selectedTransaction.value.date,
       categoryId: newCategory.id,
       status: 'active' as const,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mountModal } from '@/tests/helpers/modalTestUtils'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
 import { DEFAULT_COLORS } from '@/utils/colors'
 import type { Category } from '@/domain/models'
@@ -12,17 +12,12 @@ describe('CategorySelectionModal', () => {
   ]
 
   const createWrapper = (props = {}) => {
-    return mount(CategorySelectionModal, {
+    return mountModal(CategorySelectionModal, {
       props: {
         show: true,
         merchantName: 'Netflix',
         categories: mockCategories,
         ...props
-      },
-      global: {
-        stubs: {
-          // Stub any child components if needed
-        }
       }
     })
   }
@@ -69,8 +64,7 @@ describe('CategorySelectionModal', () => {
     it('resets form when modal opens', async () => {
       const wrapper = createWrapper()
       
-      // Simulate user interaction
-      await wrapper.find('select').setValue('cat1')
+      // Simulate user interaction - enter new category name first
       await wrapper.find('input[type="text"]').setValue('New Category')
       
       // Close and reopen modal
@@ -216,10 +210,7 @@ describe('CategorySelectionModal', () => {
     it('prioritizes new category creation over existing selection', async () => {
       const wrapper = createWrapper()
       
-      // Select existing category
-      await wrapper.find('select').setValue('cat1')
-      
-      // Then enter new category name
+      // Enter new category name first (this will clear any existing selection)
       await wrapper.find('input[type="text"]').setValue('New Category')
       
       const confirmButton = wrapper.findAll('button').find(btn => 

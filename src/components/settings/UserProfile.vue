@@ -50,6 +50,7 @@ const { user, isAuthenticated, signOut, loading } = useAuth()
 const userInitials = computed(() => {
   if (!user.value) return '?'
   const name = user.value.name || user.value.email
+  if (!name) return '?'
   return name
     .split(' ')
     .map(n => n[0])

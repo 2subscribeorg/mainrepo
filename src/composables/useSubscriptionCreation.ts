@@ -3,6 +3,8 @@ import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
 import type { Transaction, Subscription } from '@/domain/models'
+import type { SubscriptionRecurrence, SubscriptionCreationParams } from '@/types/subscriptions'
+import { calculateNextPaymentDate, getDefaultRecurrenceForMerchant, generateSubscriptionNotes } from '@/utils/subscriptionUtils'
 
 export function useSubscriptionCreation() {
   const subscriptionsStore = useSubscriptionsStore()
@@ -14,15 +16,23 @@ export function useSubscriptionCreation() {
 
   async function createSubscriptionFromTransaction(
     transaction: Transaction, 
-    categoryId: string
+    categoryId: string,
+    recurrence?: SubscriptionRecurrence
   ): Promise<Subscription> {
     loading.value = true
     error.value = null
     
     try {
-      // Calculate next payment date (30 days from transaction)
-      const nextDate = new Date(transaction.date)
-      nextDate.setDate(nextDate.getDate() + 30)
+      // Determine recurrence - use provided, infer from merchant, or default to monthly
+      const subscriptionRecurrence = recurrence || 
+        getDefaultRecurrenceForMerchant(transaction.merchantName) || 
+        'monthly'
+      
+      // Calculate next payment date using enhanced utility
+      const nextPaymentDate = calculateNextPaymentDate(transaction.date, subscriptionRecurrence)
+      
+      // Generate contextual notes
+      const notes = generateSubscriptionNotes('manual', undefined, transaction.date)
       
       const newSubscription: Subscription = {
         id: crypto.randomUUID(),
@@ -30,11 +40,11 @@ export function useSubscriptionCreation() {
         categoryId: categoryId,
         merchantName: transaction.merchantName,
         amount: transaction.amount,
-        recurrence: 'monthly',
-        nextPaymentDate: nextDate.toISOString().split('T')[0],
+        recurrence: subscriptionRecurrence,
+        nextPaymentDate: nextPaymentDate,
         status: 'active',
         source: 'manual',
-        notes: `Created manually from transaction on ${transaction.date}`,
+        notes: notes,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

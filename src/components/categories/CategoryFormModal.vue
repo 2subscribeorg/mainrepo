@@ -46,6 +46,15 @@
           />
         </div>
 
+        <div>
+          <label for="category-icon" class="input-label">Icon (Optional)</label>
+          <IconSelector 
+            id="category-icon"
+            v-model="iconModel" 
+            :fallback-color="colorModel"
+          />
+        </div>
+
         <ValidationErrors 
           v-if="validationErrors.length" 
           :errors="validationErrors"
@@ -90,10 +99,13 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import CategoryColorPicker from './CategoryColorPicker.vue'
 import ValidationErrors from '@/components/ValidationErrors.vue'
+import IconSelector from '@/components/ui/IconSelector.vue'
+import { getDefaultIconForCategory } from '@/utils/categoryIcons'
 
 interface CategoryFormData {
   name: string
   colour: string
+  icon?: string
 }
 
 const props = defineProps<{
@@ -124,6 +136,22 @@ const nameModel = computed({
 const colorModel = computed({
   get: () => props.formData.colour,
   set: (value) => emit('update:formData', { ...props.formData, colour: value })
+})
+
+const iconModel = computed({
+  get: () => props.formData.icon,
+  set: (value) => emit('update:formData', { ...props.formData, icon: value })
+})
+
+// Smart icon suggestion based on category name
+watch(() => props.formData.name, (newName) => {
+  // Only suggest icon if no icon is currently selected and name is not empty
+  if (!props.formData.icon && newName.trim()) {
+    const suggestedIcon = getDefaultIconForCategory(newName)
+    if (suggestedIcon && suggestedIcon !== 'tag') { // Don't suggest default tag icon
+      emit('update:formData', { ...props.formData, icon: suggestedIcon })
+    }
+  }
 })
 
 // Focus management

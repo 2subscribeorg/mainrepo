@@ -392,6 +392,8 @@ export function useTransitions() {
   const modalTransition = {
     enterActiveClass: 'modal-enter',
     leaveActiveClass: 'modal-leave',
+    enterFromClass: 'modal-enter-from',
+    leaveToClass: 'modal-leave-to',
     duration: prefersReducedMotion.value ? 0 : 250
   }
   
