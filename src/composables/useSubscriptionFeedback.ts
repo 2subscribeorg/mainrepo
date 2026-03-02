@@ -54,13 +54,18 @@ export function useSubscriptionFeedback() {
     try {
       const token = await getAuthToken()
       
+      // Remove undefined fields to avoid Firestore validation errors
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, value]) => value !== undefined)
+      )
+      
       const response = await fetch(`${API_BASE}/api/feedback/record`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify(cleanParams),
       })
 
       if (!response.ok) {
