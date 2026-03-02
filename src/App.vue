@@ -13,6 +13,9 @@
         <router-view />
       </main>
     </MobileLayout>
+    
+    <!-- Global toast notifications -->
+    <ToastContainer />
   </div>
 </template>
 
@@ -20,6 +23,7 @@
 import { onMounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
+import ToastContainer from '@/components/ToastContainer.vue'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 

@@ -110,7 +110,20 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
 
   async function getAllAccounts(): Promise<BankAccount[]> {
     try {
-      return await repo.listAccounts()
+      // Return accounts only from active connections (not disconnected)
+      // Use the accounts embedded in connections rather than repo.listAccounts()
+      // to ensure we only show accounts from active connections
+      const activeAccounts: BankAccount[] = []
+      
+      connections.value
+        .filter(c => c.status !== 'disconnected')
+        .forEach(connection => {
+          if (connection.accounts) {
+            activeAccounts.push(...connection.accounts)
+          }
+        })
+      
+      return activeAccounts
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch accounts'
       return []

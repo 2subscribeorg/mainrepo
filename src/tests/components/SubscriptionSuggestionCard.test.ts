@@ -50,7 +50,7 @@ describe('SubscriptionSuggestionCard', () => {
     const { ref } = await import('vue')
     mockSubscriptionFeedback = {
       confirmSubscription: vi.fn().mockResolvedValue(true),
-      rejectSubscription: vi.fn().mockResolvedValue(true),
+      rejectSubscription: vi.fn().mockResolvedValue('feedback-123'), // Now returns feedback ID
       loading: ref(false),
       error: ref(null),
       showCategoryModal: ref(false),
@@ -182,7 +182,9 @@ describe('SubscriptionSuggestionCard', () => {
       await wrapper.vm.$nextTick()
 
       expect(wrapper.emitted('rejected')).toBeTruthy()
-      expect(wrapper.emitted('rejected')[0]).toEqual([mockPattern])
+      // Now expects [pattern, feedbackId] where feedbackId is a string
+      expect(wrapper.emitted('rejected')[0][0]).toEqual(mockPattern)
+      expect(typeof wrapper.emitted('rejected')[0][1]).toBe('string')
     })
   })
 
@@ -359,8 +361,8 @@ describe('SubscriptionSuggestionCard', () => {
       const confirmButton = wrapper.find('button:first-of-type')
       const rejectButton = wrapper.find('button:last-of-type')
 
-      expect(confirmButton.text()).toContain('Confirm Subscription')
-      expect(rejectButton.text()).toContain('Not a Subscription')
+      expect(confirmButton.text()).toContain("Yes, it's a subscription")
+      expect(rejectButton.text()).toContain('Not a subscription')
     })
 
     it('maintains focus management during loading states', async () => {

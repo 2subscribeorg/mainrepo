@@ -1,7 +1,24 @@
 <template>
   <div
-    class="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 shadow-sm hover:shadow-md transition-fast card-animated gpu-accelerated"
+    ref="cardRef"
+    class="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 shadow-sm hover:shadow-md transition-all duration-200 ease-out card-animated gpu-accelerated"
+    :style="cardStyle"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
   >
+    <!-- Progress Indicator -->
+    <div v-if="showProgress" class="mb-4 flex items-center justify-between">
+      <span class="text-sm text-gray-500">Suggestion {{ currentIndex }} of {{ totalCount }}</span>
+      <button
+        v-if="onReviewLater"
+        @click="handleReviewLater"
+        class="text-sm font-medium text-primary hover:text-primary-dark transition-colors duration-150"
+      >
+        Review later
+      </button>
+    </div>
+
     <div class="flex items-start justify-between">
       <div class="flex-1">
         <div class="flex items-center gap-2">
@@ -50,24 +67,32 @@
       </div>
     </div>
 
-    <div class="mt-4 flex gap-2">
+    <!-- Action Buttons - Stacked vertically on mobile, horizontal on desktop -->
+    <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-2">
       <button
         @click="handleConfirm"
         :disabled="loading"
-        class="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-fast disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full sm:flex-1 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white hover:bg-primary-dark active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+        style="min-height: 48px"
       >
-        <span v-if="!loading">✓ Confirm Subscription</span>
+        <span v-if="!loading">✓ Yes, it's a subscription</span>
         <span v-else>Processing...</span>
       </button>
       <button
         @click="handleReject"
         :disabled="loading"
-        class="flex-1 rounded-md border border-border-light px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-hover transition-fast disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full sm:flex-1 rounded-xl border-2 border-border-light px-6 py-3 text-sm font-medium text-text-secondary hover:bg-surface-hover active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+        style="min-height: 44px"
       >
-        <span v-if="!loading">✗ Not a Subscription</span>
+        <span v-if="!loading">✗ Not a subscription</span>
         <span v-else>Processing...</span>
       </button>
     </div>
+
+    <!-- Swipe hint (shows on first card only) -->
+    <p v-if="showSwipeHint" class="mt-3 text-center text-xs text-gray-400">
+      Or swipe left to dismiss
+    </p>
 
     <div v-if="error" class="mt-2 text-xs text-red-600">
       {{ error }}
@@ -94,13 +119,24 @@ import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { useCategoriesStore } from '@/stores/categories'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   pattern: RecurringPattern
-}>()
+  currentIndex?: number
+  totalCount?: number
+  showProgress?: boolean
+  showSwipeHint?: boolean
+  onReviewLater?: () => void
+}>(), {
+  currentIndex: 1,
+  totalCount: 1,
+  showProgress: false,
+  showSwipeHint: false
+})
 
 const emit = defineEmits<{
   confirmed: [pattern: RecurringPattern]
-  rejected: [pattern: RecurringPattern]
+  rejected: [pattern: RecurringPattern, feedbackId?: string]
+  reviewLater: [pattern: RecurringPattern]
 }>()
 
 const { 
@@ -116,6 +152,23 @@ const {
 
 const categoriesStore = useCategoriesStore()
 const showTransactions = ref(false)
+const cardRef = ref<HTMLElement | null>(null)
+
+// Swipe state
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const currentX = ref(0)
+const isDragging = ref(false)
+const SWIPE_THRESHOLD = 100 // pixels
+const SWIPE_VELOCITY_THRESHOLD = 0.5
+
+const cardStyle = computed(() => {
+  if (!isDragging.value) return {}
+  return {
+    transform: `translateX(${currentX.value}px) rotate(${currentX.value * 0.05}deg)`,
+    opacity: 1 - Math.abs(currentX.value) / 300
+  }
+})
 
 const categories = computed(() => categoriesStore.categories)
 
@@ -172,7 +225,8 @@ async function handleConfirm() {
 async function handleReject() {
   const lastTransaction = props.pattern.transactions[props.pattern.transactions.length - 1]
   
-  const success = await rejectSubscription({
+  // rejectSubscription now returns the feedback ID for undo functionality
+  const feedbackId = await rejectSubscription({
     transactionId: lastTransaction.id,
     merchantName: props.pattern.merchant,
     amount: {
@@ -184,8 +238,65 @@ async function handleReject() {
     detectionMethod: 'pattern_matching',
   })
 
-  if (success) {
-    emit('rejected', props.pattern)
+  if (feedbackId) {
+    // Emit with feedback ID so Dashboard can implement undo
+    emit('rejected', props.pattern, feedbackId)
   }
+}
+
+function handleReviewLater() {
+  emit('reviewLater', props.pattern)
+}
+
+// Swipe-to-dismiss functionality (left swipe only)
+function handleTouchStart(e: TouchEvent) {
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+  isDragging.value = true
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (!isDragging.value) return
+  
+  const deltaX = e.touches[0].clientX - touchStartX.value
+  const deltaY = e.touches[0].clientY - touchStartY.value
+  
+  // Only allow left swipe (negative deltaX)
+  if (deltaX < 0 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    currentX.value = deltaX
+    e.preventDefault()
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (!isDragging.value) return
+  
+  const deltaX = currentX.value
+  const velocity = Math.abs(deltaX) / 100
+  
+  // Trigger dismiss if swiped far enough or fast enough
+  if (deltaX < -SWIPE_THRESHOLD || velocity > SWIPE_VELOCITY_THRESHOLD) {
+    // Animate card out
+    if (cardRef.value) {
+      cardRef.value.style.transition = 'transform 200ms ease-out, opacity 200ms ease-out'
+      cardRef.value.style.transform = 'translateX(-100%) rotate(-10deg)'
+      cardRef.value.style.opacity = '0'
+    }
+    
+    // Haptic feedback on supported devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10)
+    }
+    
+    // Emit reject after animation
+    setTimeout(() => {
+      handleReject()
+    }, 200)
+  } else {
+    // Snap back
+    currentX.value = 0
+  }
+  
+  isDragging.value = false
 }
 </script>

@@ -232,13 +232,14 @@ export function useSubscriptionFeedback() {
     showCategoryModal.value = false
   }
 
-  async function rejectSubscription(params: Omit<RecordFeedbackParams, 'userAction'>): Promise<boolean> {
+  async function rejectSubscription(params: Omit<RecordFeedbackParams, 'userAction'>): Promise<string | null> {
     const result = await recordFeedback({
       ...params,
       userAction: 'rejected',
       detectionMethod: params.detectionMethod || 'pattern_matching',
     })
-    return result !== null
+    // Return feedback ID for undo functionality
+    return result?.id || null
   }
 
   async function getUserFeedback(limit: number = 100): Promise<SubscriptionFeedback[]> {
@@ -302,6 +303,36 @@ export function useSubscriptionFeedback() {
     }
   }
 
+  async function undoFeedback(feedbackId: string): Promise<boolean> {
+    loading.value = true
+    error.value = null
+
+    try {
+      const token = await getAuthToken()
+      
+      const response = await fetch(`${API_BASE}/api/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to undo feedback')
+      }
+
+      console.log(`✅ Feedback ${feedbackId} undone successfully`)
+      return true
+    } catch (err: any) {
+      error.value = err.message
+      console.error('Error undoing feedback:', err)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -310,6 +341,7 @@ export function useSubscriptionFeedback() {
     rejectSubscription,
     getUserFeedback,
     getFeedbackStats,
+    undoFeedback,
     // Category selection modal state and handlers
     showCategoryModal,
     pendingSubscriptionData,

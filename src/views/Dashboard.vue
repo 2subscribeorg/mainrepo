@@ -156,6 +156,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
+import { useToast } from '@/composables/useToast'
+import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useCategoriesStore } from '@/stores/categories'
@@ -181,6 +183,12 @@ const showAllSuggestions = ref(false)
 const suggestions = ref<RecurringPattern[]>([])
 const suggestionsLoading = ref(false)
 const suggestionsError = ref<string | null>(null)
+const dismissedMerchants = ref<Set<string>>(new Set())
+const toast = useToast()
+const { undoFeedback } = useSubscriptionFeedback()
+
+// Track last feedback ID for undo functionality
+const lastFeedbackId = ref<string | null>(null)
 
 // Get all transactions that are marked as subscriptions (with or without categories)
 const subscriptionTransactions = computed(() => 
@@ -210,6 +218,16 @@ async function loadSubscriptionSuggestions() {
     // Ensure transactions are loaded
     await transactionsDataStore.fetchTransactions()
     
+    // Fetch user's feedback history from database to know what they've already dismissed
+    const { useSubscriptionFeedback: useFeedback } = await import('@/composables/useSubscriptionFeedback')
+    const { getUserFeedback } = useFeedback()
+    const userFeedback = await getUserFeedback(1000)
+    
+    // Build set of merchants user has already given feedback on
+    dismissedMerchants.value = new Set(
+      userFeedback.map(f => f.merchantName)
+    )
+    
     // Use actual pattern detection service
     const detectionService = new SubscriptionDetectionService()
     const bankTransactions = transactionsDataStore.transactions.map((tx) => ({
@@ -228,12 +246,12 @@ async function loadSubscriptionSuggestions() {
     }))
     const allPatterns = detectionService.detectPatterns(bankTransactions)
     
-    // Filter patterns with reasonable confidence
+    // Filter patterns with reasonable confidence and exclude ones user has already given feedback on
     suggestions.value = allPatterns.filter(pattern => {
-      return pattern.confidence >= 0.5
+      return pattern.confidence >= 0.5 && !dismissedMerchants.value.has(pattern.merchant)
     })
     
-    console.log(`Found ${suggestions.value.length} subscription suggestions (filtered from ${allPatterns.length} total patterns)`)
+    console.log(`Found ${suggestions.value.length} subscription suggestions (filtered from ${allPatterns.length} total patterns, ${dismissedMerchants.value.size} already reviewed)`)
     
   } catch (err: any) {
     suggestionsError.value = err.message || 'Failed to load subscription suggestions'
@@ -244,17 +262,47 @@ async function loadSubscriptionSuggestions() {
 }
 
 function handleSuggestionConfirmed(suggestion: RecurringPattern) {
-  // Handle confirmation logic here
   console.log('Confirmed suggestion:', suggestion)
-  // Remove from suggestions
+  // Feedback is already recorded in the database via useSubscriptionFeedback
+  // Add to dismissed set so it doesn't reappear in this session
+  dismissedMerchants.value.add(suggestion.merchant)
+  // Remove from current suggestions list
   suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
 }
 
-function handleSuggestionRejected(suggestion: RecurringPattern) {
-  // Handle rejection logic here
+function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: string) {
   console.log('Rejected suggestion:', suggestion)
-  // Remove from suggestions
+  
+  // Store feedback ID for undo
+  if (feedbackId) {
+    lastFeedbackId.value = feedbackId
+  }
+  
+  // Add to dismissed set so it doesn't reappear in this session
+  dismissedMerchants.value.add(suggestion.merchant)
+  
+  // Remove from current suggestions list
+  const removedSuggestion = suggestion
   suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
+  
+  // Show toast with undo option
+  toast.info(`"${suggestion.merchant}" dismissed`, {
+    label: 'Undo',
+    onClick: async () => {
+      if (lastFeedbackId.value) {
+        const success = await undoFeedback(lastFeedbackId.value)
+        if (success) {
+          // Remove from dismissed set
+          dismissedMerchants.value.delete(removedSuggestion.merchant)
+          // Add back to suggestions list
+          suggestions.value.unshift(removedSuggestion)
+          toast.success('Dismissal undone')
+        } else {
+          toast.error('Failed to undo')
+        }
+      }
+    }
+  })
 }
 
 const markedCount = computed(() =>

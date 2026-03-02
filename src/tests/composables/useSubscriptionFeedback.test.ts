@@ -219,10 +219,11 @@ describe('useSubscriptionFeedback', () => {
           body: expect.stringContaining('"userAction":"rejected"'),
         })
       )
-      expect(result).toBe(true)
+      // Now returns feedback ID instead of boolean
+      expect(result).toBe('feedback-1')
     })
 
-    test('returns false when rejection feedback fails', async () => {
+    test('returns null when rejection feedback fails', async () => {
       // Arrange
       const { rejectSubscription } = useSubscriptionFeedback()
       const rejectParams = {
@@ -242,7 +243,8 @@ describe('useSubscriptionFeedback', () => {
       const result = await rejectSubscription(rejectParams)
 
       // Assert
-      expect(result).toBe(false)
+      // Returns null on failure instead of false
+      expect(result).toBe(null)
     })
   })
 
