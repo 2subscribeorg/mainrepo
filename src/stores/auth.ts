@@ -283,11 +283,14 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('No user logged in')
       }
 
+      console.log('🔐 Reauthenticating user:', currentUser.email)
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
       await reauthenticateWithCredential(currentUser, credential)
+      console.log('✅ Reauthentication successful')
       return { success: true, message: 'Reauthentication successful' }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to reauthenticate'
+      console.error('❌ Reauthentication failed:', message)
       return { success: false, message }
     }
   }
@@ -346,11 +349,16 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      console.log('🔐 Starting password change process...')
+      
       // Reauthenticate first (Firebase security requirement)
+      console.log('🔐 Step 1: Reauthenticating with current password...')
       const reauth = await reauthenticate(currentPassword)
       if (!reauth.success) {
+        console.error('❌ Reauthentication failed:', reauth.message)
         throw new Error(reauth.message)
       }
+      console.log('✅ Reauthentication successful')
 
       const auth = getFirebaseAuth()
       const currentUser = auth.currentUser
@@ -359,10 +367,19 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('No user logged in')
       }
 
+      console.log('🔐 Step 2: Updating password in Firebase...')
       await firebaseUpdatePassword(currentUser, newPassword)
+      console.log('✅ Password updated successfully in Firebase')
+      
+      // Force token refresh to ensure new credentials are active
+      console.log('🔐 Step 3: Refreshing authentication token...')
+      await currentUser.getIdToken(true)
+      console.log('✅ Token refreshed')
+      
       return { success: true, message: 'Password updated successfully' }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to update password'
+      console.error('❌ Password change failed:', message)
       error.value = message
       return { success: false, message }
     } finally {
