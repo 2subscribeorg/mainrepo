@@ -223,9 +223,12 @@ async function loadSubscriptionSuggestions() {
     const { getUserFeedback } = useFeedback()
     const userFeedback = await getUserFeedback(1000)
     
-    // Build set of merchants user has already given feedback on (case-insensitive)
+    // Build set of merchants user has REJECTED (not confirmed) - case-insensitive
+    // Only rejected feedback should prevent suggestions from appearing again
     dismissedMerchants.value = new Set(
-      userFeedback.map(f => f.merchantName.toLowerCase())
+      userFeedback
+        .filter(f => f.userAction === 'rejected')
+        .map(f => f.merchantName.toLowerCase())
     )
     
     // Use actual pattern detection service
