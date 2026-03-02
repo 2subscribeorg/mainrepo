@@ -29,7 +29,10 @@ export function useSubscriptionFeedback() {
   
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+  // Use VITE_BACKEND_API_URL to match PlaidBackendService
+  // If it includes /api, use as-is, otherwise append /api
+  const backendUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002'
+  const API_BASE = backendUrl.includes('/api') ? backendUrl.replace('/api', '') : backendUrl
   
   // Category selection modal state
   const showCategoryModal = ref(false)
