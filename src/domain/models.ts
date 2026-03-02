@@ -28,7 +28,7 @@ export interface Subscription {
   lastPaymentDate?: string
   categoryId: ID
   status: 'active' | 'paused' | 'cancelled' | 'pending_review'  // pending_review = detected but not confirmed
-  source: 'mock' | 'plaid' | 'manual'
+  source: 'mock' | 'plaid' | 'manual' | 'pattern_detection'
   // Phase 2 fields
   userId?: ID  // Owner of this subscription
   plaidTransactionIds?: ID[]  // Links to transactions that detected this

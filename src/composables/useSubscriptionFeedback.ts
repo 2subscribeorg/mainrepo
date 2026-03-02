@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { SubscriptionFeedback, Category } from '@/domain/models'
+import type { SubscriptionFeedback, Category, Subscription } from '@/domain/models'
 import { useAuth } from './useAuth'
 import { getFirebaseAuthToken } from '@/utils/authHelpers'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
@@ -133,9 +133,9 @@ export function useSubscriptionFeedback() {
       const params = pendingSubscriptionData.value
 
       // Create the actual subscription with selected category - following the same pattern as Transactions.vue
-      const newSubscription = {
+      const newSubscription: Subscription = {
         id: crypto.randomUUID(),
-        userId: user.value?.uid || 'unknown',
+        userId: user.value?.id || 'unknown',
         merchantName: params.merchantName,
         amount: {
           amount: params.amount.amount,
@@ -199,11 +199,11 @@ export function useSubscriptionFeedback() {
 
     try {
       // Create new category first - following the same pattern as useCategoryManagement.ts
-      const newCategory = {
+      const newCategory: Category = {
         id: crypto.randomUUID(),
         name: categoryData.name.trim(),
         colour: categoryData.colour,
-        userId: user.value?.uid || 'unknown',
+        userId: user.value?.id || 'unknown',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
@@ -233,6 +233,23 @@ export function useSubscriptionFeedback() {
   }
 
   async function rejectSubscription(params: Omit<RecordFeedbackParams, 'userAction'>): Promise<string | null> {
+    // Optimistically cache the rejection in localStorage to prevent race conditions
+    try {
+      const cacheKey = `rejected_merchants_${user.value?.id || 'anonymous'}`
+      const cached = localStorage.getItem(cacheKey)
+      const rejectedMerchants = cached ? JSON.parse(cached) : []
+      
+      // Add this merchant if not already cached (case-insensitive)
+      const merchantLower = params.merchantName.toLowerCase()
+      if (!rejectedMerchants.includes(merchantLower)) {
+        rejectedMerchants.push(merchantLower)
+        localStorage.setItem(cacheKey, JSON.stringify(rejectedMerchants))
+        console.log(`💾 Cached rejection for ${params.merchantName}`)
+      }
+    } catch (err) {
+      console.warn('Failed to cache rejection locally:', err)
+    }
+
     const result = await recordFeedback({
       ...params,
       userAction: 'rejected',
@@ -249,14 +266,11 @@ export function useSubscriptionFeedback() {
     try {
       const token = await getAuthToken()
       
-      // Add timestamp to prevent caching issues
-      const timestamp = Date.now()
       const response = await fetch(
-        `${API_BASE}/api/feedback/user/${user.value?.uid}?limit=${limit}&_t=${timestamp}`,
+        `${API_BASE}/api/feedback/user/${user.value?.id}?limit=${limit}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Cache-Control': 'no-cache',
           },
         }
       )
@@ -267,7 +281,38 @@ export function useSubscriptionFeedback() {
       }
 
       const result = await response.json()
-      return result.data || []
+      const dbFeedback = result.data || []
+      
+      // Merge with locally cached rejections to handle race conditions
+      try {
+        const cacheKey = `rejected_merchants_${user.value?.id || 'anonymous'}`
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          const cachedMerchants: string[] = JSON.parse(cached)
+          const dbMerchants = new Set(dbFeedback.map((f: SubscriptionFeedback) => f.merchantName.toLowerCase()))
+          
+          // Add synthetic feedback entries for cached merchants not yet in DB
+          cachedMerchants.forEach(merchantName => {
+            if (!dbMerchants.has(merchantName)) {
+              dbFeedback.push({
+                id: `cached_${merchantName}`,
+                transactionId: 'pending',
+                userId: user.value?.id || 'unknown',
+                merchantName: merchantName,
+                amount: { amount: 0, currency: 'GBP' },
+                date: new Date().toISOString(),
+                userAction: 'rejected',
+                timestamp: new Date().toISOString()
+              } as SubscriptionFeedback)
+              console.log(`📦 Using cached rejection for ${merchantName}`)
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to merge cached rejections:', err)
+      }
+      
+      return dbFeedback
     } catch (err: any) {
       error.value = err.message
       console.error('Error fetching feedback:', err)
@@ -306,11 +351,27 @@ export function useSubscriptionFeedback() {
     }
   }
 
-  async function undoFeedback(feedbackId: string): Promise<boolean> {
+  async function undoFeedback(feedbackId: string, merchantName?: string): Promise<boolean> {
     loading.value = true
     error.value = null
 
     try {
+      // Remove from localStorage cache if merchant name provided
+      if (merchantName) {
+        try {
+          const cacheKey = `rejected_merchants_${user.value?.id || 'anonymous'}`
+          const cached = localStorage.getItem(cacheKey)
+          if (cached) {
+            const rejectedMerchants: string[] = JSON.parse(cached)
+            const filtered = rejectedMerchants.filter(m => m !== merchantName.toLowerCase())
+            localStorage.setItem(cacheKey, JSON.stringify(filtered))
+            console.log(`🗑️ Removed ${merchantName} from cache`)
+          }
+        } catch (err) {
+          console.warn('Failed to remove from cache:', err)
+        }
+      }
+
       const token = await getAuthToken()
       
       const response = await fetch(`${API_BASE}/api/feedback/${feedbackId}`, {
