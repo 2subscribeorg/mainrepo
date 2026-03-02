@@ -12,6 +12,7 @@ app.use(createPinia())
 app.use(router)
 
 // Bootstrap application (initializes Firebase if needed)
-await bootstrapApp()
-
-app.mount('#app')
+;(async () => {
+  await bootstrapApp()
+  app.mount('#app')
+})()
