@@ -62,6 +62,8 @@ export class FirebaseSubscriptionFeedbackRepo {
   }
 
   async getUserFeedback(userId: string, limitCount: number = 100): Promise<SubscriptionFeedback[]> {
+    console.log('Loading feedback from Firebase for userId:', userId)
+    
     const q = query(
       collection(this.db, this.collectionName),
       where('userId', '==', userId),
@@ -69,12 +71,24 @@ export class FirebaseSubscriptionFeedbackRepo {
       limit(limitCount)
     )
 
-    const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      timestamp: doc.data().timestamp?.toDate?.()?.toISOString() || new Date().toISOString()
-    })) as SubscriptionFeedback[]
+    try {
+      const querySnapshot = await getDocs(q)
+      const feedback = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate?.()?.toISOString() || new Date().toISOString()
+      })) as SubscriptionFeedback[]
+      
+      console.log(`Loaded ${feedback.length} feedback items from Firebase:`, feedback.map(f => ({ merchant: f.merchantName, action: f.userAction })))
+      return feedback
+    } catch (error: any) {
+      console.error('Error loading feedback from Firebase:', {
+        code: error.code,
+        message: error.message,
+        userId
+      })
+      throw error
+    }
   }
 
   async deleteFeedback(feedbackId: string): Promise<void> {
