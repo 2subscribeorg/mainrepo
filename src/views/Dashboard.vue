@@ -121,7 +121,7 @@
           {{ suggestionsError }}
         </div>
         
-        <div v-else-if="suggestions.length === 0" class="text-center py-6 text-gray-500">
+        <div v-else-if="filteredSuggestions.length === 0" class="text-center py-6 text-gray-500">
           <p>No subscription suggestions at the moment.</p>
         </div>
         
@@ -157,6 +157,7 @@ import { useRouter } from 'vue-router'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
 import { useToast } from '@/composables/useToast'
+import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
@@ -176,6 +177,7 @@ const transactionsDataStore = useTransactionsDataStore()
 const { activeWarnings, dismissWarning } = useRenewalWarnings()
 const categoriesStore = useCategoriesStore()
 const bankAccountsStore = useBankAccountsStore()
+const { user } = useAuth()
 const loading = ref(true)
 const highlightedIndex = ref<number | null>(null)
 const showAll = ref(false)
@@ -190,6 +192,23 @@ const { undoFeedback } = useSubscriptionFeedback()
 // Track last feedback ID for undo functionality
 const lastFeedbackId = ref<string | null>(null)
 
+// Synchronously pull from localStorage immediately on setup
+// This ensures dismissed merchants are loaded BEFORE the template renders
+const syncLocalDismissed = () => {
+  const cacheKey = `rejected_merchants_${user.value?.id || 'anonymous'}`
+  const cached = localStorage.getItem(cacheKey)
+  if (cached) {
+    try {
+      const names = JSON.parse(cached) as string[]
+      names.forEach(name => dismissedMerchants.value.add(name.toLowerCase()))
+      console.log(`📦 Loaded ${names.length} dismissed merchants from cache`)
+    } catch (err) {
+      console.warn('Failed to parse cached dismissed merchants:', err)
+    }
+  }
+}
+syncLocalDismissed()
+
 // Get all transactions that are marked as subscriptions (with or without categories)
 const subscriptionTransactions = computed(() => 
   transactionsDataStore.transactions.filter((tx) => tx.subscriptionId)
@@ -197,9 +216,18 @@ const subscriptionTransactions = computed(() =>
 
 const totalSubscriptions = computed(() => subscriptionTransactions.value.length)
 
-// Subscription suggestions
+// Reactive filtering - this is the "source of truth" for the UI
+// Automatically filters out dismissed merchants whenever suggestions or dismissedMerchants changes
+const filteredSuggestions = computed(() => {
+  return suggestions.value.filter(pattern => {
+    const isDismissed = dismissedMerchants.value.has(pattern.merchant.toLowerCase())
+    return !isDismissed
+  })
+})
+
+// Subscription suggestions - now uses filtered list
 const visibleSuggestions = computed(() => 
-  showAllSuggestions.value ? suggestions.value : suggestions.value.slice(0, 2)
+  showAllSuggestions.value ? filteredSuggestions.value : filteredSuggestions.value.slice(0, 2)
 )
 
 async function handleDismissWarning(warningId: string) {
@@ -223,13 +251,11 @@ async function loadSubscriptionSuggestions() {
     const { getUserFeedback } = useFeedback()
     const userFeedback = await getUserFeedback(1000)
     
-    // Build set of merchants user has REJECTED (not confirmed) - case-insensitive
+    // Merge database rejections with existing dismissed set (don't overwrite)
     // Only rejected feedback should prevent suggestions from appearing again
-    dismissedMerchants.value = new Set(
-      userFeedback
-        .filter(f => f.userAction === 'rejected')
-        .map(f => f.merchantName.toLowerCase())
-    )
+    userFeedback
+      .filter(f => f.userAction === 'rejected')
+      .forEach(f => dismissedMerchants.value.add(f.merchantName.toLowerCase()))
     
     // Use actual pattern detection service
     const detectionService = new SubscriptionDetectionService()
@@ -249,13 +275,11 @@ async function loadSubscriptionSuggestions() {
     }))
     const allPatterns = detectionService.detectPatterns(bankTransactions)
     
-    // Filter patterns with reasonable confidence and exclude ones user has already given feedback on
-    // Use case-insensitive comparison for merchant names
-    suggestions.value = allPatterns.filter(pattern => {
-      return pattern.confidence >= 0.5 && !dismissedMerchants.value.has(pattern.merchant.toLowerCase())
-    })
+    // Store ALL patterns with reasonable confidence
+    // Filtering happens in the computed property, not here
+    suggestions.value = allPatterns.filter(pattern => pattern.confidence >= 0.5)
     
-    console.log(`Found ${suggestions.value.length} subscription suggestions (filtered from ${allPatterns.length} total patterns, ${dismissedMerchants.value.size} already reviewed)`)
+    console.log(`Found ${suggestions.value.length} patterns (${dismissedMerchants.value.size} dismissed, ${filteredSuggestions.value.length} visible)`)
     
   } catch (err: any) {
     suggestionsError.value = err.message || 'Failed to load subscription suggestions'
@@ -268,10 +292,9 @@ async function loadSubscriptionSuggestions() {
 function handleSuggestionConfirmed(suggestion: RecurringPattern) {
   console.log('Confirmed suggestion:', suggestion)
   // Feedback is already recorded in the database via useSubscriptionFeedback
-  // Add to dismissed set so it doesn't reappear in this session (case-insensitive)
+  // Add to dismissed set so it doesn't reappear (case-insensitive)
+  // The computed property will automatically hide it from the UI
   dismissedMerchants.value.add(suggestion.merchant.toLowerCase())
-  // Remove from current suggestions list
-  suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
 }
 
 function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: string) {
@@ -282,24 +305,18 @@ function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: str
     lastFeedbackId.value = feedbackId
   }
   
-  // Add to dismissed set so it doesn't reappear in this session (case-insensitive)
+  // Add to dismissed set immediately - the computed property will hide it instantly
   dismissedMerchants.value.add(suggestion.merchant.toLowerCase())
-  
-  // Remove from current suggestions list
-  const removedSuggestion = suggestion
-  suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
   
   // Show toast with undo option
   toast.info(`"${suggestion.merchant}" dismissed`, {
     label: 'Undo',
     onClick: async () => {
       if (lastFeedbackId.value) {
-        const success = await undoFeedback(lastFeedbackId.value, removedSuggestion.merchant)
+        const success = await undoFeedback(lastFeedbackId.value, suggestion.merchant)
         if (success) {
-          // Remove from dismissed set (case-insensitive)
-          dismissedMerchants.value.delete(removedSuggestion.merchant.toLowerCase())
-          // Add back to suggestions list
-          suggestions.value.unshift(removedSuggestion)
+          // Remove from dismissed set - the computed property will show it again
+          dismissedMerchants.value.delete(suggestion.merchant.toLowerCase())
           toast.success('Dismissal undone')
         } else {
           toast.error('Failed to undo')
