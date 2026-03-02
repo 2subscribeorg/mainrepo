@@ -223,9 +223,9 @@ async function loadSubscriptionSuggestions() {
     const { getUserFeedback } = useFeedback()
     const userFeedback = await getUserFeedback(1000)
     
-    // Build set of merchants user has already given feedback on
+    // Build set of merchants user has already given feedback on (case-insensitive)
     dismissedMerchants.value = new Set(
-      userFeedback.map(f => f.merchantName)
+      userFeedback.map(f => f.merchantName.toLowerCase())
     )
     
     // Use actual pattern detection service
@@ -247,8 +247,9 @@ async function loadSubscriptionSuggestions() {
     const allPatterns = detectionService.detectPatterns(bankTransactions)
     
     // Filter patterns with reasonable confidence and exclude ones user has already given feedback on
+    // Use case-insensitive comparison for merchant names
     suggestions.value = allPatterns.filter(pattern => {
-      return pattern.confidence >= 0.5 && !dismissedMerchants.value.has(pattern.merchant)
+      return pattern.confidence >= 0.5 && !dismissedMerchants.value.has(pattern.merchant.toLowerCase())
     })
     
     console.log(`Found ${suggestions.value.length} subscription suggestions (filtered from ${allPatterns.length} total patterns, ${dismissedMerchants.value.size} already reviewed)`)
@@ -264,8 +265,8 @@ async function loadSubscriptionSuggestions() {
 function handleSuggestionConfirmed(suggestion: RecurringPattern) {
   console.log('Confirmed suggestion:', suggestion)
   // Feedback is already recorded in the database via useSubscriptionFeedback
-  // Add to dismissed set so it doesn't reappear in this session
-  dismissedMerchants.value.add(suggestion.merchant)
+  // Add to dismissed set so it doesn't reappear in this session (case-insensitive)
+  dismissedMerchants.value.add(suggestion.merchant.toLowerCase())
   // Remove from current suggestions list
   suggestions.value = suggestions.value.filter(s => s.merchant !== suggestion.merchant)
 }
@@ -278,8 +279,8 @@ function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: str
     lastFeedbackId.value = feedbackId
   }
   
-  // Add to dismissed set so it doesn't reappear in this session
-  dismissedMerchants.value.add(suggestion.merchant)
+  // Add to dismissed set so it doesn't reappear in this session (case-insensitive)
+  dismissedMerchants.value.add(suggestion.merchant.toLowerCase())
   
   // Remove from current suggestions list
   const removedSuggestion = suggestion
@@ -292,8 +293,8 @@ function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: str
       if (lastFeedbackId.value) {
         const success = await undoFeedback(lastFeedbackId.value)
         if (success) {
-          // Remove from dismissed set
-          dismissedMerchants.value.delete(removedSuggestion.merchant)
+          // Remove from dismissed set (case-insensitive)
+          dismissedMerchants.value.delete(removedSuggestion.merchant.toLowerCase())
           // Add back to suggestions list
           suggestions.value.unshift(removedSuggestion)
           toast.success('Dismissal undone')
