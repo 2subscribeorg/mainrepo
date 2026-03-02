@@ -9,10 +9,13 @@ lerna-debug.log*
 
 # Environment variables
 .env
-.env.*
 .env.local
 .env.production
 .env.development
+.env.*.local
+
+# Allow example env file
+!.env.example
 
 node_modules
 dist
@@ -42,6 +45,10 @@ coverage/
 
 # Documentation (keep locally, don't commit)
 *.md
+
+# Allow critical setup documentation
+!PRODUCTION_SETUP.md
+!README.md
 
 # Admin Dashboard (exclude from deployment)
 # admin-dashboard/

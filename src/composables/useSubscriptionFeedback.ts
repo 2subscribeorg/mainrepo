@@ -29,7 +29,7 @@ export function useSubscriptionFeedback() {
   
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002'
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3002'
   
   // Category selection modal state
   const showCategoryModal = ref(false)
