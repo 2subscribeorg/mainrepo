@@ -243,19 +243,22 @@ async function loadSubscriptionSuggestions() {
     suggestionsLoading.value = true
     suggestionsError.value = null
     
-    // Ensure transactions are loaded
-    await transactionsDataStore.fetchTransactions()
-    
-    // Fetch user's feedback history from database to know what they've already dismissed
+    // CRITICAL: Load database rejections FIRST, before doing anything else
+    // This ensures dismissed merchants are in the Set before suggestions populate
     const { useSubscriptionFeedback: useFeedback } = await import('@/composables/useSubscriptionFeedback')
     const { getUserFeedback } = useFeedback()
     const userFeedback = await getUserFeedback(1000)
     
-    // Merge database rejections with existing dismissed set (don't overwrite)
+    // Merge database rejections with existing dismissed set (includes localStorage cache)
     // Only rejected feedback should prevent suggestions from appearing again
     userFeedback
       .filter(f => f.userAction === 'rejected')
       .forEach(f => dismissedMerchants.value.add(f.merchantName.toLowerCase()))
+    
+    console.log(`📋 Loaded ${dismissedMerchants.value.size} dismissed merchants (DB + localStorage)`)
+    
+    // Now load transactions and detect patterns
+    await transactionsDataStore.fetchTransactions()
     
     // Use actual pattern detection service
     const detectionService = new SubscriptionDetectionService()
@@ -279,7 +282,7 @@ async function loadSubscriptionSuggestions() {
     // Filtering happens in the computed property, not here
     suggestions.value = allPatterns.filter(pattern => pattern.confidence >= 0.5)
     
-    console.log(`Found ${suggestions.value.length} patterns (${dismissedMerchants.value.size} dismissed, ${filteredSuggestions.value.length} visible)`)
+    console.log(`✅ Found ${suggestions.value.length} patterns → ${filteredSuggestions.value.length} visible after filtering`)
     
   } catch (err: any) {
     suggestionsError.value = err.message || 'Failed to load subscription suggestions'
