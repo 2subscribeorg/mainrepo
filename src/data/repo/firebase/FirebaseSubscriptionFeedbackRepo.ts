@@ -39,13 +39,26 @@ export class FirebaseSubscriptionFeedbackRepo {
       timestamp: Timestamp.now()
     }
 
-    const docRef = await addDoc(collection(this.db, this.collectionName), feedbackData)
+    console.log('Attempting to save feedback:', { userId, merchantName, userAction, collection: this.collectionName })
 
-    return {
-      id: docRef.id,
-      ...feedbackData,
-      timestamp: new Date().toISOString()
-    } as SubscriptionFeedback
+    try {
+      const docRef = await addDoc(collection(this.db, this.collectionName), feedbackData)
+      console.log('Feedback saved successfully:', docRef.id)
+
+      return {
+        id: docRef.id,
+        ...feedbackData,
+        timestamp: new Date().toISOString()
+      } as SubscriptionFeedback
+    } catch (error: any) {
+      console.error('Firebase error saving feedback:', {
+        code: error.code,
+        message: error.message,
+        userId,
+        collection: this.collectionName
+      })
+      throw error
+    }
   }
 
   async getUserFeedback(userId: string, limitCount: number = 100): Promise<SubscriptionFeedback[]> {
