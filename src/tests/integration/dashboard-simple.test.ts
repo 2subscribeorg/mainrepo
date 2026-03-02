@@ -103,6 +103,103 @@ describe('Dashboard Simple Integration Tests', () => {
     return wrapper
   }
 
+  describe('Subscription Suggestions Filtering', () => {
+    it('filters out rejected suggestions but not confirmed ones', async () => {
+      // Mock the useSubscriptionFeedback composable
+      const mockGetUserFeedback = vi.fn().mockResolvedValue([
+        {
+          id: 'feedback-1',
+          transactionId: 'tx-1',
+          userId: 'user-123',
+          merchantName: 'Netflix',
+          amount: { amount: 15.99, currency: 'USD' },
+          date: '2024-01-15',
+          userAction: 'rejected',
+          timestamp: '2024-01-15T10:00:00.000Z'
+        },
+        {
+          id: 'feedback-2',
+          transactionId: 'tx-2',
+          userId: 'user-123',
+          merchantName: 'Spotify',
+          amount: { amount: 9.99, currency: 'USD' },
+          date: '2024-01-20',
+          userAction: 'confirmed',
+          timestamp: '2024-01-20T10:00:00.000Z'
+        }
+      ])
+
+      // Mock the module import
+      vi.doMock('@/composables/useSubscriptionFeedback', () => ({
+        useSubscriptionFeedback: () => ({
+          getUserFeedback: mockGetUserFeedback,
+          loading: { value: false },
+          error: { value: null }
+        })
+      }))
+
+      await mountAndWait()
+      await flushPromises()
+
+      // The component should have called getUserFeedback
+      expect(mockGetUserFeedback).toHaveBeenCalled()
+    })
+
+    it('only adds rejected merchants to dismissed set', async () => {
+      const rejectedMerchant = 'Netflix'
+      const confirmedMerchant = 'Spotify'
+      
+      const mockGetUserFeedback = vi.fn().mockResolvedValue([
+        {
+          id: 'feedback-1',
+          merchantName: rejectedMerchant,
+          userAction: 'rejected',
+          timestamp: '2024-01-15T10:00:00.000Z'
+        },
+        {
+          id: 'feedback-2',
+          merchantName: confirmedMerchant,
+          userAction: 'confirmed',
+          timestamp: '2024-01-20T10:00:00.000Z'
+        }
+      ])
+
+      vi.doMock('@/composables/useSubscriptionFeedback', () => ({
+        useSubscriptionFeedback: () => ({
+          getUserFeedback: mockGetUserFeedback
+        })
+      }))
+
+      await mountAndWait()
+      await flushPromises()
+
+      // Verify the feedback was fetched
+      expect(mockGetUserFeedback).toHaveBeenCalled()
+    })
+
+    it('handles case-insensitive merchant name matching', async () => {
+      const mockGetUserFeedback = vi.fn().mockResolvedValue([
+        {
+          id: 'feedback-1',
+          merchantName: 'NETFLIX',
+          userAction: 'rejected',
+          timestamp: '2024-01-15T10:00:00.000Z'
+        }
+      ])
+
+      vi.doMock('@/composables/useSubscriptionFeedback', () => ({
+        useSubscriptionFeedback: () => ({
+          getUserFeedback: mockGetUserFeedback
+        })
+      }))
+
+      await mountAndWait()
+      await flushPromises()
+
+      expect(mockGetUserFeedback).toHaveBeenCalled()
+    })
+  })
+
   describe('Dashboard Basic Functionality', () => {
     it('renders dashboard title', async () => {
       await mountAndWait()

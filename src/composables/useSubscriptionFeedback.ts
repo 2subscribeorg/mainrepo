@@ -249,11 +249,14 @@ export function useSubscriptionFeedback() {
     try {
       const token = await getAuthToken()
       
+      // Add timestamp to prevent caching issues
+      const timestamp = Date.now()
       const response = await fetch(
-        `${API_BASE}/api/feedback/user/${user.value?.uid}?limit=${limit}`,
+        `${API_BASE}/api/feedback/user/${user.value?.uid}?limit=${limit}&_t=${timestamp}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
           },
         }
       )
