@@ -351,6 +351,23 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       console.log('🔐 Starting password change process...')
       
+      // Validate new password strength (Firebase minimum is 6, but we enforce 8)
+      if (newPassword.length < 8) {
+        return { success: false, message: 'Password must be at least 8 characters long' }
+      }
+      
+      // Additional password strength checks
+      const hasUpperCase = /[A-Z]/.test(newPassword)
+      const hasLowerCase = /[a-z]/.test(newPassword)
+      const hasNumber = /[0-9]/.test(newPassword)
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+        return { 
+          success: false, 
+          message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
+        }
+      }
+      
       // Reauthenticate first (Firebase security requirement)
       console.log('🔐 Step 1: Reauthenticating with current password...')
       const reauth = await reauthenticate(currentPassword)

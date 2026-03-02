@@ -235,6 +235,16 @@ async function handleChangePassword() {
     return
   }
 
+  // Validate password strength
+  const hasUpperCase = /[A-Z]/.test(newPassword.value)
+  const hasLowerCase = /[a-z]/.test(newPassword.value)
+  const hasNumber = /[0-9]/.test(newPassword.value)
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    errorMessage.value = 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    return
+  }
+
   const { success, message } = await updatePassword(currentPassword.value, newPassword.value)
 
   if (success) {
