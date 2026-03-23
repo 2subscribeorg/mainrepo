@@ -18,6 +18,59 @@ import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncServi
 import { emailVerificationService } from '@/services/EmailVerificationService'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 
+/**
+ * SECURITY: Secure error message handler for authentication
+ * Prevents information disclosure about user existence
+ */
+function getSecureAuthMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    
+    // Firebase auth error codes that reveal user existence
+    const userExistenceErrors = [
+      'auth/user-not-found',
+      'auth/wrong-password', 
+      'auth/email-already-in-use',
+      'auth/user-disabled',
+      'auth/invalid-credential'
+    ]
+    
+    // Check if error reveals user existence
+    const revealsUserExistence = userExistenceErrors.some(errCode => 
+      message.includes(errCode.toLowerCase())
+    )
+    
+    if (revealsUserExistence) {
+      // Return generic message that doesn't reveal if user exists
+      return 'Invalid email or password. Please try again.'
+    }
+    
+    // Handle other Firebase auth errors generically
+    if (message.includes('auth/invalid-email')) {
+      return 'Invalid email address. Please check and try again.'
+    }
+    
+    if (message.includes('auth/weak-password')) {
+      return 'Password does not meet security requirements.'
+    }
+    
+    if (message.includes('auth/too-many-requests')) {
+      return 'Too many attempts. Please try again later.'
+    }
+    
+    if (message.includes('auth/network-request-failed')) {
+      return 'Network error. Please check your connection and try again.'
+    }
+    
+    if (message.includes('timeout')) {
+      return 'Request timed out. Please try again.'
+    }
+  }
+  
+  // Fallback for any other errors
+  return 'Authentication failed. Please try again.'
+}
+
 export interface User {
   id: string
   name: string
@@ -69,7 +122,6 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Prevent multiple listener registrations
     if (listenerInitialized) {
-      console.debug('Auth listener already initialized, skipping')
       return
     }
 
@@ -168,9 +220,10 @@ export const useAuthStore = defineStore('auth', () => {
           }, 10000)
         })
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to sign in'
-        error.value = message
-        throw new Error(message)
+        // SECURITY: Never expose Firebase error messages that reveal user existence
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        throw new Error(secureMessage)
       }
     })
   }
@@ -233,9 +286,10 @@ export const useAuthStore = defineStore('auth', () => {
           }, 10000)
         })
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to sign up'
-        error.value = message
-        throw new Error(message)
+        // SECURITY: Never expose Firebase error messages that reveal user existence
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        throw new Error(secureMessage)
       }
     })
   }
@@ -245,7 +299,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function logout() {
     if (!isFirebaseMode) {
-      console.warn('logout() only works in Firebase mode')
       return
     }
 
@@ -256,8 +309,10 @@ export const useAuthStore = defineStore('auth', () => {
         await signOut(auth)
         user.value = null
       } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed to logout'
-        throw e
+        // SECURITY: Never expose Firebase error messages
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        throw new Error(secureMessage)
       }
     })
   }
@@ -267,7 +322,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function sendPasswordReset(email: string) {
     if (!isFirebaseMode) {
-      console.warn('sendPasswordReset() only works in Firebase mode')
       return { success: false, message: 'Password reset not available in Mock mode' }
     }
 
@@ -278,9 +332,10 @@ export const useAuthStore = defineStore('auth', () => {
         await sendPasswordResetEmail(auth, email)
         return { success: true, message: 'Password reset email sent' }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to send password reset email'
-        error.value = message
-        return { success: false, message }
+        // SECURITY: Never expose Firebase error messages that reveal user existence
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        return { success: false, message: secureMessage }
       }
     })
   }
@@ -305,9 +360,9 @@ export const useAuthStore = defineStore('auth', () => {
       await reauthenticateWithCredential(currentUser, credential)
       return { success: true, message: 'Reauthentication successful' }
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to reauthenticate'
-      console.error('❌ Reauthentication failed:', message)
-      return { success: false, message }
+      // SECURITY: Never expose Firebase error messages
+      const secureMessage = getSecureAuthMessage(e)
+      return { success: false, message: secureMessage }
     }
   }
 
@@ -316,7 +371,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function changeEmail(newEmail: string, currentPassword: string) {
     if (!isFirebaseMode) {
-      console.warn('changeEmail() only works in Firebase mode')
       return { success: false, message: 'Email change not available in Mock mode' }
     }
 
@@ -345,9 +399,10 @@ export const useAuthStore = defineStore('auth', () => {
         
         return { success: true, message: 'Email updated successfully' }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to update email'
-        error.value = message
-        return { success: false, message }
+        // SECURITY: Never expose Firebase error messages
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        return { success: false, message: secureMessage }
       }
     })
   }
@@ -357,7 +412,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function changePassword(currentPassword: string, newPassword: string) {
     if (!isFirebaseMode) {
-      console.warn('changePassword() only works in Firebase mode')
       return { success: false, message: 'Password change not available in Mock mode' }
     }
 
@@ -402,10 +456,10 @@ export const useAuthStore = defineStore('auth', () => {
         
         return { success: true, message: 'Password updated successfully' }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to update password'
-        console.error('❌ Password change failed:', message)
-        error.value = message
-        return { success: false, message }
+        // SECURITY: Never expose Firebase error messages
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        return { success: false, message: secureMessage }
       }
     })
   }
@@ -415,7 +469,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function deleteAccount(currentPassword: string) {
     if (!isFirebaseMode) {
-      console.warn('deleteAccount() only works in Firebase mode')
       return { success: false, message: 'Account deletion not available in Mock mode' }
     }
 
@@ -460,9 +513,10 @@ export const useAuthStore = defineStore('auth', () => {
       
         return { success: true, message: 'Account deleted successfully' }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to delete account'
-        error.value = message
-        return { success: false, message }
+        // SECURITY: Never expose Firebase error messages
+        const secureMessage = getSecureAuthMessage(e)
+        error.value = secureMessage
+        return { success: false, message: secureMessage }
       }
     })
   }

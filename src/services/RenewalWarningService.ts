@@ -9,7 +9,6 @@ class RenewalWarningService {
     try {
       return await getFirebaseAuthToken()
     } catch (error) {
-      console.error('Auth token error:', error)
       throw error
     }
   }

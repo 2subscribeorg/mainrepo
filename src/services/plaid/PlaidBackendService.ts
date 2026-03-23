@@ -36,7 +36,6 @@ export class PlaidBackendService {
     try {
       return await user.getIdToken()
     } catch (error) {
-      console.error('Failed to get auth token:', error)
       throw new Error('Failed to get authentication token')
     }
   }
@@ -183,10 +182,8 @@ export class PlaidBackendService {
       
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
-        console.error('❌ Validation error:', error.message)
         throw error
       }
-      console.error('❌ Backend disconnectBank error:', error)
       throw new Error(`Failed to disconnect bank: ${error.message}`)
     }
   }

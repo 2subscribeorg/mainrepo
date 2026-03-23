@@ -21,7 +21,6 @@ export class PlaidTokenService {
       })
       
     } catch (error) {
-      console.error('❌ Failed to store access token:', error)
       throw new Error('Failed to store access token')
     }
   }
@@ -37,13 +36,11 @@ export class PlaidTokenService {
       const tokenDoc = await getDoc(tokenRef)
       
       if (!tokenDoc.exists()) {
-        console.warn(`⚠️ No access token found for item: ${itemId}`)
         return null
       }
       
       return tokenDoc.data().accessToken
     } catch (error) {
-      console.error('❌ Failed to get access token:', error)
       return null
     }
   }
@@ -59,7 +56,6 @@ export class PlaidTokenService {
       await deleteDoc(tokenRef)
       
     } catch (error) {
-      console.error('❌ Failed to delete access token:', error)
       throw new Error('Failed to delete access token')
     }
   }
@@ -75,12 +71,7 @@ export class PlaidTokenService {
     }
     
     if (!auth.currentUser) {
-      console.error('❌ Firebase Auth currentUser is null')
-      console.error('Auth state:', { 
-        app: auth.app?.name,
-        config: auth.config,
-      })
-      throw new Error('User not authenticated. Please log in again.')
+      throw new Error('Firebase Auth currentUser is null')
     }
     
     return auth.currentUser.uid

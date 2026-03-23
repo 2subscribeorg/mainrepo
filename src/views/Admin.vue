@@ -220,7 +220,6 @@ onMounted(async () => {
       categoriesStore.fetchAll(),
     ])
   } catch (error) {
-    console.error('Admin page loading error:', error)
     // Handle error gracefully - individual store operations may have their own error handling
   }
 })

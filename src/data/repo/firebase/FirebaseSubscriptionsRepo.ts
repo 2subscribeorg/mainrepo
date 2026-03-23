@@ -188,7 +188,6 @@ export class FirebaseSubscriptionsRepo implements ISubscriptionsRepo {
         callback(results)
       },
       (error) => {
-        console.error('Firebase subscription error:', error)
         callback([]) // Return empty on error
       }
     )

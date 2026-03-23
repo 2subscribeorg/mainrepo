@@ -12,28 +12,27 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
   const error = ref<string | null>(null)
   
   const { withLoading, isLoading } = useLoadingStates()
-  const loading = isLoading('bankTransactions')
+  const loading = isLoading('transactions')
 
   const repo = repoFactory.getBankTransactionsRepo()
 
   const needsReviewCount = computed(() => pendingPatterns.value.length)
 
   async function fetchUnmatched() {
-    return await withLoading('bankTransactions', async () => {
+    return await withLoading('transactions', async () => {
       error.value = null
       try {
         // Remove mock data - get patterns from pattern detection instead
         unmatchedTransactions.value = await repo.getUnmatched()
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to fetch unmatched transactions'
-        console.error('❌ Failed to fetch unmatched transactions:', e)
         throw e
       }
     })
   }
 
   async function matchToSubscription(transactionId: ID, subscriptionId: ID) {
-    return await withLoading('bankTransactions', async () => {
+    return await withLoading('transactions', async () => {
       error.value = null
       try {
         await repo.matchToSubscription(transactionId, subscriptionId)
@@ -43,17 +42,15 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
           item => item.transaction.id !== transactionId
         )
         
-        console.log(`✅ Matched transaction ${transactionId} to subscription ${subscriptionId}`)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to match transaction'
-        console.error('❌ Failed to match transaction:', e)
         throw e
       }
     })
   }
 
   async function dismissTransaction(transactionId: ID) {
-    return await withLoading('bankTransactions', async () => {
+    return await withLoading('transactions', async () => {
       error.value = null
       try {
         await repo.dismiss(transactionId)
@@ -63,17 +60,15 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
           item => item.transaction.id !== transactionId
         )
         
-        console.log(`✅ Dismissed transaction ${transactionId}`)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to dismiss transaction'
-        console.error('❌ Failed to dismiss transaction:', e)
         throw e
       }
     })
   }
 
   async function syncFromBank(accountId: ID) {
-    return await withLoading('bankTransactions', async () => {
+    return await withLoading('transactions', async () => {
       error.value = null
       try {
         await repo.syncFromBank(accountId)
@@ -81,10 +76,8 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
         // Refresh unmatched list after sync
         await fetchUnmatched()
         
-        console.log(`✅ Synced transactions from bank account ${accountId}`)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to sync from bank'
-        console.error('❌ Failed to sync from bank:', e)
         throw e
       }
     })
@@ -94,7 +87,6 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
     try {
       return await repo.getForSubscription(subscriptionId)
     } catch (e) {
-      console.error('❌ Failed to get transactions for subscription:', e)
       return []
     }
   }
@@ -110,7 +102,6 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
       // Note: Actual subscription creation will be handled by SubscriptionDetectionService
       return pattern
     } catch (e) {
-      console.error('❌ Failed to create subscription from pattern:', e)
       throw e
     }
   }
@@ -120,7 +111,6 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
       // Remove from pending patterns
       pendingPatterns.value = pendingPatterns.value.filter(p => p !== pattern)
     } catch (e) {
-      console.error('❌ Failed to dismiss pattern:', e)
       throw e
     }
   }

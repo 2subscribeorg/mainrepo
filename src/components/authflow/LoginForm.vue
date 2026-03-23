@@ -1,17 +1,18 @@
 <template>
-  <div class="login-form">
-    <h2 class="text-2xl font-bold mb-6 text-text-primary">Sign In</h2>
+  <FormErrorBoundary preserve-form-data>
+    <div class="login-form">
+      <h2 class="text-2xl font-bold mb-6 text-text-primary">Sign In</h2>
 
-    <!-- Error Message -->
-    <div
-      v-if="errorMessage"
-      class="mb-4 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
-    >
-      {{ errorMessage }}
-    </div>
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="mb-4 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
+      >
+        {{ errorMessage }}
+      </div>
 
-    <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="space-y-4">
+      <!-- Form -->
+      <form @submit.prevent="handleSubmit" class="space-y-4">
       <!-- Email Input -->
       <div>
         <label for="email" class="block text-sm font-medium text-text-secondary mb-1">
@@ -79,13 +80,15 @@
         Sign up
       </button>
     </div>
-  </div>
+    </div>
+  </FormErrorBoundary>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
+import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
 
 // Emits
 defineEmits<{

@@ -39,11 +39,8 @@ export class FirebaseSubscriptionFeedbackRepo {
       timestamp: Timestamp.now()
     }
 
-    console.log('Attempting to save feedback:', { userId, merchantName, userAction, collection: this.collectionName })
-
     try {
       const docRef = await addDoc(collection(this.db, this.collectionName), feedbackData)
-      console.log('Feedback saved successfully:', docRef.id)
 
       return {
         id: docRef.id,
@@ -51,19 +48,11 @@ export class FirebaseSubscriptionFeedbackRepo {
         timestamp: new Date().toISOString()
       } as SubscriptionFeedback
     } catch (error: any) {
-      console.error('Firebase error saving feedback:', {
-        code: error.code,
-        message: error.message,
-        userId,
-        collection: this.collectionName
-      })
-      throw error
+      throw new Error(`Failed to save feedback: ${error.message}`)
     }
   }
 
   async getUserFeedback(userId: string, limitCount: number = 100): Promise<SubscriptionFeedback[]> {
-    console.log('Loading feedback from Firebase for userId:', userId)
-    
     const q = query(
       collection(this.db, this.collectionName),
       where('userId', '==', userId),
@@ -79,15 +68,9 @@ export class FirebaseSubscriptionFeedbackRepo {
         timestamp: doc.data().timestamp?.toDate?.()?.toISOString() || new Date().toISOString()
       })) as SubscriptionFeedback[]
       
-      console.log(`Loaded ${feedback.length} feedback items from Firebase:`, feedback.map(f => ({ merchant: f.merchantName, action: f.userAction })))
       return feedback
     } catch (error: any) {
-      console.error('Error loading feedback from Firebase:', {
-        code: error.code,
-        message: error.message,
-        userId
-      })
-      throw error
+      throw new Error(`Failed to load feedback: ${error.message}`)
     }
   }
 

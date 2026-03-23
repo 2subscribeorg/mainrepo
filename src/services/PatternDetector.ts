@@ -47,7 +47,6 @@ export class PatternDetector {
       
       return patterns.sort((a, b) => b.confidence - a.confidence)
     } catch (error) {
-      console.error('❌ Error in PatternDetector.detectPatterns:', error)
       return []
     }
   }

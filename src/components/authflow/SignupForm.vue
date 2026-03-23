@@ -1,27 +1,28 @@
 <template>
-  <div class="signup-form">
-    <h2 class="text-2xl font-bold mb-6 text-text-primary">Create Account</h2>
+  <FormErrorBoundary preserve-form-data>
+    <div class="signup-form">
+      <h2 class="text-2xl font-bold mb-6 text-text-primary">Create Account</h2>
 
-    <!-- Error Message -->
-    <div
-      v-if="errorMessage"
-      class="mb-4 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
-    >
-      {{ errorMessage }}
-    </div>
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="mb-4 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
+      >
+        {{ errorMessage }}
+      </div>
 
-    <!-- Validation Errors -->
-    <div
-      v-if="validationErrors.length > 0"
-      class="mb-4 p-3 bg-warning-bg border border-warning-border text-warning-text rounded-lg text-sm"
-    >
-      <ul class="list-disc list-inside space-y-1">
-        <li v-for="error in validationErrors" :key="error">{{ error }}</li>
-      </ul>
-    </div>
+      <!-- Validation Errors -->
+      <div
+        v-if="validationErrors.length > 0"
+        class="mb-4 p-3 bg-warning-bg border border-warning-border text-warning-text rounded-lg text-sm"
+      >
+        <ul class="list-disc list-inside space-y-1">
+          <li v-for="error in validationErrors" :key="error">{{ error }}</li>
+        </ul>
+      </div>
 
-    <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="space-y-4">
+      <!-- Form -->
+      <form @submit.prevent="handleSubmit" class="space-y-4">
       <!-- Email Input -->
       <div>
         <label for="signup-email" class="block text-sm font-medium text-text-secondary mb-1">
@@ -99,7 +100,8 @@
         Sign in
       </button>
     </div>
-  </div>
+    </div>
+  </FormErrorBoundary>
 </template>
 
 <script setup lang="ts">
@@ -108,6 +110,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
 import { validatePassword as validatePasswordStrength, isPasswordValid } from '@/utils/passwordValidation'
+import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
 
 // Emits
 defineEmits<{

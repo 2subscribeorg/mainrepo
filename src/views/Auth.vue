@@ -8,21 +8,23 @@
       </div>
 
       <!-- Login, Signup, or Forgot Password Form -->
-      <div class="mt-8">
-        <LoginForm
-          v-if="mode === 'login'"
-          @switch-to-signup="mode = 'signup'"
-          @forgot-password="mode = 'forgot'"
-        />
-        <SignupForm
-          v-else-if="mode === 'signup'"
-          @switch-to-login="mode = 'login'"
-        />
-        <ForgotPasswordForm
-          v-else-if="mode === 'forgot'"
-          @back-to-login="mode = 'login'"
-        />
-      </div>
+      <ErrorBoundary component="AuthForms">
+        <div class="mt-8">
+          <LoginForm
+            v-if="mode === 'login'"
+            @switch-to-signup="mode = 'signup'"
+            @forgot-password="mode = 'forgot'"
+          />
+          <SignupForm
+            v-else-if="mode === 'signup'"
+            @switch-to-login="mode = 'login'"
+          />
+          <ForgotPasswordForm
+            v-else-if="mode === 'forgot'"
+            @back-to-login="mode = 'login'"
+          />
+        </div>
+      </ErrorBoundary>
 
       <!-- Mode Toggle (Alternative) -->
       <div class="text-center text-sm text-gray-500">
@@ -42,6 +44,7 @@ import { ref } from 'vue'
 import LoginForm from '@/components/authflow/LoginForm.vue'
 import SignupForm from '@/components/authflow/SignupForm.vue'
 import ForgotPasswordForm from '@/components/authflow/ForgotPasswordForm.vue'
+import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const mode = ref<'login' | 'signup' | 'forgot'>('login')

@@ -39,7 +39,6 @@ export class EmailVerificationService {
 
       return { success: true }
     } catch (error: any) {
-      console.error('Failed to send verification email:', error)
       return {
         success: false,
         error: error.message || 'Failed to send verification email',
@@ -56,7 +55,6 @@ export class EmailVerificationService {
       await user.reload()
       return user.emailVerified
     } catch (error) {
-      console.error('Failed to reload user:', error)
       return false
     }
   }

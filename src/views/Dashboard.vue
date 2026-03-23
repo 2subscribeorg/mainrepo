@@ -8,134 +8,135 @@
 
     <div v-else class="mt-6 space-y-6">
       <!-- Expiring connections banner -->
-      <ConnectionExpirationBanner />
+      <ErrorBoundary component="ConnectionExpirationBanner">
+        <ConnectionExpirationBanner />
+      </ErrorBoundary>
       
       <!-- Renewal Warnings Section -->
-      <div v-if="activeWarnings.length > 0" class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Upcoming Renewals</h3>
-          <span class="text-sm text-gray-500">{{ activeWarnings.length }} warning{{ activeWarnings.length !== 1 ? 's' : '' }}</span>
-        </div>
-        <div class="space-y-3">
-          <RenewalWarningCard
-            v-for="warning in activeWarnings"
-            :key="warning.id"
-            :warning="warning"
-            @dismiss="handleDismissWarning"
-            @view-subscription="handleViewSubscription"
-          />
-        </div>
-      </div>
-
-      <div class="donut-card">
-        <div class="donut-card__header">
-          <div>
-            <p class="donut-card__eyebrow">Subscription categories</p>
-            <h3 class="donut-card__title">{{ totalSubscriptions }} subscription transactions</h3>
+      <AsyncErrorBoundary loading-message="Loading renewal warnings...">
+        <div v-if="activeWarnings.length > 0" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Upcoming Renewals</h3>
+            <span class="text-sm text-gray-500">{{ activeWarnings.length }} warning{{ activeWarnings.length !== 1 ? 's' : '' }}</span>
+          </div>
+          <div class="space-y-3">
+            <RenewalWarningCard
+              v-for="warning in activeWarnings"
+              :key="warning.id"
+              :warning="warning"
+              @dismiss="handleDismissWarning"
+              @view-subscription="handleViewSubscription"
+            />
           </div>
         </div>
-        <div class="donut-card__body">
-          <!-- Large centered donut chart -->
-          <div class="donut-card__chart-container">
-            <div class="donut-card__chart" :style="{ background: donutGradient }">
-              <!-- Icons positioned inside donut segments -->
-              <div 
-                v-for="seg in segmentIcons" 
-                :key="seg.categoryId"
-                class="donut-segment-icon"
-                :style="{ left: seg.x + '%', top: seg.y + '%' }"
-              >
-                <component 
-                  v-if="seg.iconComponent" 
-                  :is="seg.iconComponent" 
-                  :size="seg.iconSize" 
-                  class="donut-segment-icon__svg"
-                />
-              </div>
-              <div class="donut-card__center">
-                <p class="donut-center__value">{{ totalSpending }}</p>
-                <p class="donut-center__label">monthly</p>
-              </div>
+      </AsyncErrorBoundary>
+
+      <ErrorBoundary component="DonutChart">
+        <div class="donut-card">
+          <div class="donut-card__header">
+            <div>
+              <p class="donut-card__eyebrow">Subscription categories</p>
+              <h3 class="donut-card__title">{{ totalSubscriptions }} subscription transactions</h3>
             </div>
           </div>
-          
-          <!-- Vertical legend list below chart -->
-          <div class="donut-card__legend-container">
-            <div class="legend-list" :class="{ 'legend-list--scrollable': categoryData.length > 4 }">
-              <div 
-                v-for="(item, index) in displayedCategories" 
-                :key="item.categoryId" 
-                class="legend-item"
-                :class="{ 'legend-item--highlighted': highlightedIndex === index }"
-                @click="highlightSegment(index)"
-                @mouseenter="highlightSegment(index)"
-                @mouseleave="clearHighlight"
-              >
-                <div class="legend-visual">
-                  <CategoryIcon 
-                    :icon="item.icon" 
-                    :fallback-color="item.color"
-                    :show-icon="true"
-                    size="md"
+          <div class="donut-card__body">
+            <!-- Large centered donut chart -->
+            <div class="donut-card__chart-container">
+              <div class="donut-card__chart" :style="{ background: donutGradient }">
+                <!-- Icons positioned inside donut segments -->
+                <div 
+                  v-for="seg in segmentIcons" 
+                  :key="seg.categoryId"
+                  class="donut-segment-icon"
+                  :style="{ left: seg.x + '%', top: seg.y + '%' }"
+                >
+                  <component 
+                    v-if="seg.iconComponent" 
+                    :is="seg.iconComponent" 
+                    :size="seg.iconSize" 
+                    class="donut-segment-icon__svg"
                   />
                 </div>
-                <div class="legend-content">
-                  <div class="legend-main">
-                    <p class="legend-name">{{ item.categoryName }}</p>
-                    <p class="legend-percentage">{{ Math.round(item.percentage) }}%</p>
-                  </div>
-                  <p class="legend-count">{{ item.formattedAmount }} • {{ item.count }} subscription{{ item.count !== 1 ? 's' : '' }}</p>
+                <div class="donut-card__center">
+                  <p class="donut-center__value">{{ totalSpending }}</p>
+                  <p class="donut-center__label">monthly</p>
                 </div>
               </div>
             </div>
             
-            <!-- See All button for many categories -->
-            <button 
-              v-if="categoryData.length > 4" 
-              class="see-all-button"
-              @click="toggleSeeAll"
-            >
-              {{ showAll ? 'Show Less' : `See All ${categoryData.length} Categories` }}
-            </button>
+            <!-- Vertical legend list below chart -->
+            <div class="donut-card__legend-container">
+              <div class="legend-list">
+                <div 
+                  v-for="(item, index) in displayedCategories" 
+                  :key="item.categoryId" 
+                  class="legend-item"
+                  :class="{ 'legend-item--highlighted': highlightedIndex === index }"
+                  @click="highlightSegment(index)"
+                  @mouseenter="highlightSegment(index)"
+                  @mouseleave="clearHighlight"
+                >
+                  <div class="legend-visual">
+                    <CategoryIcon 
+                      :icon="item.icon" 
+                      :fallback-color="item.color"
+                      :show-icon="true"
+                      size="md"
+                    />
+                  </div>
+                  <div class="legend-content">
+                    <div class="legend-main">
+                      <p class="legend-name">{{ item.categoryName }}</p>
+                      <p class="legend-percentage">{{ Math.round(item.percentage) }}%</p>
+                    </div>
+                    <p class="legend-count">{{ item.formattedAmount }} • {{ item.count }} subscription{{ item.count !== 1 ? 's' : '' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </ErrorBoundary>
 
       <!-- Subscription Suggestions Section -->
-      <div class="bg-white rounded-2xl shadow-sm p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Subscription Insights</h3>
-          <button 
-            @click="showAllSuggestions = !showAllSuggestions"
-            class="text-sm text-blue-600 hover:underline focus:outline-none"
-          >
-            {{ showAllSuggestions ? 'Show Less' : 'View All' }}
-          </button>
-        </div>
-        
-        <div v-if="suggestionsLoading" class="flex justify-center py-4">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        </div>
-        
-        <div v-else-if="suggestionsError" class="text-red-500 text-sm py-2">
-          {{ suggestionsError }}
-        </div>
-        
-        <div v-else-if="filteredSuggestions.length === 0" class="text-center py-6 text-gray-500">
-          <p>No subscription suggestions at the moment.</p>
-        </div>
-        
-        <div v-else class="space-y-4">
-          <div v-for="suggestion in visibleSuggestions" :key="suggestion.merchant">
-            <SubscriptionSuggestionCard 
-              :pattern="suggestion"
-              @confirmed="handleSuggestionConfirmed"
-              @rejected="handleSuggestionRejected"
-              class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow"
-            />
+      <ErrorBoundary component="SubscriptionSuggestions">
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Subscription Insights</h3>
+            <button 
+              @click="showAllSuggestions = !showAllSuggestions"
+              class="text-sm text-blue-600 hover:underline focus:outline-none"
+            >
+              {{ showAllSuggestions ? 'Show Less' : 'View All' }}
+            </button>
           </div>
+          
+          <AsyncErrorBoundary loading-message="Loading suggestions...">
+            <div v-if="suggestionsLoading" class="flex justify-center py-4">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+            
+            <div v-else-if="suggestionsError" class="text-red-500 text-sm py-2">
+              {{ suggestionsError }}
+            </div>
+            
+            <div v-else-if="filteredSuggestions.length === 0" class="text-center py-6 text-gray-500">
+              <p>No subscription suggestions at the moment.</p>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div v-for="suggestion in visibleSuggestions" :key="suggestion.merchant">
+                <SubscriptionSuggestionCard 
+                  :pattern="suggestion"
+                  @confirmed="handleSuggestionConfirmed"
+                  @rejected="handleSuggestionRejected"
+                  class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow"
+                />
+              </div>
+            </div>
+          </AsyncErrorBoundary>
         </div>
-      </div>
+      </ErrorBoundary>
 
       <div class="action-card">
         <div class="action-card__content">
@@ -152,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
@@ -160,7 +161,7 @@ import { useToast } from '@/composables/useToast'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
-import { useTransactionsDataStore } from '@/stores/transactionsData'
+import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
@@ -171,17 +172,18 @@ import { getIconComponent } from '@/utils/categoryIcons'
 import { SubscriptionDetectionService } from '@/services/SubscriptionDetectionService'
 import type { RecurringPattern } from '@/services/PatternDetector'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
+import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
-const transactionsDataStore = useTransactionsDataStore()
+const transactionsStore = useTransactionsStore()
 const { activeWarnings, dismissWarning } = useRenewalWarnings()
 const categoriesStore = useCategoriesStore()
 const bankAccountsStore = useBankAccountsStore()
 const { user } = useAuth()
 const { setLoading, isLoading, withLoading } = useLoadingStates()
 const highlightedIndex = ref<number | null>(null)
-const showAll = ref(false)
 const showAllSuggestions = ref(false)
 const suggestions = ref<RecurringPattern[]>([])
 const suggestionsError = ref<string | null>(null)
@@ -199,99 +201,135 @@ const lastFeedbackId = ref<string | null>(null)
 // Synchronously pull from localStorage immediately on setup
 // This ensures dismissed merchants are loaded BEFORE the template renders
 const syncLocalDismissed = () => {
-  const cacheKey = `rejected_merchants_${user.value?.id || 'anonymous'}`
-  const cached = localStorage.getItem(cacheKey)
-  if (cached) {
-    try {
+  if (!user.value?.id) {
+    console.warn('No user ID available for localStorage sync')
+    return
+  }
+  
+  const cacheKey = `rejected_merchants_${user.value.id}`
+  try {
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
       const names = JSON.parse(cached) as string[]
-      names.forEach(name => dismissedMerchants.value.add(name.toLowerCase()))
-    } catch (err) {
-      console.warn('Failed to parse cached dismissed merchants:', err)
+      if (Array.isArray(names)) {
+        names.forEach(name => {
+          if (typeof name === 'string' && name.trim()) {
+            dismissedMerchants.value.add(name.toLowerCase().trim())
+          }
+        })
+        console.log(`Loaded ${names.length} dismissed merchants from localStorage`)
+      }
     }
+  } catch (err) {
+    console.warn('Failed to load dismissed merchants from localStorage:', err)
+    // Don't clear the set - just continue with empty state
   }
 }
 syncLocalDismissed()
 
-// Get all transactions that are marked as subscriptions (with or without categories)
-// Memoized subscription transactions with cache
-const subscriptionTransactionsMemoKey = computed(() => 
-  `${transactionsDataStore.transactions.value.length}-${transactionsDataStore.transactions.value.map(tx => tx.subscriptionId ? '1' : '0').join('')}`
-)
-
-const subscriptionTransactionsCache = new Map<string, any>()
-
-const subscriptionTransactions = computed(() => {
-  const memoKey = subscriptionTransactionsMemoKey.value
-  
-  // Bypass cache in test mode to ensure fresh calculation
-  const isTestMode = import.meta.env.VITE_TEST_MODE === 'true'
-  if (!isTestMode && subscriptionTransactionsCache.has(memoKey)) {
-    return subscriptionTransactionsCache.get(memoKey)
+// Watch for user changes and resync dismissed merchants
+watch(() => user.value?.id, (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    // Clear the current set and resync for the new user
+    dismissedMerchants.value.clear()
+    categoryStatsCache.value.clear() // Also clear category cache on user change
+    syncLocalDismissed()
   }
+}, { immediate: false })
+
+// Persistent cache for category statistics with automatic cleanup
+const categoryStatsCache = ref(new Map<string, { count: number; totalAmount: number }>())
+const lastCacheUpdate = ref<string>('')
+
+// Cache cleanup function to prevent memory bloat
+const cleanupCategoryCache = () => {
+  const maxCacheSize = 100 // Limit cache size
+  if (categoryStatsCache.value.size > maxCacheSize) {
+    // Remove oldest entries (simple FIFO cleanup)
+    const entries = Array.from(categoryStatsCache.value.entries())
+    categoryStatsCache.value.clear()
+    // Keep only the most recent entries
+    entries.slice(-maxCacheSize * 0.8).forEach(([key, value]) => {
+      categoryStatsCache.value.set(key, value)
+    })
+  }
+}
+
+// Watch for user changes to clear cache
+watch(() => user.value?.id, () => {
+  categoryStatsCache.value.clear()
+}, { immediate: false })
+
+// Get comprehensive category data from all sources
+const subscriptionData = computed(() => {
+  const subscriptions = subscriptionsStore.subscriptions || []
+  const transactions = transactionsStore.transactions || []
   
-  const result = transactionsDataStore.transactions.value.filter((tx) => tx.subscriptionId)
+  // Get all transactions (not just subscription ones) to capture all categories
+  const allTransactions = transactions
   
-  if (!isTestMode) {
-    subscriptionTransactionsCache.set(memoKey, result)
-    
-    // Clean up cache
-    if (subscriptionTransactionsCache.size > 5) {
-      const oldestKey = subscriptionTransactionsCache.keys().next().value
-      if (oldestKey !== undefined) {
-        subscriptionTransactionsCache.delete(oldestKey)
+  // Start with direct subscriptions
+  const mergedData = [...subscriptions]
+  
+  // Add category information from all transactions
+  // This ensures we capture categories even from non-subscription transactions
+  const categoryMap = new Map<string, { amount: number; count: number }>()
+  
+  // Process all transactions to build category statistics
+  allTransactions.forEach((tx: any) => {
+    if (tx.categoryId) {
+      const existing = categoryMap.get(tx.categoryId) || { amount: 0, count: 0 }
+      categoryMap.set(tx.categoryId, {
+        amount: existing.amount + Math.abs(tx.amount?.amount || 0),
+        count: existing.count + 1
+      })
+    }
+  })
+  
+  // Update subscriptions with transaction-derived category data
+  mergedData.forEach((sub: any) => {
+    if (sub.categoryId && categoryMap.has(sub.categoryId)) {
+      const categoryData = categoryMap.get(sub.categoryId)!
+      // Use subscription amount but ensure we have category info
+    }
+  })
+  
+  // Add synthetic entries for categories that appear in transactions but not in subscriptions
+  categoryMap.forEach((data, categoryId) => {
+    const hasSubscription = mergedData.some((sub: any) => sub.categoryId === categoryId)
+    if (!hasSubscription) {
+      // Find the category details
+      const category = categoriesStore.categories?.find((c: any) => c.id === categoryId)
+      if (category) {
+        mergedData.push({
+          id: `category_${categoryId}`,
+          merchantName: category.name,
+          amount: { amount: data.amount, currency: 'GBP' },
+          categoryId: categoryId,
+          status: 'active',
+          source: 'pattern_detection', // Use valid source from Subscription type
+          recurrence: 'monthly', // Default recurrence for synthetic entries
+          nextPaymentDate: new Date().toISOString().split('T')[0] // Today's date as default
+        })
       }
     }
-  }
+  })
   
-  return result
+  return mergedData
 })
 
 const totalSubscriptions = computed(() => {
-  // Simple test - return a fixed value to see if template renders
-  if (import.meta.env.VITE_TEST_MODE === 'true') {
-    console.log('totalSubscriptions computed - test mode')
-    return 2 // Fixed value for testing
-  }
-  
-  const count = subscriptionTransactions.value.length
-  // Debug log in test mode
-  if (import.meta.env.VITE_TEST_MODE === 'true') {
-    console.log('totalSubscriptions computed:', count)
-  }
-  return count
+  return subscriptionData.value.length
 })
 
-// Optimized suggestion filtering with memoization
-const suggestionFilterMemoKey = computed(() => 
-  `${suggestions.value.length}-${Array.from(dismissedMerchants.value).sort().join(',')}`
-)
-
-const suggestionFilterCache = new Map<string, any>()
-
 const filteredSuggestions = computed(() => {
-  const memoKey = suggestionFilterMemoKey.value
-  
-  if (suggestionFilterCache.has(memoKey)) {
-    return suggestionFilterCache.get(memoKey)
-  }
-  
-  const result = suggestions.value.filter(pattern => {
+  return suggestions.value.filter(pattern => {
     const isDismissed = dismissedMerchants.value.has(pattern.merchant.toLowerCase())
     return !isDismissed
   })
-  
-  suggestionFilterCache.set(memoKey, result)
-  
-  // Clean up cache
-  if (suggestionFilterCache.size > 5) {
-    const oldestKey = suggestionFilterCache.keys().next().value
-    suggestionFilterCache.delete(oldestKey)
-  }
-  
-  return result
 })
 
-// Optimized visible suggestions - avoid redundant slice operations
+// Visible suggestions with show/hide functionality
 const visibleSuggestions = computed(() => {
   const filtered = filteredSuggestions.value
   return showAllSuggestions.value ? filtered : filtered.slice(0, 2)
@@ -310,50 +348,61 @@ async function loadSubscriptionSuggestions() {
     try {
       suggestionsError.value = null
     
-    // CRITICAL: Load database rejections FIRST, before doing anything else
-    // This ensures dismissed merchants are in the Set before suggestions populate
-    const { useSubscriptionFeedback: useFeedback } = await import('@/composables/useSubscriptionFeedback')
-    const { getUserFeedback } = useFeedback()
-    const userFeedback = await getUserFeedback(1000)
-    
-    // Merge database rejections with existing dismissed set (includes localStorage cache)
-    // Only rejected feedback should prevent suggestions from appearing again
-    if (userFeedback && Array.isArray(userFeedback)) {
-      userFeedback
-        .filter(f => f.userAction === 'rejected')
-        .forEach(f => dismissedMerchants.value.add(f.merchantName.toLowerCase()))
-    }
+      // CRITICAL: Load database rejections FIRST, before doing anything else
+      // This ensures dismissed merchants are in the Set before suggestions populate
+      try {
+        const { useSubscriptionFeedback: useFeedback } = await import('@/composables/useSubscriptionFeedback')
+        const { getUserFeedback } = useFeedback()
+        const userFeedback = await getUserFeedback(1000)
+        
+        // Merge database rejections with existing dismissed set (includes localStorage cache)
+        // Only rejected feedback should prevent suggestions from appearing again
+        if (userFeedback && Array.isArray(userFeedback)) {
+          userFeedback
+            .filter(f => f.userAction === 'rejected')
+            .forEach(f => dismissedMerchants.value.add(f.merchantName.toLowerCase()))
+        }
+      } catch (dbError) {
+        // If database loading fails, we still have localStorage merchants from syncLocalDismissed()
+        // Don't clear the dismissed set, just log the error and continue
+        console.warn('Failed to load database rejections, using localStorage only:', dbError)
+      }
     
     
     // Now load transactions and detect patterns
-    await transactionsDataStore.fetchTransactions()
-    
-    // Use actual pattern detection service
-    const detectionService = new SubscriptionDetectionService()
-    const bankTransactions = transactionsDataStore.transactions.value.map((tx) => ({
-      id: tx.id,
-      accountId: tx.accountId ?? '',
-      amount: tx.amount,
-      merchantName: tx.merchantName,
-      date: tx.date,
-      category: tx.category,
-      pending: tx.pending ?? false,
-      transactionType: 'purchase' as const,
-      subscriptionId: tx.subscriptionId,
-      matchedSubscriptionId: tx.subscriptionId,
-      userId: tx.userId,
-      createdAt: tx.createdAt,
-    }))
-    const allPatterns = detectionService.detectPatterns(bankTransactions)
-    
-    // Store ALL patterns with reasonable confidence
-    // Filtering happens in the computed property, not here
-    suggestions.value = allPatterns.filter(pattern => pattern.confidence >= 0.5)
+      try {
+        await transactionsStore.fetchTransactions()
+        
+        // Use actual pattern detection service
+        const detectionService = new SubscriptionDetectionService()
+        const bankTransactions = transactionsStore.transactions?.map((tx: any) => ({
+          id: tx.id,
+          accountId: tx.accountId ?? '',
+          amount: tx.amount,
+          merchantName: tx.merchantName,
+          date: tx.date,
+          category: tx.category,
+          pending: tx.pending ?? false,
+          transactionType: 'purchase' as const,
+          subscriptionId: tx.subscriptionId,
+          matchedSubscriptionId: tx.subscriptionId,
+          userId: tx.userId,
+          createdAt: tx.createdAt,
+        })) || []
+        const allPatterns = detectionService.detectPatterns(bankTransactions)
+        
+        // Store ALL patterns with reasonable confidence
+        // Filtering happens in the computed property, not here
+        suggestions.value = allPatterns?.filter(pattern => pattern.confidence >= 0.5) || []
+      } catch (patternError) {
+        // If pattern detection fails, ensure we still have empty suggestions rather than undefined
+        console.warn('Failed to detect patterns, showing no suggestions:', patternError)
+        suggestions.value = []
+      }
     
     
     } catch (err: any) {
       suggestionsError.value = err.message || 'Failed to load subscription suggestions'
-      console.error('Error loading subscription suggestions:', err)
       throw err // Re-throw to let withLoading handle the finally
     }
   })
@@ -395,54 +444,103 @@ function handleSuggestionRejected(suggestion: RecurringPattern, feedbackId?: str
 }
 
 const markedCount = computed(() =>
-  transactionsDataStore.transactions.value.filter((tx) => tx.subscriptionId).length
+  transactionsStore.transactions?.filter((tx: any) => tx.subscriptionId).length || 0
 )
 
-// Optimized category lookup map to eliminate repeated find() operations
-const categoriesById = computed(() => {
-  return new Map(categoriesStore.categories.map(c => [c.id, c]))
-})
-
-// Memoization key for categoryData to prevent unnecessary recalculations
-const categoryDataMemoKey = computed(() => {
-  const transactionIds = subscriptionTransactions.value.map(tx => `${tx.id}-${tx.categoryId}-${tx.amount?.amount}`).join(',')
-  const categoryIds = categoriesStore.categories.map(c => `${c.id}-${c.name}`).join(',')
-  return `${transactionIds}|${categoryIds}`
-})
-
-// Cache for expensive category data computation
-const categoryDataCache = new Map<string, any>()
-
 const categoryData = computed(() => {
-  const memoKey = categoryDataMemoKey.value
+  const categories = categoriesStore.categories || []
   
-  // Return cached result if available
-  if (categoryDataCache.has(memoKey)) {
-    return categoryDataCache.get(memoKey)
+  // Skip processing if categories aren't loaded yet
+  if (categories.length === 0) {
+    return []
   }
   
-  const categoryStats = new Map<string, { count: number; totalAmount: number }>()
-  const categoryLookup = categoriesById.value
+  // Create cache key based on data changes
+  const cacheKey = `${categories.length}-${subscriptionData.value.length}-${transactionsStore.transactions?.length || 0}`
   
-  subscriptionTransactions.value.forEach((tx) => {
+  // Return cached data if unchanged
+  if (lastCacheUpdate.value === cacheKey && categoryStatsCache.value.size > 0) {
+    cleanupCategoryCache() // Still run cleanup to prevent memory bloat
+    return Array.from(categoryStatsCache.value.entries()).map(([categoryId, stats]) => {
+      if (categoryId === 'uncategorized') {
+        return {
+          categoryId,
+          categoryName: 'Unknown Category',
+          count: stats.count,
+          totalAmount: stats.totalAmount,
+          formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
+          color: '#9CA3AF',
+          icon: undefined,
+          percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
+        }
+      }
+      
+      const category = categories.find((c: any) => c.id === categoryId)
+      return {
+        categoryId,
+        categoryName: category?.name || 'Unknown Category',
+        count: stats.count,
+        totalAmount: stats.totalAmount,
+        formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
+        color: category?.colour || '#6366f1',
+        icon: category?.icon,
+        percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
+      }
+    }).sort((a, b) => b.totalAmount - a.totalAmount)
+  }
+  
+  // Data changed - recalculate and cache
+  const categoryStats = new Map<string, { count: number; totalAmount: number }>()
+  
+  // DEBUG: Let's see what we're working with
+  const allCategoryIds = categories.map((c: any) => c.id)
+  const foundCategoryIds = new Set<string>()
+  
+  subscriptionData.value.forEach((sub: any) => {
+    if (sub.categoryId) {
+      foundCategoryIds.add(sub.categoryId)
+    }
+  })
+  
+  // TEMPORARY: Add missing categories with zero count so they appear
+  allCategoryIds.forEach((categoryId: string) => {
+    if (!foundCategoryIds.has(categoryId)) {
+      categoryStats.set(categoryId, { count: 0, totalAmount: 0 })
+    }
+  })
+  
+  subscriptionData.value.forEach((sub: any) => {
     let categoryKey: string
     
-    if (!tx.categoryId) {
+    if (!sub.categoryId) {
       categoryKey = 'uncategorized'
     } else {
-      // Use optimized lookup instead of find()
-      const category = categoryLookup.get(tx.categoryId)
-      categoryKey = category ? tx.categoryId : 'uncategorized'
+      // Find category by ID - use case-insensitive comparison as fallback
+      let category = categories.find((c: any) => c.id === sub.categoryId)
+      
+      // If not found by exact match, try case-insensitive
+      if (!category) {
+        category = categories.find((c: any) => 
+          c.id.toLowerCase() === sub.categoryId.toLowerCase()
+        )
+      }
+      
+      categoryKey = category ? category.id : 'uncategorized'
     }
     
     const current = categoryStats.get(categoryKey) || { count: 0, totalAmount: 0 }
-    const amount = Math.abs(tx.amount?.amount || 0)
+    const amount = Math.abs(sub.amount?.amount || 0)
     
     categoryStats.set(categoryKey, {
       count: current.count + 1,
       totalAmount: current.totalAmount + amount
     })
   })
+
+  // Update cache
+  categoryStatsCache.value = new Map(categoryStats)
+  lastCacheUpdate.value = cacheKey
+  cleanupCategoryCache()
 
   const result = Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
     if (categoryId === 'uncategorized') {
@@ -458,8 +556,15 @@ const categoryData = computed(() => {
       }
     }
     
-    // Use optimized lookup instead of find()
-    const category = categoryLookup.get(categoryId)
+    // Find category by ID - use case-insensitive comparison as fallback
+    let category = categories.find((c: any) => c.id === categoryId)
+    
+    // If not found by exact match, try case-insensitive
+    if (!category) {
+      category = categories.find((c: any) => 
+        c.id.toLowerCase() === categoryId.toLowerCase()
+      )
+    }
     return {
       categoryId,
       categoryName: category?.name || 'Unknown Category',
@@ -475,23 +580,12 @@ const categoryData = computed(() => {
   // Sort by total amount descending
   result.sort((a, b) => b.totalAmount - a.totalAmount)
   
-  // Cache the result
-  categoryDataCache.set(memoKey, result)
-  
-  // Clean up old cache entries (keep last 10)
-  if (categoryDataCache.size > 10) {
-    const oldestKey = categoryDataCache.keys().next().value
-    categoryDataCache.delete(oldestKey)
-  }
-  
+  // TEMPORARY: Show all categories including zero-count ones for debugging
   return result
 })
 
 const displayedCategories = computed(() => {
-  if (showAll.value) {
-    return categoryData.value
-  }
-  return categoryData.value.slice(0, 4)
+  return categoryData.value  // Show all categories by default
 })
 
 const totalSpending = computed(() => {
@@ -570,9 +664,6 @@ function clearHighlight() {
   highlightedIndex.value = null
 }
 
-function toggleSeeAll() {
-  showAll.value = !showAll.value
-}
 
 onMounted(async () => {
   await withLoading('dashboard', async () => {
@@ -580,12 +671,11 @@ onMounted(async () => {
       await Promise.all([
         loadSubscriptionSuggestions(),
         subscriptionsStore.fetchAll().catch(() => []),
-        transactionsDataStore.fetchAll().catch(() => []),
+        transactionsStore.fetchTransactions().catch(() => []),
         categoriesStore.fetchAll().catch(() => []),
         bankAccountsStore.fetchConnections().catch(() => []),
       ])
     } catch (error) {
-      console.error('Dashboard loading error:', error)
       throw error // Re-throw to let withLoading handle the finally
     }
   })

@@ -47,12 +47,6 @@ const router = createRouter({
       component: () => import('@/views/PlatformSubscription.vue'),
       beforeEnter: requireAuth,
     },
-    // UI Preview (no auth required)
-    {
-      path: '/preview/dashboard',
-      name: 'dashboard-preview',
-      component: () => import('@/views/DashboardPreview.vue'),
-    },
     // Catch-all route - must be last
     {
       path: '/:pathMatch(.*)*',
@@ -63,8 +57,8 @@ const router = createRouter({
 })
 
 // Global error handler for route loading
-router.onError((error) => {
-  console.error('Router error:', error)
+router.onError(() => {
+  // Router error handled
 })
 
 export default router

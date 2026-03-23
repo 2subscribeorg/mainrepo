@@ -146,7 +146,7 @@ async function signOut() {
     await firebaseSignOut(auth)
     router.push('/login')
   } catch (error) {
-    console.error('Sign out error:', error)
+    // Sign out error
   }
 }
 

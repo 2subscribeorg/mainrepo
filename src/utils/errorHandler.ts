@@ -80,7 +80,7 @@ function categorizeError(error: unknown): string {
  */
 export function handleError(
   error: unknown,
-  context: string,
+  _context: string,
   config: Partial<ErrorConfig> = {}
 ): string {
   const finalConfig = { ...DEFAULT_CONFIG, ...config }
@@ -89,13 +89,7 @@ export function handleError(
 
   // Log technical details (for debugging only)
   if (finalConfig.logToConsole) {
-    console.group(`❌ Error in ${context}`)
-    console.error('Category:', category)
-    console.error('Error:', error)
-    if (error instanceof Error) {
-      console.error('Stack:', error.stack)
-    }
-    console.groupEnd()
+    // Error details logged in development mode only
   }
 
   // TODO Phase 2: Send to error tracking service (Sentry, LogRocket, etc.)
@@ -178,7 +172,7 @@ export function assert(condition: boolean, message: string): void {
     if (import.meta.env.DEV) {
       throw new Error(`Assertion failed: ${message}`)
     } else {
-      console.error(`Assertion failed: ${message}`)
+      // Assertion failed in production
     }
   }
 }

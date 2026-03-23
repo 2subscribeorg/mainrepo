@@ -24,7 +24,6 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
     )
 
   } catch (error) {
-    console.error('❌ Failed to sync user to Firestore:', error)
     // Don't throw - we don't want to block login if Firestore sync fails
   }
 }
@@ -56,7 +55,6 @@ export async function createUserProfile(user: FirebaseUser): Promise<void> {
     })
 
   } catch (error) {
-    console.error('❌ Failed to create user profile:', error)
     throw error
   }
 }

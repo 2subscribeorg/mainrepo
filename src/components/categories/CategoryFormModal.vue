@@ -1,53 +1,54 @@
 <template>
   <Teleport to="body">
-    <Transition name="modal" appear>
-      <div
-        v-if="show"
-        class="modal-overlay modal-backdrop-enter"
-        @click.self="$emit('close')"
-        @keydown.esc="handleEscape"
-      >
-        <div 
-          ref="modalRef"
-          class="modal-card modal-enter gpu-accelerated"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
+    <FormErrorBoundary preserve-form-data>
+      <Transition name="modal" appear>
+        <div
+          v-if="show"
+          class="modal-overlay modal-backdrop-enter"
+          @click.self="$emit('close')"
+          @keydown.esc="handleEscape"
         >
-          <h3 id="modal-title" class="modal-title slide-down">
-            {{ editing ? 'Edit Category' : 'Add Category' }}
-          </h3>
+          <div 
+            ref="modalRef"
+            class="modal-card modal-enter gpu-accelerated"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <h3 id="modal-title" class="modal-title slide-down">
+              {{ editing ? 'Edit Category' : 'Add Category' }}
+            </h3>
 
-      <div class="modal-content">
-        <div>
-          <label for="category-name" class="input-label">Name</label>
-          <input
-            id="category-name"
-            v-model="nameModel"
-            type="text"
-            class="text-input input-animated"
-            placeholder="e.g. Streaming"
-            autocomplete="off"
-            aria-describedby="name-hint"
-            :aria-invalid="validationErrors.length > 0"
-            aria-required="true"
-          />
-          <p id="name-hint" class="sr-only">
-            Enter a name for the category
-          </p>
-        </div>
+            <div class="modal-content">
+              <div>
+                <label for="category-name" class="input-label">Name</label>
+                <input
+                  id="category-name"
+                  v-model="nameModel"
+                  type="text"
+                  class="text-input input-animated"
+                  placeholder="e.g. Streaming"
+                  autocomplete="off"
+                  aria-describedby="name-hint"
+                  :aria-invalid="validationErrors.length > 0"
+                  aria-required="true"
+                />
+                <p id="name-hint" class="sr-only">
+                  Enter a name for the category
+                </p>
+              </div>
 
-        <div>
-          <label for="category-color" class="input-label">Color</label>
-          <CategoryColorPicker 
-            id="category-color"
-            v-model="colorModel" 
-            :aria-label="`Select color for category`"
-          />
-        </div>
+              <div>
+                <label for="category-color" class="input-label">Color</label>
+                <CategoryColorPicker 
+                  id="category-color"
+                  v-model="colorModel" 
+                  :aria-label="`Select color for category`"
+                />
+              </div>
 
-        <div>
-          <label for="category-icon" class="input-label">Icon (Optional)</label>
+              <div>
+                <label for="category-icon" class="input-label">Icon (Optional)</label>
           <IconSelector 
             id="category-icon"
             v-model="iconModel" 
@@ -90,8 +91,9 @@
         </button>
       </div>
     </div>
-      </div>
-    </Transition>
+    </div>
+      </Transition>
+    </FormErrorBoundary>
   </Teleport>
 </template>
 
@@ -101,6 +103,7 @@ import CategoryColorPicker from './CategoryColorPicker.vue'
 import ValidationErrors from '@/components/ValidationErrors.vue'
 import IconSelector from '@/components/ui/IconSelector.vue'
 import { getDefaultIconForCategory } from '@/utils/categoryIcons'
+import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
 
 interface CategoryFormData {
   name: string

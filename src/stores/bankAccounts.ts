@@ -22,7 +22,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         connections.value = await repo.listConnections()
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to fetch bank connections'
-        console.error('❌ Failed to fetch bank connections:', e)
         throw e
       }
     })
@@ -37,7 +36,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         return { linkToken }
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to initialize bank connection'
-        console.error('❌ Failed to initialize connection:', e)
         throw e
       } finally {
         connectingBank.value = false
@@ -54,7 +52,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         return connection
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to complete bank connection'
-        console.error('❌ Failed to complete connection:', e)
         throw e
       }
     })
@@ -75,10 +72,8 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
       try {
         await repo.disconnect(connectionId)
         connections.value = connections.value.filter(c => c.id !== connectionId)
-        console.log(`✅ Disconnected from ${connection.institutionName}`)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to disconnect bank'
-        console.error('❌ Failed to disconnect bank:', e)
         throw e
       }
     })
@@ -93,13 +88,11 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         // Show success message
         const connection = connections.value.find(c => c.id === connectionId)
         const institutionName = connection?.institutionName || 'Unknown Bank'
-        console.log(`✅ Synced transactions from ${institutionName}`)
         
         // Optionally refresh connections to get updated sync status
         await fetchConnections()
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to sync transactions'
-        console.error('❌ Failed to sync transactions:', e)
         throw e
       }
     })

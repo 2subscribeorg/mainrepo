@@ -1,12 +1,14 @@
 import { ref } from 'vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
+import { useHybridValidation } from './useHybridValidation'
 import type { Category } from '@/domain/models'
 import { validateCategoryForm, validateCategoryUpdate, getErrorMessages, type CategoryFormData, type CategoryUpdateData } from '@/schemas/form-validation.schema'
 
 export function useCategoryManagement() {
   const categoriesStore = useCategoriesStore()
   const authStore = useAuthStore()
+  const { validateCategory } = useHybridValidation()
   
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -40,6 +42,22 @@ export function useCategoryManagement() {
       if (validatedData.icon) {
         newCategory.icon = validatedData.icon
       }
+      
+      // Validate category data with hybrid validation before saving
+      console.log('🔍 Validating category data...')
+      const validation = await validateCategory({
+        name: newCategory.name,
+        userId: newCategory.userId,
+        color: newCategory.colour,
+        icon: newCategory.icon,
+        isActive: true,
+      })
+      
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Category validation failed')
+      }
+      
+      console.log(`✅ Category validation passed (using ${validation.usingServer ? 'server' : 'client'} validation)`)
       
       await categoriesStore.save(newCategory)
       

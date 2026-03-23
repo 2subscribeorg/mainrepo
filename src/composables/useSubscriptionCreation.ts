@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
+import { useHybridValidation } from './useHybridValidation'
 import type { Transaction, Subscription } from '@/domain/models'
 import type { SubscriptionRecurrence, SubscriptionCreationParams } from '@/types/subscriptions'
 import { calculateNextPaymentDate, getDefaultRecurrenceForMerchant, generateSubscriptionNotes } from '@/utils/subscriptionUtils'
@@ -10,6 +11,7 @@ export function useSubscriptionCreation() {
   const subscriptionsStore = useSubscriptionsStore()
   const transactionsStore = useTransactionsStore()
   const authStore = useAuthStore()
+  const { validateSubscription } = useHybridValidation()
   
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -48,6 +50,26 @@ export function useSubscriptionCreation() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
+      
+      // Validate subscription data before saving
+      console.log('🔍 Validating subscription data...')
+      const validation = await validateSubscription({
+        amount: typeof newSubscription.amount === 'number' ? newSubscription.amount : newSubscription.amount?.amount || 0,
+        merchantName: newSubscription.merchantName,
+        categoryId: newSubscription.categoryId,
+        userId: newSubscription.userId,
+        status: newSubscription.status,
+        frequency: newSubscription.recurrence,
+        nextBillingDate: newSubscription.nextPaymentDate,
+        description: newSubscription.notes,
+        isActive: newSubscription.status === 'active',
+      })
+      
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Subscription validation failed')
+      }
+      
+      console.log(`✅ Subscription validation passed (using ${validation.usingServer ? 'server' : 'client'} validation)`)
       
       // Save subscription
       await subscriptionsStore.save(newSubscription)

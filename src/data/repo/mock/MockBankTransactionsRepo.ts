@@ -139,7 +139,6 @@ export class MockBankTransactionsRepo implements IBankTransactionsRepo {
     }
     
     this.matched.set(transactionId, subscriptionId)
-    console.log('🔗 Matched transaction', transactionId, 'to subscription', subscriptionId)
   }
   
   async dismiss(transactionId: ID): Promise<void> {
@@ -150,15 +149,11 @@ export class MockBankTransactionsRepo implements IBankTransactionsRepo {
     }
     
     this.dismissed.add(transactionId)
-    console.log('✖️ Dismissed transaction', transactionId)
   }
   
-  async syncFromBank(accountId: ID): Promise<void> {
+  async syncFromBank(_accountId: ID): Promise<void> {
     // Mock sync - in real implementation, this would call Plaid API
     await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    console.log('🔄 Mock sync from bank for account', accountId)
-    console.log('💡 In production, this would call Plaid transactions/get endpoint')
     
     // Could add more mock transactions here if needed
   }

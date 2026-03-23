@@ -76,9 +76,7 @@ class BillingService {
       ])
 
       this.initialized = true
-      console.log('✅ Billing Service: Initialized for user', userId)
     } catch (error) {
-      console.error('❌ Billing Service: Failed to initialize', error)
       throw error
     }
   }
@@ -132,7 +130,6 @@ class BillingService {
 
     try {
       // Start Paddle checkout
-      console.log(`🛒 Starting checkout for ${plan.name}...`)
       const paddleResult = await mockPaddle.startCheckout({
         priceId: plan.paddlePriceId,
         customData: { planId }
@@ -145,12 +142,10 @@ class BillingService {
       // If Paddle payment succeeded, grant access via RevenueCat
       if (paddleResult.transactionId) {
         await mockRevenueCat.grantProAccess(paddleResult.transactionId)
-        console.log(`✅ Purchase completed: ${plan.name}`)
       }
 
       return paddleResult
     } catch (error: any) {
-      console.error('❌ Purchase failed:', error)
       return {
         success: false,
         error: error.message || 'Purchase failed'
@@ -163,7 +158,6 @@ class BillingService {
    */
   async cancelSubscription(): Promise<void> {
     await mockRevenueCat.revokeProAccess()
-    console.log('✅ Subscription cancelled')
   }
 
   /**

@@ -41,7 +41,6 @@ export function calculateNextPaymentDate(
       break
     default:
       // Fallback to monthly if invalid recurrence
-      console.warn(`Unknown recurrence type: ${recurrence}, defaulting to monthly`)
       date.setMonth(date.getMonth() + 1)
   }
   

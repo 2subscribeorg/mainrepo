@@ -231,8 +231,6 @@ export class MockAdminService {
 
     this.users.unshift(newUser) // Add to beginning of list
 
-    console.log('✅ Mock: Created user', request.email)
-
     return {
       uid: newUser.uid,
       email: newUser.email
@@ -253,8 +251,6 @@ export class MockAdminService {
 
     const user = this.users[userIndex]
     this.users.splice(userIndex, 1)
-
-    console.log('✅ Mock: Deleted user', user.email)
   }
 
   /**
@@ -269,8 +265,7 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    console.log('✅ Mock: Sent password reset to', user.email)
-  }
+    return { success: true }
 
   /**
    * Send password reset email to user by email address
@@ -284,8 +279,7 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    console.log('✅ Mock: Sent password reset to', email)
-  }
+    return { success: true }
 
   /**
    * Get current admin user info

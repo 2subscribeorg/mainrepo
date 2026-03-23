@@ -28,7 +28,6 @@ class RepoFactory {
 
   constructor() {
     this.backend = (import.meta.env.VITE_DATA_BACKEND as DataBackend) || 'MOCK'
-    console.log(`📦 Repository Factory initialized with backend: ${this.backend}`)
   }
 
   getBackend(): DataBackend {
@@ -68,16 +67,11 @@ class RepoFactory {
     if (this.backend === 'FIREBASE') {
       // Use backend-enabled repo if VITE_USE_PLAID_BACKEND is true
       const usePlaidBackend = import.meta.env.VITE_USE_PLAID_BACKEND === 'true'
-      console.log('🔧 VITE_USE_PLAID_BACKEND:', import.meta.env.VITE_USE_PLAID_BACKEND)
-      console.log('🔧 usePlaidBackend:', usePlaidBackend)
       if (usePlaidBackend) {
-        console.log('🔧 Using FirebaseBankAccountsRepoWithBackend')
         return new FirebaseBankAccountsRepoWithBackend()
       }
-      console.log('🔧 Using FirebaseBankAccountsRepo')
       return new FirebaseBankAccountsRepo()
     }
-    console.log('🔧 Using MockBankAccountsRepo')
     return new MockBankAccountsRepo()
   }
 

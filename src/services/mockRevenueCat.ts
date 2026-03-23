@@ -116,7 +116,7 @@ class MockRevenueCatService {
         this._customerInfo.value = JSON.parse(stored)
       }
     } catch (error) {
-      console.error('Failed to load RevenueCat data from storage:', error)
+      // Failed to load RevenueCat data from storage
     }
   }
 
@@ -126,7 +126,7 @@ class MockRevenueCatService {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._customerInfo.value))
       }
     } catch (error) {
-      console.error('Failed to save RevenueCat data to storage:', error)
+      // Failed to save RevenueCat data to storage
     }
   }
 }

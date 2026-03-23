@@ -25,29 +25,33 @@
     <LoadingSpinner v-if="loading" />
 
     <div v-else class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <TransitionGroup name="category-card" tag="div" class="contents">
-        <CategoryCard
-          v-for="category in categoriesStore.categories"
-          :key="category.id"
-          :category="category"
-          class="category-card-enter"
-          @edit="editCategory"
-          @delete="handleDeleteFromSwipe"
-        />
-      </TransitionGroup>
+      <ErrorBoundary component="CategoryGrid">
+        <TransitionGroup name="category-card" tag="div" class="contents">
+          <CategoryCard
+            v-for="category in categoriesStore.categories"
+            :key="category.id"
+            :category="category"
+            class="category-card-enter"
+            @edit="editCategory"
+            @delete="handleDeleteFromSwipe"
+          />
+        </TransitionGroup>
+      </ErrorBoundary>
     </div>
 
-    <CategoryFormModal
-      :show="modalVisible"
-      :form-data="formData"
-      :saving="saving"
-      :editing="Boolean(editingCategory)"
-      :validation-errors="validationErrors"
-      @close="closeModal"
-      @delete="deleteCategory"
-      @save="saveCategory"
-      @update:formData="(value) => (formData = value)"
-    />
+    <ErrorBoundary component="CategoryFormModal">
+      <CategoryFormModal
+        :show="modalVisible"
+        :form-data="formData"
+        :saving="saving"
+        :editing="Boolean(editingCategory)"
+        :validation-errors="validationErrors"
+        @close="closeModal"
+        @delete="deleteCategory"
+        @save="saveCategory"
+        @update:formData="(value) => (formData = value)"
+      />
+    </ErrorBoundary>
   </div>
 </template>
 
@@ -64,6 +68,7 @@ import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'
 import { useAnimations } from '@/utils/useAnimations'
 import { validateCategoryWithZod } from '@/schemas/category.schema'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 
 const categoriesStore = useCategoriesStore()
 
@@ -196,7 +201,6 @@ async function saveCategory() {
   } catch (error) {
     // Show actual error message for debugging
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Category save error:', error)
     validationErrors.value = [`Failed to save category: ${errorMessage}`]
   } finally {
     saving.value = false
@@ -217,9 +221,6 @@ async function deleteCategory() {
     // Show success message
     showSuccessMessage(`Category "${categoryName}" deleted successfully!`)
   } catch (error) {
-    // Log the actual error for debugging
-    console.error('Category deletion error:', error)
-    
     // Check if category was actually deleted despite the error
     const categoryStillExists = categoriesStore.categories.some(c => c.id === categoryId)
     

@@ -9,61 +9,71 @@
         </div>
       </div>
 
-      <TransactionFilterPanel
-        :filters="filters"
-        :accounts="accounts"
-        :categories="categoriesStore.categories"
-        :active-filter-count="activeFilterCount"
-        mode="realtime"
-        @update:selectedAccount="selectedAccount = $event"
-        @update:subscriptionFilter="subscriptionFilter = $event"
-        @update:merchantSearch="handleMerchantSearchUpdate"
-        @update:dateRange="handleDateRangeUpdate"
-        @update:amountRange="handleAmountRangeUpdate"
-        @update:categories="handleCategoriesUpdate"
-        @apply-filters="handleApplyFilters"
-        @clear-all="handleClearAllFilters"
-        @clear-filter="handleClearFilter"
-      />
+      <ErrorBoundary component="TransactionFilterPanel">
+        <TransactionFilterPanel
+          :filters="filters"
+          :accounts="accounts"
+          :categories="categoriesStore.categories"
+          :active-filter-count="activeFilterCount"
+          mode="realtime"
+          @update:selectedAccount="selectedAccount = $event"
+          @update:subscriptionFilter="subscriptionFilter = $event"
+          @update:merchantSearch="handleMerchantSearchUpdate"
+          @update:dateRange="handleDateRangeUpdate"
+          @update:amountRange="handleAmountRangeUpdate"
+          @update:categories="handleCategoriesUpdate"
+          @apply-filters="handleApplyFilters"
+          @clear-all="handleClearAllFilters"
+          @clear-filter="handleClearFilter"
+        />
+      </ErrorBoundary>
     </div>
 
     <LoadingSpinner v-if="loading" />
 
     <template v-else>
       <!-- Transactions List -->
-      <TransactionList
-        v-if="paginatedTransactions.length > 0"
-        :transactions="paginatedTransactions"
-        :categories="categoriesStore.categories"
-        :pagination="pagination"
-        :get-account-name="getAccountName"
-        :get-amount-color="getAmountColor"
-        @go-to-page="goToPage"
-        @create-subscription="handleCreateSubscription"
-        @edit-subscription="handleEditSubscription"
-        @category-change="handleCategoryChange"
-        @link-to-existing-subscription="handleLinkToExistingSubscription"
-      />
+      <AsyncErrorBoundary loading-message="Loading transactions...">
+        <ErrorBoundary component="TransactionList">
+          <TransactionList
+            v-if="paginatedTransactions.length > 0"
+            :transactions="paginatedTransactions"
+            :categories="categoriesStore.categories"
+            :pagination="pagination"
+            :get-account-name="getAccountName"
+            :get-amount-color="getAmountColor"
+            @go-to-page="goToPage"
+            @create-subscription="handleCreateSubscription"
+            @edit-subscription="handleEditSubscription"
+            @category-change="handleCategoryChange"
+            @link-to-existing-subscription="handleLinkToExistingSubscription"
+          />
+        </ErrorBoundary>
 
-      <!-- Empty State -->
-      <EmptyState
-        v-else
+        <!-- Empty State -->
+        <ErrorBoundary component="EmptyState">
+          <EmptyState
+            v-if="paginatedTransactions.length === 0"
         title="No transactions found"
         description="Connect a bank account to see your transactions here."
         action-text="Connect Bank Account"
         action-to="/settings"
       />
+        </ErrorBoundary>
+      </AsyncErrorBoundary>
     </template>
 
     <!-- Category Selection Modal -->
-    <CategorySelectionModal
-      :show="showCategoryModal"
-      :merchant-name="selectedTransaction?.merchantName || ''"
-      :categories="categoriesStore.categories"
-      @confirm="handleCategorySelected"
-      @create-and-confirm="handleCreateCategoryAndConfirm"
-      @cancel="handleCategoryModalCancel"
-    />
+    <ErrorBoundary component="CategorySelectionModal">
+      <CategorySelectionModal
+        :show="showCategoryModal"
+        :merchant-name="selectedTransaction?.merchantName || ''"
+        :categories="categoriesStore.categories"
+        @confirm="handleCategorySelected"
+        @create-and-confirm="handleCreateCategoryAndConfirm"
+        @cancel="handleCategoryModalCancel"
+      />
+    </ErrorBoundary>
 
   </div>
 </template>
@@ -81,6 +91,8 @@ import TransactionFilterPanel from '@/components/transactions/TransactionFilterP
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
+import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
+import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
 
 // Use the composable for all business logic
 const {
@@ -161,7 +173,6 @@ async function handleCategorySelected(categoryId: string) {
     alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
     
   } catch (error) {
-    console.error('Failed to create subscription:', error)
     alert('❌ Failed to create subscription')
   } finally {
     showCategoryModal.value = false
@@ -174,7 +185,7 @@ function handleCategoryModalCancel() {
   selectedTransaction.value = null
 }
 
-async function handleEditSubscription(transaction: Transaction) {
+async function handleEditSubscription(_transaction: Transaction) {
   // TODO: Open modal to edit subscription details
 }
 
@@ -191,16 +202,15 @@ async function handleCategoryChange(transaction: Transaction, categoryId: string
     await transactionsStore.save(updatedTransaction)
     
   } catch (error) {
-    console.error('❌ Failed to update category:', error)
     alert('Failed to update category. Please try again.')
   }
 }
 
-async function handleLinkToExistingSubscription(transaction: Transaction, data: { transactionId: string; subscriptionId: string; categoryId: string }) {
+async function handleLinkToExistingSubscription(_transaction: Transaction, data: { transactionId: string; subscriptionId: string; categoryId: string }) {
   try {
     // Update the transaction to link it to the existing subscription
     const updatedTransaction = {
-      ...transaction,
+      ..._transaction,
       subscriptionId: data.subscriptionId,
       categoryId: data.categoryId
     }
@@ -209,7 +219,7 @@ async function handleLinkToExistingSubscription(transaction: Transaction, data: 
     await transactionsStore.save(updatedTransaction)
     
   } catch (error) {
-    console.error('❌ Failed to link transaction to existing subscription:', error)
+    // Failed to link transaction to existing subscription
   }
 }
 
@@ -262,7 +272,6 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     alert(`✅ New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
-    console.error('Failed to create category and subscription:', error)
     alert('❌ Failed to create category and subscription')
   } finally {
     showCategoryModal.value = false

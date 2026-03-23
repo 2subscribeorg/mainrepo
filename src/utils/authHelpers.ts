@@ -22,7 +22,6 @@ export async function getFirebaseAuthToken(
       try {
         return await user.getIdToken()
       } catch (error) {
-        console.error(`Failed to get ID token (attempt ${attempt + 1}/${maxRetries}):`, error)
         if (attempt === maxRetries - 1) {
           throw new Error('Failed to get authentication token. Please try again.')
         }

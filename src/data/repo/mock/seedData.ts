@@ -73,11 +73,8 @@ export async function seedDatabase(): Promise<void> {
   // Check if already seeded
   const existingCategories = await db.getAll('categories')
   if (existingCategories.length > 0) {
-    console.log('Database already seeded')
     return
   }
-
-  console.log('Seeding database...')
 
   // Create categories
   const categories: Category[] = DEFAULT_CATEGORIES.map((cat) => ({
@@ -135,8 +132,6 @@ export async function seedDatabase(): Promise<void> {
 
   // Seed transactions
   await seedTransactions(150, subscriptions, categories)
-
-  console.log('Database seeded successfully!')
 }
 
 export async function seedTransactions(
