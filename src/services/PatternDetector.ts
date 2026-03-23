@@ -31,7 +31,6 @@ export class PatternDetector {
    * Uses hybrid approach: merchant-based grouping with amount clustering
    */
   detectPatterns(transactions: BankTransaction[]): RecurringPattern[] {
-    console.log(`🔍 PatternDetector: Analyzing ${transactions.length} transactions with hybrid detection`)
     
     try {
       const cutoffDate = new Date()
@@ -42,12 +41,10 @@ export class PatternDetector {
         new Date(t.date) >= cutoffDate && !t.matchedSubscriptionId
       )
       
-      console.log(`📅 PatternDetector: ${recentTransactions.length} unlinked transactions within ${this.config.lookbackDays} days (filtered out ${transactions.length - recentTransactions.length} already confirmed subscriptions)`)
       
       // Use hybrid detection: merchant-based with amount clustering
       const patterns = this.detectHybridPatterns(recentTransactions)
       
-      console.log(`🎯 PatternDetector: Found ${patterns.length} hybrid patterns`)
       return patterns.sort((a, b) => b.confidence - a.confidence)
     } catch (error) {
       console.error('❌ Error in PatternDetector.detectPatterns:', error)
@@ -60,14 +57,12 @@ export class PatternDetector {
    * This catches price changes, VAT adjustments, and merchant name variations
    */
   private detectHybridPatterns(transactions: BankTransaction[]): RecurringPattern[] {
-    console.log('🔄 Detecting hybrid patterns (merchant + amount clustering)...')
     
     // Step 1: Group by similar merchants using fuzzy matching
     const merchantGroups = new Map<string, BankTransaction[]>()
     
     for (const tx of transactions) {
       if (!tx.amount || typeof tx.amount.amount !== 'number') {
-        console.log(`⚠️ Skipping transaction with invalid amount:`, tx)
         continue
       }
       
@@ -91,23 +86,18 @@ export class PatternDetector {
       merchantGroups.get(matchedMerchant)!.push(tx)
     }
     
-    console.log(`🏪 Grouped into ${merchantGroups.size} merchant groups`)
-    
     // Step 2: For each merchant group, cluster by similar amounts
     const patterns: RecurringPattern[] = []
     
     for (const [merchant, txs] of merchantGroups) {
       if (txs.length < this.config.minTransactions) {
-        console.log(`⏭️ Skipping ${merchant}: only ${txs.length} transactions`)
         continue
       }
       
-      console.log(`🔍 Analyzing ${merchant}: ${txs.length} transactions`)
       
       // Cluster transactions by similar amounts
       const amountClusters = this.amountClusterer.clusterByAmount(txs)
       
-      console.log(`💰 Found ${amountClusters.length} amount clusters for ${merchant}`)
       
       // Create pattern for each cluster with enough transactions
       for (const cluster of amountClusters) {
@@ -115,102 +105,13 @@ export class PatternDetector {
           const pattern = this.patternBuilder.createHybridPattern(merchant, cluster)
           if (pattern && pattern.confidence >= this.config.minConfidence) {
             patterns.push(pattern)
-            console.log(`✅ Created pattern: ${pattern.merchant} - ${pattern.amount} (${cluster.length} txs, ${Math.round(pattern.confidence * 100)}% confidence)`)
           }
         }
       }
     }
     
-    console.log(`🎯 Total hybrid patterns created: ${patterns.length}`)
     return patterns
   }
-
-
-  /**
-   * New simple detection: Find transactions with matching amounts (2+ occurrences)
-   */
-  private detectAmountBasedPatterns(transactions: BankTransaction[]): RecurringPattern[] {
-    console.log('💰 Detecting amount-based patterns...')
-    console.log('💰 Sample transaction data:', transactions.slice(0, 3))
-    
-    // Group transactions by exact amount
-    const amountGroups = new Map<number, BankTransaction[]>()
-    
-    for (const tx of transactions) {
-      console.log(`💰 Processing transaction: ${tx.merchantName} - ${tx.amount?.amount || 'NO AMOUNT'}`)
-      
-      if (!tx.amount || typeof tx.amount.amount !== 'number') {
-        console.log(`⚠️ Skipping transaction with invalid amount:`, tx)
-        continue
-      }
-      
-      const amount = Math.abs(tx.amount.amount) // Use absolute value
-      if (!amountGroups.has(amount)) {
-        amountGroups.set(amount, [])
-      }
-      amountGroups.get(amount)!.push(tx)
-    }
-    
-    console.log(`💰 Grouped into ${amountGroups.size} amount groups`)
-    
-    const patterns: RecurringPattern[] = []
-    
-    for (const [amount, txs] of amountGroups) {
-      console.log(`💰 Checking amount ${amount}: ${txs.length} transactions`)
-      
-      if (txs.length >= 2) { // At least 2 transactions with same amount
-        console.log(`💰 Found ${txs.length} transactions with amount ${amount}`)
-        
-        // Group by merchant name within same amount
-        const merchantGroups = new Map<string, BankTransaction[]>()
-        for (const tx of txs) {
-          const merchant = this.merchantNormalizer.normalize(tx.merchantName)
-          console.log(`💰 Normalized merchant: "${tx.merchantName}" -> "${merchant}"`)
-          
-          if (!merchantGroups.has(merchant)) {
-            merchantGroups.set(merchant, [])
-          }
-          merchantGroups.get(merchant)!.push(tx)
-        }
-        
-        console.log(`💰 Amount ${amount} has ${merchantGroups.size} unique merchants`)
-        
-        // Create patterns for merchants with 2+ transactions of same amount
-        for (const [merchant, merchantTxs] of merchantGroups) {
-          console.log(`💰 Merchant "${merchant}": ${merchantTxs.length} transactions`)
-          
-          if (merchantTxs.length >= 2) {
-            console.log(`💰 Creating pattern for ${merchant} with ${merchantTxs.length} transactions`)
-            const pattern = this.patternBuilder.createAmountBasedPattern(merchant, merchantTxs, amount)
-            if (pattern) {
-              patterns.push(pattern)
-              console.log(`✅ Created subscription pattern: ${merchant} - ${amount}`)
-            } else {
-              console.log(`❌ Failed to create pattern for ${merchant}`)
-            }
-          }
-        }
-      }
-    }
-    
-    console.log(`💰 Total patterns created: ${patterns.length}`)
-    return patterns
-  }
-
-
-  /**
-   * Analyze a group of transactions from the same merchant (legacy method - not used)
-   */
-  private analyzeTransactionGroup(
-    normalizedMerchant: string,
-    transactions: BankTransaction[]
-  ): RecurringPattern | null {
-    // This method is deprecated and not used by the current detection logic
-    // Keeping for backwards compatibility but returning null
-    return null
-  }
-
-
 
   /**
    * Check if a new transaction matches an existing pattern

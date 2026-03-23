@@ -54,7 +54,7 @@
       <!-- Change Email Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Email</h4>
-        <form @submit.prevent="handleChangeEmail" class="space-y-3">
+        <form @submit.prevent="handleChangeEmail" class="space-y-3" novalidate>
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               New Email
@@ -95,7 +95,7 @@
       <!-- Change Password Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Password</h4>
-        <form @submit.prevent="handleChangePassword" class="space-y-3">
+        <form @submit.prevent="handleChangePassword" class="space-y-3" novalidate>
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Current Password
@@ -181,6 +181,7 @@
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import DeleteAccountModal from './DeleteAccountModal.vue'
+import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'
 
 const { userEmail, updateEmail, updatePassword, deleteAccount, loading } = useAuth()
 
@@ -208,7 +209,18 @@ async function handleChangeEmail() {
   successMessage.value = null
   errorMessage.value = null
 
-  const { success, message } = await updateEmail(newEmail.value, emailCurrentPassword.value)
+  // Validate form data using Zod schema
+  const validation = validateChangeEmailForm({
+    newEmail: newEmail.value,
+    currentPassword: emailCurrentPassword.value
+  })
+
+  if (!validation.success) {
+    errorMessage.value = validation.error?.issues?.[0]?.message || 'Invalid form data'
+    return
+  }
+
+  const { success, message } = await updateEmail(validation.data.newEmail, validation.data.currentPassword)
 
   if (success) {
     successMessage.value = message || 'Email updated successfully!'
@@ -223,29 +235,19 @@ async function handleChangePassword() {
   successMessage.value = null
   errorMessage.value = null
 
-  // Validate password match
-  if (newPassword.value !== confirmNewPassword.value) {
-    errorMessage.value = 'New passwords do not match'
+  // Validate form data using Zod schema
+  const validation = validateChangePasswordForm({
+    currentPassword: currentPassword.value,
+    newPassword: newPassword.value,
+    confirmNewPassword: confirmNewPassword.value
+  })
+
+  if (!validation.success) {
+    errorMessage.value = validation.error?.issues?.[0]?.message || 'Invalid form data'
     return
   }
 
-  // Validate password length
-  if (newPassword.value.length < 8) {
-    errorMessage.value = 'Password must be at least 8 characters'
-    return
-  }
-
-  // Validate password strength
-  const hasUpperCase = /[A-Z]/.test(newPassword.value)
-  const hasLowerCase = /[a-z]/.test(newPassword.value)
-  const hasNumber = /[0-9]/.test(newPassword.value)
-  
-  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-    errorMessage.value = 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    return
-  }
-
-  const { success, message } = await updatePassword(currentPassword.value, newPassword.value)
+  const { success, message } = await updatePassword(validation.data.currentPassword, validation.data.newPassword)
 
   if (success) {
     successMessage.value = message || 'Password updated successfully!'

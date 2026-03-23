@@ -3,11 +3,15 @@ import { ref } from 'vue'
 import type { Subscription, ID } from '@/domain/models'
 import type { SubscriptionFilter } from '@/data/repo/interfaces/ISubscriptionsRepo'
 import { repoFactory } from '@/data/repo/RepoFactory'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 export const useSubscriptionsStore = defineStore('subscriptions', () => {
   const subscriptions = ref<Subscription[]>([])
-  const loading = ref(false)
   const error = ref<string | null>(null)
+  
+  // Consolidated loading states
+  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const loading = isLoading('subscriptions')
   
   // Track active subscription
   let unsubscribe: (() => void) | null = null
@@ -16,82 +20,78 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
   const repo = repoFactory.getSubscriptionsRepo()
 
   async function fetchAll(filter?: SubscriptionFilter) {
-    loading.value = true
-    error.value = null
-    try {
-      subscriptions.value = await repo.list(filter)
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to fetch subscriptions'
-    } finally {
-      loading.value = false
-    }
+    return await withLoading('subscriptions', async () => {
+      error.value = null
+      try {
+        subscriptions.value = await repo.list(filter)
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to fetch subscriptions'
+        throw e
+      }
+    })
   }
 
   async function getById(id: ID): Promise<Subscription | null> {
     const cached = subscriptions.value.find((s) => s.id === id)
     if (cached) return cached
 
-    loading.value = true
-    try {
-      return await repo.get(id)
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to fetch subscription'
-      return null
-    } finally {
-      loading.value = false
-    }
+    return await withLoading('subscriptions', async () => {
+      try {
+        return await repo.get(id)
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to fetch subscription'
+        return null
+      }
+    })
   }
 
   async function save(subscription: Subscription) {
-    loading.value = true
-    error.value = null
-    try {
-      await repo.upsert(subscription)
-      // If not using real-time subscription, manually refetch
-      if (!unsubscribe) {
-        await fetchAll(currentFilter)
+    return await withLoading('subscriptions', async () => {
+      error.value = null
+      try {
+        await repo.upsert(subscription)
+        // If not using real-time subscription, manually refetch
+        if (!unsubscribe) {
+          await fetchAll(currentFilter)
+        }
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to save subscription'
+        throw e
       }
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to save subscription'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    })
   }
 
   async function cancel(id: ID) {
-    loading.value = true
-    error.value = null
-    try {
-      const result = await repo.cancel(id)
-      // If not using real-time subscription, manually refetch
-      if (!unsubscribe) {
-        await fetchAll(currentFilter)
+    return await withLoading('subscriptions', async () => {
+      error.value = null
+      try {
+        const result = await repo.cancel(id)
+        // If not using real-time subscription, manually refetch
+        if (!unsubscribe) {
+          await fetchAll(currentFilter)
+        }
+        return result
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to cancel subscription'
+        throw e
       }
-      return result
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to cancel subscription'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    })
   }
 
   async function remove(id: ID) {
-    loading.value = true
-    error.value = null
-    try {
-      await repo.delete(id)
-      // If not using real-time subscription, manually update
-      if (!unsubscribe) {
-        subscriptions.value = subscriptions.value.filter((s) => s.id !== id)
+    return await withLoading('subscriptions', async () => {
+      error.value = null
+      try {
+        await repo.delete(id)
+        // If not using real-time subscription, manually update
+        if (!unsubscribe) {
+          subscriptions.value = subscriptions.value.filter((s) => s.id !== id)
+        }
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to delete subscription'
+        throw e
       }
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to delete subscription'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    })
   }
 
   // ============================================================================
@@ -109,13 +109,13 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
     }
 
     currentFilter = filter
-    loading.value = true
+    setLoading('subscriptions', true)
     error.value = null
 
     // Subscribe to changes
     unsubscribe = repo.subscribe((data) => {
       subscriptions.value = data
-      loading.value = false
+      setLoading('subscriptions', false)
     }, filter)
   }
 

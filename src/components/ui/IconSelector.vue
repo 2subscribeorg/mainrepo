@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Search } from 'lucide-vue-next'
 import { ICON_CATEGORIES } from '@/utils/categoryIcons'
 import CategoryIcon from './CategoryIcon.vue'
@@ -162,11 +162,19 @@ watch(activeCategory, () => {
 })
 
 // Close grid when clicking outside
-document.addEventListener('click', (e) => {
+const handleClickOutside = (e: Event) => {
   const target = e.target as HTMLElement
   if (!target.closest('.icon-selector')) {
     showGrid.value = false
   }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 

@@ -4,7 +4,7 @@ import { useSubscriptionCreation } from '@/composables/useSubscriptionCreation'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
-import type { Transaction, Subscription } from '@/domain/models'
+import type { Transaction } from '@/domain/models'
 import type { SubscriptionRecurrence } from '@/types/subscriptions'
 
 // Mock stores to isolate the composable under test
@@ -41,7 +41,6 @@ describe('useSubscriptionCreation', () => {
     amount: { amount: 15.99, currency: 'USD' },
     date: '2024-01-15',
     pending: false,
-    transactionType: 'purchase',
     categoryId: 'entertainment-category',
     createdAt: '2024-01-15T10:00:00.000Z',
     updatedAt: '2024-01-15T10:00:00.000Z'

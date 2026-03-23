@@ -16,6 +16,7 @@ import {
 import { getFirebaseAuth, getFirebaseDb } from '@/config/firebase'
 import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncService'
 import { emailVerificationService } from '@/services/EmailVerificationService'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 export interface User {
   id: string
@@ -40,8 +41,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   )
 
-  const loading = ref(false)
   const error = ref<string | null>(null)
+  
+  // Consolidated loading states
+  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const loading = isLoading('auth')
 
   const isAuthenticated = computed(() => user.value !== null)
   const isSuperAdmin = computed(() => user.value?.isSuperAdmin || false)
@@ -96,7 +100,6 @@ export const useAuthStore = defineStore('auth', () => {
           role,
           permissions: customClaims.permissions as string[] || [],
         }
-        console.log('🔐 User signed in:', firebaseUser.email, 'Admin:', customClaims.admin, 'SuperAdmin:', customClaims.superAdmin)
         
         // Resolve any pending promises waiting for this user
         const resolver = authStateResolvers.get(firebaseUser.uid)
@@ -106,7 +109,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
       } else {
         user.value = null
-        console.log('🔐 User signed out')
         
         // Resolve any pending promises waiting for sign out
         const resolver = authStateResolvers.get('null')
@@ -118,7 +120,6 @@ export const useAuthStore = defineStore('auth', () => {
     })
     
     listenerInitialized = true
-    console.log('✅ Auth listener initialized')
   }
 
   /**
@@ -127,41 +128,51 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function signIn(email: string, password: string): Promise<User> {
     if (!isFirebaseMode) {
-      console.warn('signIn() only works in Firebase mode')
-      throw new Error('signIn() only works in Firebase mode')
+      // Mock mode - simulate delay and return mock user
+      return await withLoading('auth', async () => {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const mockUser: User = {
+          id: 'mock-user-1',
+          name: 'Demo User',
+          email: email,
+          isSuperAdmin: email === 'admin@2subscribe.app'
+        }
+        user.value = mockUser
+        return mockUser
+      })
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      const auth = getFirebaseAuth()
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      
-      // Return promise that resolves when onAuthStateChanged fires
-      return new Promise<User>((resolve, reject) => {
-        authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
-          loading.value = false
-          if (updatedUser) {
-            resolve(updatedUser)
-          } else {
-            reject(new Error('User state not updated after sign in'))
-          }
-        })
+    return await withLoading('auth', async () => {
+      error.value = null
+
+      try {
+        const auth = getFirebaseAuth()
+        const userCredential = await signInWithEmailAndPassword(auth, email, password)
         
-        // Timeout after 10 seconds to prevent hanging
-        setTimeout(() => {
-          if (authStateResolvers.has(userCredential.user.uid)) {
-            authStateResolvers.delete(userCredential.user.uid)
-            loading.value = false
-            reject(new Error('Auth state update timeout'))
-          }
-        }, 10000)
-      })
-    } catch (e) {
-      loading.value = false
-      error.value = e instanceof Error ? e.message : 'Failed to sign in'
-      throw e
-    }
+        // Return promise that resolves when onAuthStateChanged fires
+        return new Promise<User>((resolve, reject) => {
+          authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
+            if (updatedUser) {
+              resolve(updatedUser)
+            } else {
+              reject(new Error('Failed to get user data after sign in'))
+            }
+          })
+          
+          // Timeout after 10 seconds to prevent hanging
+          setTimeout(() => {
+            if (authStateResolvers.has(userCredential.user.uid)) {
+              authStateResolvers.delete(userCredential.user.uid)
+              reject(new Error('Sign in timeout - please try again'))
+            }
+          }, 10000)
+        })
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to sign in'
+        error.value = message
+        throw new Error(message)
+      }
+    })
   }
 
   /**
@@ -171,53 +182,62 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function signUp(email: string, password: string, sendVerification = false): Promise<{ success: boolean; needsVerification: boolean; user?: User }> {
     if (!isFirebaseMode) {
-      console.warn('signUp() only works in Firebase mode')
-      return { success: false, needsVerification: false }
+      // Mock mode - simulate delay and return success
+      return await withLoading('auth', async () => {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const mockUser: User = {
+          id: 'mock-user-2',
+          name: 'New Demo User',
+          email: email,
+          isSuperAdmin: false
+        }
+        user.value = mockUser
+        return { success: true, needsVerification: false, user: mockUser }
+      })
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      const auth = getFirebaseAuth()
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      
-      // Create user profile in Firestore
-      await createUserProfile(userCredential.user)
-      
-      // Send verification email if requested
-      if (sendVerification) {
-        await emailVerificationService.sendVerificationEmail(userCredential.user)
-        // Sign out user until they verify
-        await signOut(auth)
-        loading.value = false
-        return { success: true, needsVerification: true }
-      }
-      
-      // Return promise that resolves when onAuthStateChanged fires
-      return new Promise((resolve, reject) => {
-        authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
-          loading.value = false
-          if (updatedUser) {
-            resolve({ success: true, needsVerification: false, user: updatedUser })
-          } else {
-            reject(new Error('User state not updated after sign up'))
-          }
-        })
+    return await withLoading('auth', async () => {
+      error.value = null
+
+      try {
+        const auth = getFirebaseAuth()
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
         
-        // Timeout after 10 seconds to prevent hanging
-        setTimeout(() => {
-          if (authStateResolvers.has(userCredential.user.uid)) {
-            authStateResolvers.delete(userCredential.user.uid)
-            loading.value = false
-            reject(new Error('Auth state update timeout'))
-          }
-        }, 10000)
-      })
-    } catch (e) {
-      loading.value = false
-      error.value = e instanceof Error ? e.message : 'Failed to sign up'
-      throw e
-    }
+        // Create user profile in Firestore
+        await createUserProfile(userCredential.user)
+        
+        // Send verification email if requested
+        if (sendVerification) {
+          await emailVerificationService.sendVerificationEmail(userCredential.user)
+          // Sign out user until they verify
+          await signOut(auth)
+          return { success: true, needsVerification: true }
+        }
+        
+        // Return promise that resolves when onAuthStateChanged fires
+        return new Promise((resolve, reject) => {
+          authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
+            if (updatedUser) {
+              resolve({ success: true, needsVerification: false, user: updatedUser })
+            } else {
+              reject(new Error('Failed to get user data after sign up'))
+            }
+          })
+          
+          // Timeout after 10 seconds to prevent hanging
+          setTimeout(() => {
+            if (authStateResolvers.has(userCredential.user.uid)) {
+              authStateResolvers.delete(userCredential.user.uid)
+              reject(new Error('Sign up timeout - please try again'))
+            }
+          }, 10000)
+        })
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to sign up'
+        error.value = message
+        throw new Error(message)
+      }
+    })
   }
 
   /**
@@ -229,18 +249,17 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      const auth = getFirebaseAuth()
-      await signOut(auth)
-      user.value = null
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to logout'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    return await withLoading('auth', async () => {
+      error.value = null
+      try {
+        const auth = getFirebaseAuth()
+        await signOut(auth)
+        user.value = null
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Failed to logout'
+        throw e
+      }
+    })
   }
 
   /**
@@ -252,19 +271,18 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, message: 'Password reset not available in Mock mode' }
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      const auth = getFirebaseAuth()
-      await sendPasswordResetEmail(auth, email)
-      return { success: true, message: 'Password reset email sent successfully' }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to send password reset email'
-      error.value = message
-      return { success: false, message }
-    } finally {
-      loading.value = false
-    }
+    return await withLoading('auth', async () => {
+      error.value = null
+      try {
+        const auth = getFirebaseAuth()
+        await sendPasswordResetEmail(auth, email)
+        return { success: true, message: 'Password reset email sent' }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to send password reset email'
+        error.value = message
+        return { success: false, message }
+      }
+    })
   }
 
   /**
@@ -283,10 +301,8 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('No user logged in')
       }
 
-      console.log('🔐 Reauthenticating user:', currentUser.email)
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
       await reauthenticateWithCredential(currentUser, credential)
-      console.log('✅ Reauthentication successful')
       return { success: true, message: 'Reauthentication successful' }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to reauthenticate'
@@ -304,37 +320,36 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, message: 'Email change not available in Mock mode' }
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      // Reauthenticate first (Firebase security requirement)
-      const reauth = await reauthenticate(currentPassword)
-      if (!reauth.success) {
-        throw new Error(reauth.message)
-      }
+    return await withLoading('auth', async () => {
+      error.value = null
+      try {
+        // Reauthenticate first (Firebase security requirement)
+        const auth = getFirebaseAuth()
+        const currentUser = auth.currentUser
+        
+        if (!currentUser || !currentUser.email) {
+          throw new Error('No authenticated user found')
+        }
 
-      const auth = getFirebaseAuth()
-      const currentUser = auth.currentUser
-      
-      if (!currentUser) {
-        throw new Error('No user logged in')
+        // Reauthenticate with current password
+        const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
+        await reauthenticateWithCredential(currentUser, credential)
+        
+        // Update email
+        await firebaseUpdateEmail(currentUser, newEmail)
+        
+        // Update user state
+        if (user.value) {
+          user.value.email = newEmail
+        }
+        
+        return { success: true, message: 'Email updated successfully' }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to update email'
+        error.value = message
+        return { success: false, message }
       }
-
-      await firebaseUpdateEmail(currentUser, newEmail)
-      
-      // Update local user state
-      if (user.value) {
-        user.value.email = newEmail
-      }
-
-      return { success: true, message: 'Email updated successfully' }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to update email'
-      error.value = message
-      return { success: false, message }
-    } finally {
-      loading.value = false
-    }
+    })
   }
 
   /**
@@ -346,62 +361,53 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, message: 'Password change not available in Mock mode' }
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      console.log('🔐 Starting password change process...')
-      
-      // Validate new password strength (Firebase minimum is 6, but we enforce 8)
-      if (newPassword.length < 8) {
-        return { success: false, message: 'Password must be at least 8 characters long' }
-      }
-      
-      // Additional password strength checks
-      const hasUpperCase = /[A-Z]/.test(newPassword)
-      const hasLowerCase = /[a-z]/.test(newPassword)
-      const hasNumber = /[0-9]/.test(newPassword)
-      
-      if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-        return { 
-          success: false, 
-          message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
+    return await withLoading('auth', async () => {
+      error.value = null
+      try {
+        
+        // Validate new password strength (Firebase minimum is 6, but we enforce 8)
+        if (newPassword.length < 8) {
+          return { success: false, message: 'Password must be at least 8 characters long' }
         }
-      }
-      
-      // Reauthenticate first (Firebase security requirement)
-      console.log('🔐 Step 1: Reauthenticating with current password...')
-      const reauth = await reauthenticate(currentPassword)
-      if (!reauth.success) {
-        console.error('❌ Reauthentication failed:', reauth.message)
-        throw new Error(reauth.message)
-      }
-      console.log('✅ Reauthentication successful')
+        
+        // Additional password strength checks
+        const hasUpperCase = /[A-Z]/.test(newPassword)
+        const hasLowerCase = /[a-z]/.test(newPassword)
+        const hasNumber = /[0-9]/.test(newPassword)
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+          return { 
+            success: false, 
+            message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
+          }
+        }
+        
+        // Reauthenticate first (Firebase security requirement)
+        const reauth = await reauthenticate(currentPassword)
+        if (!reauth.success) {
+          throw new Error(reauth.message)
+        }
 
-      const auth = getFirebaseAuth()
-      const currentUser = auth.currentUser
-      
-      if (!currentUser) {
-        throw new Error('No user logged in')
-      }
+        const auth = getFirebaseAuth()
+        const currentUser = auth.currentUser
+        
+        if (!currentUser) {
+          throw new Error('No user logged in')
+        }
 
-      console.log('🔐 Step 2: Updating password in Firebase...')
-      await firebaseUpdatePassword(currentUser, newPassword)
-      console.log('✅ Password updated successfully in Firebase')
-      
-      // Force token refresh to ensure new credentials are active
-      console.log('🔐 Step 3: Refreshing authentication token...')
-      await currentUser.getIdToken(true)
-      console.log('✅ Token refreshed')
-      
-      return { success: true, message: 'Password updated successfully' }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to update password'
-      console.error('❌ Password change failed:', message)
-      error.value = message
-      return { success: false, message }
-    } finally {
-      loading.value = false
-    }
+        await firebaseUpdatePassword(currentUser, newPassword)
+        
+        // Force token refresh to ensure new credentials are active
+        await currentUser.getIdToken(true)
+        
+        return { success: true, message: 'Password updated successfully' }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to update password'
+        console.error('❌ Password change failed:', message)
+        error.value = message
+        return { success: false, message }
+      }
+    })
   }
 
   /**
@@ -413,34 +419,34 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, message: 'Account deletion not available in Mock mode' }
     }
 
-    loading.value = true
-    error.value = null
-    try {
-      // Reauthenticate first (Firebase security requirement)
-      const reauth = await reauthenticate(currentPassword)
-      if (!reauth.success) {
-        throw new Error(reauth.message)
-      }
+    return await withLoading('auth', async () => {
+      error.value = null
+      try {
+        // Reauthenticate first (Firebase security requirement)
+        const reauth = await reauthenticate(currentPassword)
+        if (!reauth.success) {
+          throw new Error(reauth.message)
+        }
 
-      const auth = getFirebaseAuth()
-      const currentUser = auth.currentUser
-      
-      if (!currentUser) {
-        throw new Error('No user logged in')
-      }
+        const auth = getFirebaseAuth()
+        const currentUser = auth.currentUser
+        
+        if (!currentUser) {
+          throw new Error('No user logged in')
+        }
 
-      const userIdToDelete = currentUser.uid
+        const userIdToDelete = currentUser.uid
 
-      // Delete all user data from Firestore
-      const db = getFirebaseDb()
-      
-      // Delete user's collections
-      const collections = ['subscriptions', 'transactions', 'categories', 'bankAccounts', 'bankConnections']
-      
-      for (const collectionName of collections) {
-        const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore')
-        const q = query(collection(db, collectionName), where('userId', '==', userIdToDelete))
-        const snapshot = await getDocs(q)
+        // Delete all user data from Firestore
+        const db = getFirebaseDb()
+        
+        // Delete user's collections
+        const collections = ['subscriptions', 'transactions', 'categories', 'bankAccounts', 'bankConnections']
+        
+        for (const collectionName of collections) {
+          const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore')
+          const q = query(collection(db, collectionName), where('userId', '==', userIdToDelete))
+          const snapshot = await getDocs(q)
         
         const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref))
         await Promise.all(deletePromises)
@@ -452,14 +458,13 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear local state
       user.value = null
       
-      return { success: true, message: 'Account deleted successfully' }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to delete account'
-      error.value = message
-      return { success: false, message }
-    } finally {
-      loading.value = false
-    }
+        return { success: true, message: 'Account deleted successfully' }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to delete account'
+        error.value = message
+        return { success: false, message }
+      }
+    })
   }
 
   /**

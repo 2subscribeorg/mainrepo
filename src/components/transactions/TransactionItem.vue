@@ -119,6 +119,9 @@ import { DuplicateSubscriptionChecker, type DuplicateCheckResult } from '@/servi
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
+import type { Category } from '@/domain/models'
+import type { CategoryFormData } from '@/schemas/form-validation.schema'
+import { validateCategoryForm } from '@/schemas/form-validation.schema'
 import TransactionBadge from './TransactionBadge.vue'
 import DuplicateSubscriptionModal from '@/components/DuplicateSubscriptionModal.vue'
 import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'
@@ -199,17 +202,23 @@ function closeCategoryModal() {
 }
 
 async function handleSaveCategory() {
-  // Validate
+  // Validate using Zod schema for consistency
   categoryValidationErrors.value = []
   
-  if (!categoryFormData.value.name.trim()) {
-    categoryValidationErrors.value.push('Category name is required')
+  const validation = validateCategoryForm({
+    name: categoryFormData.value.name,
+    colour: categoryFormData.value.colour,
+    icon: categoryFormData.value.icon
+  })
+  
+  if (!validation.success) {
+    categoryValidationErrors.value = validation.error?.issues?.map(err => err.message) || ['Validation failed']
     return
   }
   
-  // Check for duplicate names
+  // Check for duplicate names using validated data
   const duplicateName = props.categories.some(
-    cat => cat.name.toLowerCase() === categoryFormData.value.name.trim().toLowerCase()
+    cat => cat.name.toLowerCase() === validation.data.name.toLowerCase()
   )
   
   if (duplicateName) {
@@ -220,12 +229,12 @@ async function handleSaveCategory() {
   savingCategory.value = true
   
   try {
-    // Create new category (trim only - store will handle full validation)
+    // Create new category using validated & sanitized data
     const newCategory = {
       id: `cat_${Date.now()}`,
-      name: categoryFormData.value.name.trim(),
-      colour: categoryFormData.value.colour,
-      icon: categoryFormData.value.icon,
+      name: validation.data.name,
+      colour: validation.data.colour,
+      icon: validation.data.icon,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

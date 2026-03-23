@@ -5,6 +5,7 @@ import { useBankTransactionsStore } from '@/stores/bankTransactions'
 import { useAuthStore } from '@/stores/auth'
 import { SubscriptionDetectionService } from '@/services/SubscriptionDetectionService'
 import type { BankTransaction } from '@/domain/models'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 /**
  * Business logic layer - Pattern detection and subscription creation
@@ -16,14 +17,15 @@ export function useTransactionManagement() {
   const bankTransactionsStore = useBankTransactionsStore()
   const authStore = useAuthStore()
   
-  // Business logic state
-  const patternDetectionLoading = ref(false)
+  // Unified loading states
+  const { setLoading, withLoading, isLoading } = useLoadingStates()
   const patternDetectionError = ref<string | null>(null)
+  const patternDetectionLoading = isLoading('patternDetection')
 
   // Pattern detection business logic
   async function detectPatterns() {
-    patternDetectionLoading.value = true
-    patternDetectionError.value = null
+    await withLoading('patternDetection', async () => {
+      patternDetectionError.value = null
     
     try {
       const authStore = useAuthStore()
@@ -45,18 +47,7 @@ export function useTransactionManagement() {
         userId: authStore.user!.id,
       }))
 
-      console.log(`🔍 Detecting patterns in ${bankTransactions.length} transactions...`)
-      console.log('🔍 All transactions from store:', dataStore.transactions.length)
-      console.log('Sample transactions:', bankTransactions.slice(0, 3))
-      
-      // Look specifically for Aldi transactions (debugging)
-      const aldiTransactions = bankTransactions.filter(t => 
-        t.merchantName.toLowerCase().includes('aldi')
-      )
-      console.log(`🔍 Found ${aldiTransactions.length} Aldi transactions:`, aldiTransactions)
-      
       if (bankTransactions.length === 0) {
-        console.log('❌ No transactions available for pattern detection')
         return
       }
       
@@ -65,19 +56,16 @@ export function useTransactionManagement() {
       // Add patterns for manual review
       for (const pattern of patterns) {
         await bankTransactionsStore.addPendingPattern(pattern)
-        console.log('📋 Added pattern for manual review:', pattern.merchant)
       }
 
-      console.log(`✅ Pattern detection complete: ${patterns.length} patterns found for review`)
       alert(`Pattern detection complete!\n${patterns.length} patterns found for manual review.\nGo to Subscriptions tab to review them.`)
       
     } catch (e) {
       patternDetectionError.value = e instanceof Error ? e.message : 'Failed to detect patterns'
       console.error('❌ Pattern detection failed:', e)
       throw e
-    } finally {
-      patternDetectionLoading.value = false
     }
+    })
   }
 
   // Transaction creation business logic

@@ -6,7 +6,11 @@ import type { Transaction } from '@/domain/models'
 
 // Mock child components
 vi.mock('@/components/transactions/TransactionBadge.vue', () => ({
-  default: { name: 'TransactionBadge', template: '<span>{{ type }}: {{ text }}</span>' }
+  default: { 
+    name: 'TransactionBadge', 
+    props: ['type', 'text'],
+    template: '<span>{{ type }}: {{ text }}</span>' 
+  }
 }))
 
 vi.mock('@/components/DuplicateSubscriptionModal.vue', () => ({

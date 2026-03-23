@@ -71,19 +71,10 @@ export class PatternBuilder {
     transactions: BankTransaction[], 
     amount: number
   ): RecurringPattern | null {
-    console.log(`💰 createAmountBasedPattern: ${merchant}, ${transactions.length} transactions, amount ${amount}`)
     
     if (transactions.length < 2) {
-      console.log(`💰 Not enough transactions: ${transactions.length}`)
       return null
     }
-    
-    console.log(`💰 Transaction details:`, transactions.map(t => ({
-      id: t.id,
-      merchant: t.merchantName,
-      amount: t.amount?.amount,
-      date: t.date
-    })))
     
     // Sort by date for consistency
     const sorted = [...transactions].sort((a, b) => 
@@ -115,7 +106,6 @@ export class PatternBuilder {
       flags: []
     }
     
-    console.log(`💰 Created pattern:`, pattern)
     return pattern
   }
 

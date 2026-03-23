@@ -47,27 +47,71 @@ export function useTransactions() {
 
   const totalPages = computed(() => Math.ceil(filteredTransactions.value.length / pageSize))
 
-  const thisMonthCount = computed(() => {
+  // Memoization key for transaction stats
+  const statsMemoKey = computed(() => {
+    const transactionData = filteredTransactions.value
+      .map((t: Transaction) => `${t.id}-${t.amount.amount}-${t.date}`)
+      .join(',')
+    const currentMonth = new Date().getMonth()
+    const currentYear = new Date().getFullYear()
+    return `${transactionData}|${currentMonth}-${currentYear}`
+  })
+
+  // Cache for stats calculations
+  const statsCache = new Map<string, TransactionStats>()
+
+  // Combined stats calculation with memoization and single pass
+  const stats = computed<TransactionStats>(() => {
+    const memoKey = statsMemoKey.value
+    
+    // Return cached result if available
+    if (statsCache.has(memoKey)) {
+      return statsCache.get(memoKey)!
+    }
+
+    const transactions = filteredTransactions.value
     const now = new Date()
     const thisMonth = now.getMonth()
     const thisYear = now.getFullYear()
     
-    return filteredTransactions.value.filter(t => {
+    // Single pass calculation for all stats
+    let totalAmount = 0
+    let thisMonthCount = 0
+    
+    transactions.forEach((t: Transaction) => {
+      // Calculate total amount
+      totalAmount += t.amount.amount
+      
+      // Count this month's transactions
       const txDate = new Date(t.date)
-      return txDate.getMonth() === thisMonth && txDate.getFullYear() === thisYear
-    }).length
+      if (txDate.getMonth() === thisMonth && txDate.getFullYear() === thisYear) {
+        thisMonthCount++
+      }
+    })
+
+    const result: TransactionStats = {
+      totalCount: transactions.length,
+      thisMonthCount,
+      totalAmount: formatMoney({ amount: Math.abs(totalAmount), currency: 'GBP' })
+    }
+
+    // Cache the result
+    statsCache.set(memoKey, result)
+    
+    // Clean up old cache entries (keep last 10)
+    if (statsCache.size > 10) {
+      const oldestKey = statsCache.keys().next().value
+      if (oldestKey !== undefined) {
+        statsCache.delete(oldestKey)
+      }
+    }
+
+    return result
   })
 
-  const totalAmount = computed(() => {
-    const total = filteredTransactions.value.reduce((sum, t) => sum + t.amount.amount, 0)
-    return formatMoney({ amount: Math.abs(total), currency: 'GBP' })
-  })
-
-  const stats = computed<TransactionStats>(() => ({
-    totalCount: filteredTransactions.value.length,
-    thisMonthCount: thisMonthCount.value,
-    totalAmount: totalAmount.value
-  }))
+  // Individual computed properties for backward compatibility
+  const thisMonthCount = computed(() => stats.value.thisMonthCount)
+  const totalAmount = computed(() => stats.value.totalAmount)
 
   const pagination = computed<PaginationConfig>(() => ({
     currentPage: currentPage.value,

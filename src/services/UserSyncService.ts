@@ -1,4 +1,4 @@
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { getFirebaseDb } from '@/config/firebase'
 import type { User as FirebaseUser } from 'firebase/auth'
 
@@ -23,7 +23,6 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
       { merge: true }
     )
 
-    console.log('✅ User synced to Firestore:', user.email)
   } catch (error) {
     console.error('❌ Failed to sync user to Firestore:', error)
     // Don't throw - we don't want to block login if Firestore sync fails
@@ -56,7 +55,6 @@ export async function createUserProfile(user: FirebaseUser): Promise<void> {
       },
     })
 
-    console.log('✅ User profile created in Firestore:', user.email)
   } catch (error) {
     console.error('❌ Failed to create user profile:', error)
     throw error

@@ -162,10 +162,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 const connectionStatus = ref<'none' | 'pending_expiration' | 'disconnected'>('pending_expiration')
 const showSuggestions = ref(true)
-const showLoading = ref(false)
+const { isLoading } = useLoadingStates()
+const showLoading = isLoading('dashboardPreview')
 const highlightedIndex = ref<number | null>(null)
 
 const mockTransactions = [

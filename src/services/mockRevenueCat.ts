@@ -43,7 +43,7 @@ class MockRevenueCatService {
   /**
    * Grant pro access (called when Paddle purchase succeeds)
    */
-  async grantProAccess(transactionId: string): Promise<void> {
+  async grantProAccess(): Promise<void> {
     if (!this._customerInfo.value) {
       throw new Error('RevenueCat not configured')
     }
@@ -72,7 +72,6 @@ class MockRevenueCatService {
     this._customerInfo.value.originalPurchaseDate = now.toISOString()
 
     this.saveToStorage()
-    console.log('✅ Mock RevenueCat: Granted pro access with transaction', transactionId)
   }
 
   /**
@@ -88,7 +87,6 @@ class MockRevenueCatService {
     this._customerInfo.value.latestExpirationDate = null
 
     this.saveToStorage()
-    console.log('✅ Mock RevenueCat: Revoked pro access')
   }
 
   /**

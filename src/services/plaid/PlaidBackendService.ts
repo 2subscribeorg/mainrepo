@@ -48,7 +48,6 @@ export class PlaidBackendService {
       // Validate and sanitize input
       const validatedUserId = validateUserId(userId)
       
-      console.log('🔑 Calling backend to create link token...')
       const token = await this.getAuthToken()
       
       const response = await fetch(`${API_URL}/plaid/create-link-token`, {
@@ -70,14 +69,11 @@ export class PlaidBackendService {
       // Validate response
       const validatedResponse = validateLinkTokenResponse(data)
       
-      console.log('✅ Link token received from backend')
       return validatedResponse.linkToken
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
-        console.error('❌ Validation error:', error.message)
         throw error
       }
-      console.error('❌ Backend createLinkToken error:', error)
       throw new Error(`Failed to create link token: ${error.message}`)
     }
   }
@@ -91,7 +87,6 @@ export class PlaidBackendService {
       const validatedPublicToken = validatePublicToken(publicToken)
       const validatedUserId = validateUserId(userId)
       
-      console.log('🔄 Calling backend to exchange token...')
       const token = await this.getAuthToken()
       
       const response = await fetch(`${API_URL}/plaid/exchange-token`, {
@@ -113,14 +108,11 @@ export class PlaidBackendService {
       // Validate response
       const validatedResponse = validateExchangeTokenResponse(data)
       
-      console.log('✅ Token exchanged successfully')
       return validatedResponse
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
-        console.error('❌ Validation error:', error.message)
         throw error
       }
-      console.error('❌ Backend exchangeToken error:', error)
       throw new Error(`Failed to exchange token: ${error.message}`)
     }
   }
@@ -134,7 +126,6 @@ export class PlaidBackendService {
       const validatedConnectionId = validateConnectionId(connectionId)
       const validatedUserId = validateUserId(userId)
       
-      console.log('🔄 Calling backend to sync transactions...')
       const token = await this.getAuthToken()
       
       const response = await fetch(`${API_URL}/plaid/sync-transactions`, {
@@ -156,14 +147,11 @@ export class PlaidBackendService {
       // Validate response
       const validatedResponse = validateSyncTransactionsResponse(data)
       
-      console.log(`✅ Synced ${validatedResponse.transactionCount} transactions`)
       return { count: validatedResponse.transactionCount }
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
-        console.error('❌ Validation error:', error.message)
         throw error
       }
-      console.error('❌ Backend syncTransactions error:', error)
       throw new Error(`Failed to sync transactions: ${error.message}`)
     }
   }
@@ -177,7 +165,6 @@ export class PlaidBackendService {
       const validatedConnectionId = validateConnectionId(connectionId)
       const validatedUserId = validateUserId(userId)
       
-      console.log('🔌 Calling backend to disconnect bank...')
       const token = await this.getAuthToken()
       
       const response = await fetch(`${API_URL}/plaid/disconnect`, {
@@ -194,7 +181,6 @@ export class PlaidBackendService {
         throw new Error(error.error || 'Failed to disconnect bank')
       }
       
-      console.log('✅ Bank disconnected successfully')
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
         console.error('❌ Validation error:', error.message)

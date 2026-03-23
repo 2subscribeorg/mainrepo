@@ -57,6 +57,7 @@ export interface Transaction {
   rawMerchantName?: string  // Original name from Plaid
   category?: string[]  // Plaid's categories
   createdAt?: string
+  updatedAt?: string  // ISO timestamp for conflict resolution
 }
 
 

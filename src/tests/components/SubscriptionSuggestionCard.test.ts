@@ -6,6 +6,7 @@ import type { RecurringPattern } from '@/services/PatternDetector'
 
 // Mock the composables and stores
 vi.mock('@/composables/useSubscriptionFeedback')
+vi.mock('@/composables/useLoadingStates')
 vi.mock('@/stores/categories')
 vi.mock('@/utils/formatters', () => ({
   formatMoney: vi.fn(({ amount, currency }) => `${currency} ${amount.toFixed(2)}`),
@@ -26,7 +27,7 @@ describe('SubscriptionSuggestionCard', () => {
     mockPattern = {
       merchant: 'Netflix',
       amount: 15.99,
-      frequency: 'month',
+      frequency: 'monthly',
       confidence: 0.85,
       transactions: [
         {
@@ -34,14 +35,20 @@ describe('SubscriptionSuggestionCard', () => {
           date: '2024-01-15',
           merchantName: 'Netflix',
           amount: { amount: 15.99, currency: 'USD' },
-          category: { name: 'Entertainment' }
+          accountId: 'acc-1',
+          pending: false,
+          transactionType: 'purchase',
+          category: ['Entertainment']
         },
         {
           id: 'tx-2', 
           date: '2024-02-15',
           merchantName: 'Netflix',
           amount: { amount: 15.99, currency: 'USD' },
-          category: { name: 'Entertainment' }
+          accountId: 'acc-1',
+          pending: false,
+          transactionType: 'purchase',
+          category: ['Entertainment']
         }
       ]
     }
@@ -59,6 +66,22 @@ describe('SubscriptionSuggestionCard', () => {
       cancelCategorySelection: vi.fn()
     }
 
+    // Mock loading states composable with all required properties
+    const mockLoadingStates = {
+      setLoading: vi.fn(),
+      withLoading: vi.fn(),
+      withBatchLoading: vi.fn(),
+      isLoading: vi.fn().mockReturnValue(ref(false)),
+      isAnyLoading: ref(false),
+      areLoading: vi.fn().mockReturnValue(ref(false)),
+      activeLoadingStates: ref([]),
+      setBatchLoading: vi.fn(),
+      clearLoading: vi.fn(),
+      states: ref(new Map()),
+      resetAllLoading: vi.fn(),
+      createScopedLoader: vi.fn()
+    }
+
     // Mock categories store
     mockCategoriesStore = {
       categories: [
@@ -68,9 +91,11 @@ describe('SubscriptionSuggestionCard', () => {
     }
 
     const { useSubscriptionFeedback } = await import('@/composables/useSubscriptionFeedback')
+    const { useLoadingStates } = await import('@/composables/useLoadingStates')
     const { useCategoriesStore } = await import('@/stores/categories')
     
     vi.mocked(useSubscriptionFeedback).mockReturnValue(mockSubscriptionFeedback)
+    vi.mocked(useLoadingStates).mockReturnValue(mockLoadingStates)
     vi.mocked(useCategoriesStore).mockReturnValue(mockCategoriesStore)
   })
 
@@ -190,13 +215,33 @@ describe('SubscriptionSuggestionCard', () => {
 
   describe('Loading States', () => {
     it('shows loading state on buttons when processing', async () => {
-      mockSubscriptionFeedback.loading.value = true
+      // Mock useSubscriptionFeedback to return loading state
+      const { ref } = await import('vue')
+      const { useSubscriptionFeedback } = await import('@/composables/useSubscriptionFeedback')
+      vi.mocked(useSubscriptionFeedback).mockReturnValue({
+        loading: ref(true),
+        error: ref(null),
+        recordFeedback: vi.fn(),
+        confirmSubscription: vi.fn(),
+        rejectSubscription: vi.fn(),
+        getUserFeedback: vi.fn(),
+        getFeedbackStats: vi.fn(),
+        undoFeedback: vi.fn(),
+        showCategoryModal: ref(false),
+        pendingSubscriptionData: ref(null),
+        handleCategorySelection: vi.fn(),
+        handleCategoryCreation: vi.fn(),
+        cancelCategorySelection: vi.fn(),
+      })
 
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },
         global: { plugins: [pinia] }
       })
 
+      // Wait for component to render with loading state
+      await wrapper.vm.$nextTick()
+      
       expect(wrapper.text()).toContain('Processing...')
 
       const buttons = wrapper.findAll('button')
@@ -207,7 +252,21 @@ describe('SubscriptionSuggestionCard', () => {
     })
 
     it('disables buttons during loading', async () => {
-      mockSubscriptionFeedback.loading.value = true
+      // Mock the loading state through the composable
+      const { ref } = await import('vue')
+      const { useLoadingStates } = await import('@/composables/useLoadingStates')
+      vi.mocked(useLoadingStates).mockReturnValue({
+        setLoading: vi.fn(),
+        withLoading: vi.fn(),
+        withBatchLoading: vi.fn(),
+        isLoading: vi.fn().mockReturnValue(ref(true)),
+        isAnyLoading: ref(true),
+        areLoading: vi.fn().mockReturnValue(ref(true)),
+        activeLoadingStates: ref(['subscriptionFeedback']),
+        setBatchLoading: vi.fn(),
+        clearLoading: vi.fn(),
+        states: ref(new Map([['subscriptionFeedback', true]]))
+      })
       
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },
@@ -349,9 +408,24 @@ describe('SubscriptionSuggestionCard', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper button labels for screen readers', () => {
-      // Ensure loading is false so button text is visible
-      mockSubscriptionFeedback.loading.value = false
+    it('has proper button labels for screen readers', async () => {
+      // Mock loading states to ensure loading is false so button text is visible
+      const { ref } = await import('vue')
+      const { useLoadingStates } = await import('@/composables/useLoadingStates')
+      vi.mocked(useLoadingStates).mockReturnValue({
+        setLoading: vi.fn(),
+        withLoading: vi.fn(),
+        withBatchLoading: vi.fn(),
+        isLoading: vi.fn().mockReturnValue(ref(false)),
+        isAnyLoading: ref(false),
+        areLoading: vi.fn().mockReturnValue(ref(false)),
+        activeLoadingStates: ref([]),
+        setBatchLoading: vi.fn(),
+        clearLoading: vi.fn(),
+        states: ref(new Map()),
+        resetAllLoading: vi.fn(),
+        createScopedLoader: vi.fn()
+      })
 
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },

@@ -13,7 +13,6 @@ class MockPaddleService {
     // Simulate initialization delay
     await new Promise(resolve => setTimeout(resolve, 100))
     this.isInitialized = true
-    console.log('✅ Mock Paddle: Initialized')
   }
 
   /**
@@ -82,7 +81,6 @@ class MockPaddleService {
     completeBtn?.addEventListener('click', () => {
       cleanup()
       const transactionId = `txn_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      console.log('✅ Mock Paddle: Payment completed with transaction', transactionId)
       onComplete({
         success: true,
         transactionId
@@ -91,7 +89,6 @@ class MockPaddleService {
 
     cancelBtn?.addEventListener('click', () => {
       cleanup()
-      console.log('❌ Mock Paddle: Payment cancelled')
       onComplete({
         success: false,
         error: 'Payment cancelled by user'

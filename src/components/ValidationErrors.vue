@@ -8,7 +8,7 @@
       {{ title }}
     </p>
     <ul class="list-disc list-inside text-sm" :class="listClass">
-      <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
+      <li v-for="error in errors" :key="error">{{ error }}</li>
     </ul>
   </div>
 </template>

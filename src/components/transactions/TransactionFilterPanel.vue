@@ -59,7 +59,7 @@
         <input
           data-testid="merchant-search"
           :value="filters.merchantSearch || ''"
-          @input="$emit('update:merchantSearch', ($event.target as HTMLInputElement).value)"
+          @input="$emit('update:merchantSearch', sanitizeSearchQuery(($event.target as HTMLInputElement).value))"
           type="text"
           placeholder="Search merchants..."
           class="filter-input input-animated"
@@ -93,14 +93,14 @@
         <div class="flex flex-col gap-2 sm:flex-row">
           <input
             :value="filters.amountRange?.min || ''"
-            @input="updateAmountRange('min', ($event.target as HTMLInputElement).value)"
+            @input="updateAmountRange('min', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
             type="number"
             placeholder="Min"
             class="filter-input flex-1 min-w-0 input-animated"
           />
           <input
             :value="filters.amountRange?.max || ''"
-            @input="updateAmountRange('max', ($event.target as HTMLInputElement).value)"
+            @input="updateAmountRange('max', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
             type="number"
             placeholder="Max"
             class="filter-input flex-1 min-w-0 input-animated"
@@ -270,6 +270,7 @@ import { computed, ref, onMounted } from 'vue'
 import type { BankAccount, Category } from '@/domain/models'
 import type { TransactionFilterConfig } from '@/stores/transactions'
 import { useAnimations } from '@/utils/useAnimations'
+import { sanitizeSearchQuery, sanitizeAmount } from '@/utils/sanitize'
 
 interface Props {
   filters: TransactionFilterConfig

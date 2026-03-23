@@ -20,10 +20,8 @@ export class SubscriptionDetectionService {
    * Simple pattern detection - just find recurring transactions
    */
   detectPatterns(transactions: BankTransaction[]): RecurringPattern[] {
-    console.log('🔍 Detecting subscription patterns...')
     
     const patterns = this.detector.detectPatterns(transactions)
-    console.log(`📊 Found ${patterns.length} patterns`)
     
     return patterns
   }

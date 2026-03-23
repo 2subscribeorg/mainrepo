@@ -158,7 +158,6 @@ async function handleCategorySelected(categoryId: string) {
     }
     await transactionsStore.save(updatedTransaction)
     
-    console.log('✅ Subscription created successfully!')
     alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
     
   } catch (error) {
@@ -177,7 +176,6 @@ function handleCategoryModalCancel() {
 
 async function handleEditSubscription(transaction: Transaction) {
   // TODO: Open modal to edit subscription details
-  console.log('Edit subscription for:', transaction.merchantName)
 }
 
 async function handleCategoryChange(transaction: Transaction, categoryId: string) {
@@ -192,7 +190,6 @@ async function handleCategoryChange(transaction: Transaction, categoryId: string
     // Save the updated transaction
     await transactionsStore.save(updatedTransaction)
     
-    console.log(`✅ Category updated for ${transaction.merchantName}`)
   } catch (error) {
     console.error('❌ Failed to update category:', error)
     alert('Failed to update category. Please try again.')
@@ -211,7 +208,6 @@ async function handleLinkToExistingSubscription(transaction: Transaction, data: 
     // Save the updated transaction
     await transactionsStore.save(updatedTransaction)
     
-    console.log(`✅ Linked transaction ${data.transactionId} to existing subscription ${data.subscriptionId}`)
   } catch (error) {
     console.error('❌ Failed to link transaction to existing subscription:', error)
   }
@@ -263,7 +259,6 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     }
     await transactionsStore.save(updatedTransaction)
     
-    console.log('✅ New category and subscription created successfully!')
     alert(`✅ New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
@@ -299,7 +294,6 @@ function handleClearAllFilters() {
 function handleApplyFilters() {
   // In real-time mode, filters are already applied
   // In manual mode, this would trigger a refresh
-  console.log('Apply filters triggered')
 }
 
 function handleClearFilter(filterKey: string) {

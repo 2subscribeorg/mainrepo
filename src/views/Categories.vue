@@ -63,6 +63,7 @@ import CategoryCard from '@/components/categories/CategoryCard.vue'
 import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'
 import { useAnimations } from '@/utils/useAnimations'
 import { validateCategoryWithZod } from '@/schemas/category.schema'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 const categoriesStore = useCategoriesStore()
 
@@ -70,8 +71,10 @@ const categoriesStore = useCategoriesStore()
 const { createRipple, prefersReducedMotion } = useAnimations()
 const addButtonRef = ref<HTMLElement>()
 
-const loading = ref(true)
-const saving = ref(false)
+// Unified loading states
+const { isLoading } = useLoadingStates()
+const loading = isLoading('categories')
+const saving = isLoading('categories')
 const successMessage = ref('')
 const showSuccess = ref(false)
 const editingCategory = ref<Category | null>(null)
@@ -234,7 +237,6 @@ async function deleteCategory() {
 
 onMounted(async () => {
   await categoriesStore.fetchAll()
-  loading.value = false
 })
 </script>
 

@@ -118,12 +118,15 @@ import ValidationErrors from '@/components/ValidationErrors.vue'
 import type { MerchantCategoryRule } from '@/domain/models'
 import { validateMerchantRuleForm } from '@/schemas/form-validation.schema'
 import { checkRateLimit, RATE_LIMITS, getRateLimitMessage } from '@/utils/rateLimiter'
+import { useLoadingStates } from '@/composables/useLoadingStates'
 
 const adminStore = useAdminStore()
 const categoriesStore = useCategoriesStore()
 
-const loading = ref(true)
-const saving = ref(false)
+// Unified loading states
+const { isLoading } = useLoadingStates()
+const loading = isLoading('admin')
+const saving = isLoading('admin')
 const showAddRule = ref(false)
 const successMessage = ref('')
 const showSuccess = ref(false)
@@ -211,10 +214,14 @@ async function deleteRule(id: string) {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    adminStore.fetchRules(),
-    categoriesStore.fetchAll(),
-  ])
-  loading.value = false
+  try {
+    await Promise.all([
+      adminStore.fetchRules(),
+      categoriesStore.fetchAll(),
+    ])
+  } catch (error) {
+    console.error('Admin page loading error:', error)
+    // Handle error gracefully - individual store operations may have their own error handling
+  }
 })
 </script>

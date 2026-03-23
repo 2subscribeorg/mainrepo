@@ -20,7 +20,6 @@ export class PlaidTokenService {
         updatedAt: new Date().toISOString(),
       })
       
-      console.log(`✅ Access token stored for item: ${itemId}`)
     } catch (error) {
       console.error('❌ Failed to store access token:', error)
       throw new Error('Failed to store access token')
@@ -59,7 +58,6 @@ export class PlaidTokenService {
       
       await deleteDoc(tokenRef)
       
-      console.log(`✅ Access token deleted for item: ${itemId}`)
     } catch (error) {
       console.error('❌ Failed to delete access token:', error)
       throw new Error('Failed to delete access token')

@@ -46,9 +46,12 @@ describe('RenewalWarningModal', () => {
       recurrence: 'monthly',
       dueDate: '2024-03-15',
       daysUntilDue: 3,
+      warningThreshold: 7,
       status: 'active',
+      notificationSent: false,
       createdAt: '2024-03-12T10:00:00Z',
       updatedAt: '2024-03-12T10:00:00Z',
+      expiresAt: '2024-03-16T00:00:00Z',
     },
     {
       id: 'warning-2',
@@ -59,9 +62,12 @@ describe('RenewalWarningModal', () => {
       recurrence: 'monthly',
       dueDate: '2024-03-16',
       daysUntilDue: 4,
+      warningThreshold: 7,
       status: 'active',
+      notificationSent: false,
       createdAt: '2024-03-12T10:00:00Z',
       updatedAt: '2024-03-12T10:00:00Z',
+      expiresAt: '2024-03-17T00:00:00Z',
     },
   ]
 
@@ -70,7 +76,7 @@ describe('RenewalWarningModal', () => {
     // Setup default mock returns
     mockActiveWarnings.value = []
     mockWarningCount.value = 0
-    mockLoading.value = false
+    mockLoading.value = false // Reset loading state for each test
     mockError.value = null
     mockCalculating.value = false
   })
@@ -171,7 +177,7 @@ describe('RenewalWarningModal', () => {
   describe('Content States', () => {
     test('shows loading state when loading is true', () => {
       // Arrange
-      mockLoading.value = true
+      mockLoading.value = true // Set loading state for this test
 
       // Act
       const wrapper = mount(RenewalWarningModal, {
@@ -190,6 +196,7 @@ describe('RenewalWarningModal', () => {
 
     test('shows error state when error exists', () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
       mockError.value = 'Failed to load warnings'
 
       // Act
@@ -210,6 +217,8 @@ describe('RenewalWarningModal', () => {
 
     test('shows empty state when no warnings', () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       mockActiveWarnings.value = []
       mockWarningCount.value = 0
 
@@ -230,6 +239,8 @@ describe('RenewalWarningModal', () => {
 
     test('shows warnings list when warnings exist', () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       mockActiveWarnings.value = mockWarnings
       mockWarningCount.value = 2
 
@@ -294,6 +305,8 @@ describe('RenewalWarningModal', () => {
   describe('Warning Actions', () => {
     test('calls dismissWarning when warning dismissed', async () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       mockActiveWarnings.value = mockWarnings
       mockWarningCount.value = 2
 
@@ -317,6 +330,8 @@ describe('RenewalWarningModal', () => {
 
     test('closes modal and navigates when view subscription clicked', async () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       mockActiveWarnings.value = mockWarnings
       mockWarningCount.value = 2
 
@@ -515,6 +530,8 @@ describe('RenewalWarningModal', () => {
   describe('Edge Cases', () => {
     test('handles single warning', () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       mockActiveWarnings.value = [mockWarnings[0]]
       mockWarningCount.value = 1
 
@@ -537,10 +554,25 @@ describe('RenewalWarningModal', () => {
 
     test('handles many warnings', () => {
       // Arrange
+      mockLoading.value = false // Ensure not loading
+      mockError.value = null // Ensure no error
       const manyWarnings = Array.from({ length: 10 }, (_, i) => ({
-        ...mockWarnings[0],
-        id: `warning-${i}`,
+        id: `warning-${i + 1}`,
+        userId: 'user-123',
+        subscriptionId: `sub-${i + 1}`,
+        merchantName: `Service ${i + 1}`,
+        amount: { amount: 9.99 + i, currency: 'USD' },
+        recurrence: 'monthly',
+        dueDate: '2024-03-20',
+        daysUntilDue: 3,
+        warningThreshold: 7,
+        status: 'active',
+        notificationSent: false,
+        createdAt: '2024-03-12T10:00:00Z',
+        updatedAt: '2024-03-12T10:00:00Z',
+        expiresAt: '2024-03-21T00:00:00Z',
       }))
+      
       mockActiveWarnings.value = manyWarnings
       mockWarningCount.value = 10
 
