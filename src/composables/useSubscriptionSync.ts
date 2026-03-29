@@ -1,4 +1,5 @@
 import { watch } from 'vue'
+import { logger } from '@/utils/logger'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBankTransactionsStore } from '@/stores/bankTransactions'
@@ -19,7 +20,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionCreation(subscription: Subscription): Promise<boolean> {
     try {
-      console.log('🔄 Syncing subscription creation:', subscription.merchantName)
+      logger.debug('🔄 Syncing subscription creation:', subscription.merchantName)
       
       // Save to subscriptions store
       await subscriptionsStore.save(subscription)
@@ -30,10 +31,10 @@ export function useSubscriptionSync() {
       // Run pattern detection to link existing transactions
       await transactionManagement.detectPatterns()
       
-      console.log('✅ Subscription sync completed')
+      logger.success('Subscription sync completed')
       return true
     } catch (error) {
-      console.error('❌ Subscription sync failed:', error)
+      logger.error('❌ Subscription sync failed:', error)
       return false
     }
   }
@@ -43,7 +44,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionUpdate(subscriptionId: string, updates: Partial<Subscription>): Promise<boolean> {
     try {
-      console.log('🔄 Syncing subscription update:', subscriptionId)
+      logger.debug('🔄 Syncing subscription update:', subscriptionId)
       
       // Update in subscriptions store
       const existingSubscription = subscriptionsStore.subscriptions.find(s => s.id === subscriptionId)
@@ -55,10 +56,10 @@ export function useSubscriptionSync() {
       // Refresh to ensure UI updates
       await subscriptionsStore.fetchAll()
       
-      console.log('✅ Subscription update sync completed')
+      logger.success('Subscription update sync completed')
       return true
     } catch (error) {
-      console.error('❌ Subscription update sync failed:', error)
+      logger.error('❌ Subscription update sync failed:', error)
       return false
     }
   }
@@ -68,7 +69,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionDeletion(subscriptionId: string): Promise<boolean> {
     try {
-      console.log('🔄 Syncing subscription deletion:', subscriptionId)
+      logger.debug('🔄 Syncing subscription deletion:', subscriptionId)
       
       // Remove from subscriptions store
       // Note: Actual deletion method depends on store implementation
@@ -76,10 +77,10 @@ export function useSubscriptionSync() {
       // Refresh to ensure UI updates
       await subscriptionsStore.fetchAll()
       
-      console.log('✅ Subscription deletion sync completed')
+      logger.success('Subscription deletion sync completed')
       return true
     } catch (error) {
-      console.error('❌ Subscription deletion sync failed:', error)
+      logger.error('❌ Subscription deletion sync failed:', error)
       return false
     }
   }
@@ -92,7 +93,7 @@ export function useSubscriptionSync() {
       () => subscriptionsStore.subscriptions.length,
       async (newCount, oldCount) => {
         if (newCount > oldCount) {
-          console.log('📊 New subscription detected, running pattern matching...')
+          logger.debug('📊 New subscription detected, running pattern matching...')
           // Run pattern detection to link transactions to new subscription
           await transactionManagement.detectPatterns()
         }

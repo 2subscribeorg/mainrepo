@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { logger } from '@/utils/logger'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useBankTransactionsStore } from '@/stores/bankTransactions'
@@ -62,7 +63,7 @@ export function useTransactionManagement() {
       
     } catch (e) {
       patternDetectionError.value = e instanceof Error ? e.message : 'Failed to detect patterns'
-      console.error('❌ Pattern detection failed:', e)
+      logger.error('❌ Pattern detection failed:', e)
       throw e
     }
     })
@@ -81,7 +82,7 @@ export function useTransactionManagement() {
     }
 
     await dataStore.save(newTransaction)
-    console.log('✅ Transaction created:', newTransaction.id)
+    logger.success('Transaction created:', newTransaction.id)
     return newTransaction
   }
 
@@ -118,7 +119,7 @@ export function useTransactionManagement() {
       }
     }
     
-    console.log(`✅ Transaction ${transactionId} updated with subscription ${subscriptionId}`)
+    logger.success(`Transaction ${transactionId} updated with subscription ${subscriptionId}`)
     return updatedTransaction
   }
 
@@ -130,7 +131,7 @@ export function useTransactionManagement() {
       try {
         const transaction = await dataStore.getById(update.id)
         if (!transaction) {
-          console.warn(`⚠️ Transaction ${update.id} not found, skipping`)
+          logger.warn(`⚠️ Transaction ${update.id} not found, skipping`)
           continue
         }
         
@@ -138,11 +139,11 @@ export function useTransactionManagement() {
         await dataStore.updateTransaction(updatedTransaction)
         results.push(updatedTransaction)
       } catch (error) {
-        console.error(`❌ Failed to update transaction ${update.id}:`, error)
+        logger.error(`❌ Failed to update transaction ${update.id}:`, error)
       }
     }
     
-    console.log(`✅ Bulk update complete: ${results.length}/${updates.length} transactions updated`)
+    logger.success(`Bulk update complete: ${results.length}/${updates.length} transactions updated`)
     return results
   }
 

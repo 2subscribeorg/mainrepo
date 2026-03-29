@@ -36,6 +36,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, computed, onErrorCaptured, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -86,7 +87,7 @@ const errorMessage = computed(() => {
 })
 
 onErrorCaptured((err: Error) => {
-  console.error('RouteErrorBoundary caught error:', err)
+  logger.error('RouteErrorBoundary caught error:', err)
   error.value = err
   return false
 })

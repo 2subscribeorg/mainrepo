@@ -32,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, computed, onErrorCaptured } from 'vue'
 
 interface FieldError {
@@ -93,7 +94,7 @@ const errorMessage = computed(() => {
 })
 
 onErrorCaptured((err: Error) => {
-  console.error('FormErrorBoundary caught error:', err)
+  logger.error('FormErrorBoundary caught error:', err)
   error.value = err
   
   // Try to extract field errors from the error message

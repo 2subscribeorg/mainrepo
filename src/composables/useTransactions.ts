@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { logger } from '@/utils/logger'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionManagement } from '@/composables/useTransactionManagement'
@@ -134,7 +135,7 @@ export function useTransactions() {
       accounts.value = await bankAccountsStore.getAllAccounts()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to refresh transactions'
-      console.error('Failed to refresh transactions:', err)
+      logger.error('Failed to refresh transactions:', err)
     } finally {
       loading.value = false
     }

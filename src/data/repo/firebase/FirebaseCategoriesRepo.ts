@@ -11,6 +11,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore'
 import type { ID, Category } from '@/domain/models'
+import { logger } from '@/utils/logger'
 import type { ICategoriesRepo, DataChangeCallback } from '../interfaces/ICategoriesRepo'
 import { getFirebaseDb, getFirebaseAuth } from '@/config/firebase'
 
@@ -37,11 +38,11 @@ export class FirebaseCategoriesRepo implements ICategoriesRepo {
     )
     
     const snapshot = await getDocs(q)
-    console.log('🔥 Firestore query returned:', snapshot.docs.length, 'categories')
+    logger.debug('🔥 Firestore query returned:', snapshot.docs.length, 'categories')
     
     const categories = snapshot.docs.map(doc => {
       const data = doc.data()
-      console.log('  📄 Category:', doc.id, data.name, 'userId:', data.userId)
+      logger.debug('  📄 Category:', doc.id, data.name, 'userId:', data.userId)
       return {
         id: doc.id,
         ...data,
@@ -125,7 +126,7 @@ export class FirebaseCategoriesRepo implements ICategoriesRepo {
         callback(results)
       },
       (error) => {
-        console.error('Firebase categories error:', error)
+        logger.error('Firebase categories error:', error)
         callback([])
       }
     )

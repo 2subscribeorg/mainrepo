@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { logger } from '@/utils/logger'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
 import { useHybridValidation } from './useHybridValidation'
@@ -44,7 +45,7 @@ export function useCategoryManagement() {
       }
       
       // Validate category data with hybrid validation before saving
-      console.log('🔍 Validating category data...')
+      logger.debug('🔍 Validating category data...')
       const validation = await validateCategory({
         name: newCategory.name,
         userId: newCategory.userId,
@@ -57,7 +58,7 @@ export function useCategoryManagement() {
         throw new Error(validation.error || 'Category validation failed')
       }
       
-      console.log(`✅ Category validation passed (using ${validation.usingServer ? 'server' : 'client'} validation)`)
+      logger.success(`Category validation passed (using ${validation.usingServer ? 'server' : 'client'} validation)`)
       
       await categoriesStore.save(newCategory)
       
@@ -65,13 +66,13 @@ export function useCategoryManagement() {
       // This fixes race conditions when creating category + subscription together
       await ensureCategoriesLoaded()
       
-      console.log('✅ Category created successfully:', newCategory.name)
+      logger.success('Category created successfully:', newCategory.name)
       return newCategory
       
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to create category'
       error.value = errorMessage
-      console.error('❌ Failed to create category:', e)
+      logger.error('❌ Failed to create category:', e)
       throw e
     } finally {
       loading.value = false
@@ -113,12 +114,12 @@ export function useCategoryManagement() {
       })
       
       await categoriesStore.save(updatedCategory)
-      console.log('✅ Category updated successfully:', updatedCategory.name)
+      logger.success('Category updated successfully:', updatedCategory.name)
       
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to update category'
       error.value = errorMessage
-      console.error('❌ Failed to update category:', e)
+      logger.error('❌ Failed to update category:', e)
       throw e
     } finally {
       loading.value = false

@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, computed, onMounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
@@ -80,11 +81,11 @@ function handleGlobalError(error: Error, errorInfo: any) {
 }
 
 function handleRetry(retryCount: number) {
-  console.log(`Application retry attempt ${retryCount}`)
+  logger.debug(`Application retry attempt ${retryCount}`)
 }
 
 function handleRecovery() {
-  console.log('Application recovered successfully')
+  logger.debug('Application recovered successfully')
   showRecoveryNotification.value = true
   
   // Auto-hide recovery notification after 5 seconds

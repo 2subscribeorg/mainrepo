@@ -160,6 +160,7 @@ import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
 import { useToast } from '@/composables/useToast'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
+import { logger } from '@/utils/logger'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
@@ -202,7 +203,7 @@ const lastFeedbackId = ref<string | null>(null)
 // This ensures dismissed merchants are loaded BEFORE the template renders
 const syncLocalDismissed = () => {
   if (!user.value?.id) {
-    console.warn('No user ID available for localStorage sync')
+    logger.warn('No user ID available for localStorage sync')
     return
   }
   
@@ -217,11 +218,11 @@ const syncLocalDismissed = () => {
             dismissedMerchants.value.add(name.toLowerCase().trim())
           }
         })
-        console.log(`Loaded ${names.length} dismissed merchants from localStorage`)
+        logger.debug('Loaded dismissed merchants from localStorage', { count: names.length })
       }
     }
   } catch (err) {
-    console.warn('Failed to load dismissed merchants from localStorage:', err)
+    logger.warn('Failed to load dismissed merchants from localStorage', { error: err })
     // Don't clear the set - just continue with empty state
   }
 }
@@ -365,7 +366,7 @@ async function loadSubscriptionSuggestions() {
       } catch (dbError) {
         // If database loading fails, we still have localStorage merchants from syncLocalDismissed()
         // Don't clear the dismissed set, just log the error and continue
-        console.warn('Failed to load database rejections, using localStorage only:', dbError)
+        logger.warn('Failed to load database rejections, using localStorage only', { error: dbError })
       }
     
     
@@ -396,7 +397,7 @@ async function loadSubscriptionSuggestions() {
         suggestions.value = allPatterns?.filter(pattern => pattern.confidence >= 0.5) || []
       } catch (patternError) {
         // If pattern detection fails, ensure we still have empty suggestions rather than undefined
-        console.warn('Failed to detect patterns, showing no suggestions:', patternError)
+        logger.warn('Failed to detect patterns, showing no suggestions', { error: patternError })
         suggestions.value = []
       }
     

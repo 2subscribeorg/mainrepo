@@ -5,6 +5,7 @@
  */
 
 import { initializeFirebase } from './firebase'
+import { logger } from '@/utils/logger'
 import { useAuthStore } from '@/stores/auth'
 
 // Track initialization state
@@ -36,13 +37,13 @@ export async function bootstrapApp(): Promise<void> {
       try {
         // Initialize Firebase
         initializeFirebase()
-        console.log('✅ Firebase initialized')
+        logger.success('Firebase initialized')
 
         // Initialize auth listener
         const authStore = useAuthStore()
         authStore.initAuthListener()
       } catch (error) {
-        console.error('❌ Failed to initialize Firebase:', error)
+        logger.error('❌ Failed to initialize Firebase:', error)
         throw error
       }
     }

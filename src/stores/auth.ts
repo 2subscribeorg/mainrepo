@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { rateLimiter, RATE_LIMITS, getRateLimitMessage } from '@/utils/rateLimiter'
+import { authRateLimiter } from '@/utils/authRateLimiter'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -179,6 +181,13 @@ export const useAuthStore = defineStore('auth', () => {
    * Returns a promise that resolves when auth state is updated
    */
   async function signIn(email: string, password: string): Promise<User> {
+    // Enhanced rate limiting with progressive lockout - prevent brute force attacks
+    const rateLimitCheck = authRateLimiter.canAttemptLogin(email)
+    if (!rateLimitCheck.allowed) {
+      error.value = rateLimitCheck.message || 'Too many login attempts'
+      throw new Error(rateLimitCheck.message)
+    }
+
     if (!isFirebaseMode) {
       // Mock mode - simulate delay and return mock user
       return await withLoading('auth', async () => {
@@ -205,6 +214,8 @@ export const useAuthStore = defineStore('auth', () => {
         return new Promise<User>((resolve, reject) => {
           authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
             if (updatedUser) {
+              // Record successful login
+              authRateLimiter.recordLoginAttempt(email, true)
               resolve(updatedUser)
             } else {
               reject(new Error('Failed to get user data after sign in'))
@@ -220,9 +231,13 @@ export const useAuthStore = defineStore('auth', () => {
           }, 10000)
         })
       } catch (e) {
+        // Record failed login attempt
+        authRateLimiter.recordLoginAttempt(email, false)
+        
         // SECURITY: Never expose Firebase error messages that reveal user existence
         const secureMessage = getSecureAuthMessage(e)
         error.value = secureMessage
+        // Don't reset rate limit on failed login - this is intentional for security
         throw new Error(secureMessage)
       }
     })
@@ -234,6 +249,14 @@ export const useAuthStore = defineStore('auth', () => {
    * Returns a promise that resolves when auth state is updated
    */
   async function signUp(email: string, password: string, sendVerification = false): Promise<{ success: boolean; needsVerification: boolean; user?: User }> {
+    // Rate limiting - prevent signup spam
+    const rateLimitKey = `signup:${email}`
+    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.SIGNUP.maxAttempts, RATE_LIMITS.SIGNUP.windowMs)) {
+      const message = getRateLimitMessage(rateLimitKey, RATE_LIMITS.SIGNUP)
+      error.value = message
+      throw new Error(message)
+    }
+
     if (!isFirebaseMode) {
       // Mock mode - simulate delay and return success
       return await withLoading('auth', async () => {
@@ -321,6 +344,13 @@ export const useAuthStore = defineStore('auth', () => {
    * Send password reset email (Firebase only)
    */
   async function sendPasswordReset(email: string) {
+    // Rate limiting - prevent password reset spam
+    const rateLimitKey = `password-reset:${email}`
+    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.PASSWORD_RESET.maxAttempts, RATE_LIMITS.PASSWORD_RESET.windowMs)) {
+      const message = getRateLimitMessage(rateLimitKey, RATE_LIMITS.PASSWORD_RESET)
+      return { success: false, message }
+    }
+
     if (!isFirebaseMode) {
       return { success: false, message: 'Password reset not available in Mock mode' }
     }
@@ -411,6 +441,13 @@ export const useAuthStore = defineStore('auth', () => {
    * Change user password (Firebase only, requires reauthentication)
    */
   async function changePassword(currentPassword: string, newPassword: string) {
+    // Rate limiting - prevent password change abuse
+    const rateLimitKey = `password-change:${user.value?.id || 'unknown'}`
+    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.PASSWORD_CHANGE.maxAttempts, RATE_LIMITS.PASSWORD_CHANGE.windowMs)) {
+      const message = getRateLimitMessage(rateLimitKey, RATE_LIMITS.PASSWORD_CHANGE)
+      return { success: false, message }
+    }
+
     if (!isFirebaseMode) {
       return { success: false, message: 'Password change not available in Mock mode' }
     }

@@ -77,6 +77,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, computed, onErrorCaptured, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -199,9 +200,9 @@ function getRetryDelay(): number {
 
 // Catch errors from child components
 onErrorCaptured((err: Error, instance: any, info: string) => {
-  console.error('ErrorBoundary caught an error:', err)
-  console.error('Component instance:', instance)
-  console.error('Error info:', info)
+  logger.error('ErrorBoundary caught an error:', err)
+  logger.error('Component instance:', instance)
+  logger.error('Error info:', info)
   
   error.value = err
   errorInfo.value = { instance, info }
@@ -315,7 +316,7 @@ function reportError() {
     }
     
     // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
-    console.log('Error reported:', errorData)
+    logger.debug('Error reported:', errorData)
     
     alert('Error has been reported. Thank you for your feedback!')
   }

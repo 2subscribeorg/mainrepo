@@ -3,6 +3,7 @@ import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
 import { useHybridValidation } from './useHybridValidation'
+import { logger } from '@/utils/logger'
 import type { Transaction, Subscription } from '@/domain/models'
 import type { SubscriptionRecurrence, SubscriptionCreationParams } from '@/types/subscriptions'
 import { calculateNextPaymentDate, getDefaultRecurrenceForMerchant, generateSubscriptionNotes } from '@/utils/subscriptionUtils'
@@ -52,7 +53,7 @@ export function useSubscriptionCreation() {
       }
       
       // Validate subscription data before saving
-      console.log('🔍 Validating subscription data...')
+      logger.debug('Validating subscription data...')
       const validation = await validateSubscription({
         amount: typeof newSubscription.amount === 'number' ? newSubscription.amount : newSubscription.amount?.amount || 0,
         merchantName: newSubscription.merchantName,
@@ -69,7 +70,9 @@ export function useSubscriptionCreation() {
         throw new Error(validation.error || 'Subscription validation failed')
       }
       
-      console.log(`✅ Subscription validation passed (using ${validation.usingServer ? 'server' : 'client'} validation)`)
+      logger.debug('Subscription validation passed', { 
+        validationType: validation.usingServer ? 'server' : 'client' 
+      })
       
       // Save subscription
       await subscriptionsStore.save(newSubscription)
@@ -82,13 +85,16 @@ export function useSubscriptionCreation() {
       }
       await transactionsStore.updateTransaction(updatedTransaction)
       
-      console.log('✅ Subscription created successfully:', newSubscription.merchantName)
+      logger.success('Subscription created successfully', { 
+        merchantName: newSubscription.merchantName,
+        id: newSubscription.id 
+      })
       return newSubscription
       
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to create subscription'
       error.value = errorMessage
-      console.error('❌ Failed to create subscription:', e)
+      logger.error('Failed to create subscription', e)
       throw e
     } finally {
       loading.value = false

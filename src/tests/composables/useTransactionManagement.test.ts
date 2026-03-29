@@ -540,7 +540,8 @@ describe('useTransactionManagement', () => {
       
       // Assert - should log bulk completion message
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('✅ Bulk update complete: 2/2 transactions updated')
+        expect.stringContaining('✅ Bulk update complete: 2/2 transactions updated'),
+        expect.anything()
       )
       
       consoleSpy.mockRestore()
@@ -558,7 +559,8 @@ describe('useTransactionManagement', () => {
       // Assert
       expect(results).toHaveLength(2) // Only existing transactions processed
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('⚠️ Transaction non-existent not found, skipping')
+        expect.stringContaining('⚠️ Transaction non-existent not found, skipping'),
+        expect.anything()
       )
       
       consoleWarnSpy.mockRestore()

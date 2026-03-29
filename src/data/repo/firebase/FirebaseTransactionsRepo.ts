@@ -10,6 +10,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore'
 import type { ID, Transaction } from '@/domain/models'
+import { logger } from '@/utils/logger'
 import type {
   ITransactionsRepo,
   TransactionFilter,
@@ -61,7 +62,7 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     // Validate Firebase response with Zod
     const validation = validateFirebaseTransactions(rawResults)
     if (!validation.success) {
-      console.error('Firebase transaction validation failed:', validation.error)
+      logger.error('Firebase transaction validation failed:', validation.error)
       throw new Error(`Invalid transaction data from Firebase: ${validation.error.issues[0]?.message}`)
     }
 
@@ -94,7 +95,7 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     // Validate Firebase response with Zod
     const validation = validateFirebaseTransaction(rawData)
     if (!validation.success) {
-      console.error('Firebase transaction validation failed:', validation.error)
+      logger.error('Firebase transaction validation failed:', validation.error)
       throw new Error(`Invalid transaction data from Firebase: ${validation.error.issues[0]?.message}`)
     }
     
@@ -124,12 +125,12 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
 
   async seed(_count = 150): Promise<void> {
     // Seeding not supported in Firebase
-    console.warn('Seed operation not supported in Firebase backend')
+    logger.warn('Seed operation not supported in Firebase backend')
   }
 
   async clear(): Promise<void> {
     // Batch delete would require Cloud Functions or client-side loop
-    console.warn('Clear operation requires manual implementation in Firebase')
+    logger.warn('Clear operation requires manual implementation in Firebase')
   }
 
   // Phase 2 - Observable pattern
@@ -162,7 +163,7 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
         callback(results)
       },
       (error) => {
-        console.error('Firebase transactions error:', error)
+        logger.error('Firebase transactions error:', error)
         callback([])
       }
     )

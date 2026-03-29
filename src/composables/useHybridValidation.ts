@@ -5,6 +5,7 @@
  */
 
 import { ref, computed } from 'vue'
+import { logger } from '@/utils/logger'
 import { z } from 'zod'
 
 // ============================================================================
@@ -116,20 +117,20 @@ export function useHybridValidation() {
         if (response.ok) {
           const result = await response.json()
           usingServerValidation.value = true
-          console.log('✅ Server validation passed for subscription')
+          logger.success('Server validation passed for subscription')
           return { valid: true, usingServer: true, data: result }
         } else {
           const error = await response.json()
           throw new Error(error.error?.message || 'Server validation failed')
         }
       } catch (serverError) {
-        console.warn('⚠️ Backend not available, using client validation:', serverError)
+        logger.warn('⚠️ Backend not available, using client validation:', serverError)
         
         // Fallback to client validation
         const result = subscriptionSchema.safeParse(subscriptionData)
         
         if (result.success) {
-          console.log('✅ Client validation passed for subscription')
+          logger.success('Client validation passed for subscription')
           return { valid: true, usingServer: false, data: result.data }
         } else {
           const errorMessages = result.error.issues.map(issue => issue.message)
@@ -139,7 +140,7 @@ export function useHybridValidation() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Validation failed'
       validationError.value = errorMessage
-      console.error('❌ Subscription validation failed:', errorMessage)
+      logger.error('❌ Subscription validation failed:', errorMessage)
       return { valid: false, error: errorMessage, usingServer: usingServerValidation.value }
     } finally {
       isValidating.value = false
@@ -168,20 +169,20 @@ export function useHybridValidation() {
         if (response.ok) {
           const result = await response.json()
           usingServerValidation.value = true
-          console.log('✅ Server validation passed for category')
+          logger.success('Server validation passed for category')
           return { valid: true, usingServer: true, data: result }
         } else {
           const error = await response.json()
           throw new Error(error.error?.message || 'Server validation failed')
         }
       } catch (serverError) {
-        console.warn('⚠️ Backend not available, using client validation:', serverError)
+        logger.warn('⚠️ Backend not available, using client validation:', serverError)
         
         // Fallback to client validation
         const result = categorySchema.safeParse(categoryData)
         
         if (result.success) {
-          console.log('✅ Client validation passed for category')
+          logger.success('Client validation passed for category')
           return { valid: true, usingServer: false, data: result.data }
         } else {
           const errorMessages = result.error.issues.map(issue => issue.message)
@@ -191,7 +192,7 @@ export function useHybridValidation() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Validation failed'
       validationError.value = errorMessage
-      console.error('❌ Category validation failed:', errorMessage)
+      logger.error('❌ Category validation failed:', errorMessage)
       return { valid: false, error: errorMessage, usingServer: usingServerValidation.value }
     } finally {
       isValidating.value = false
@@ -220,20 +221,20 @@ export function useHybridValidation() {
         if (response.ok) {
           const result = await response.json()
           usingServerValidation.value = true
-          console.log('✅ Server validation passed for transaction')
+          logger.success('Server validation passed for transaction')
           return { valid: true, usingServer: true, data: result }
         } else {
           const error = await response.json()
           throw new Error(error.error?.message || 'Server validation failed')
         }
       } catch (serverError) {
-        console.warn('⚠️ Backend not available, using client validation:', serverError)
+        logger.warn('⚠️ Backend not available, using client validation:', serverError)
         
         // Fallback to client validation
         const result = transactionSchema.safeParse(transactionData)
         
         if (result.success) {
-          console.log('✅ Client validation passed for transaction')
+          logger.success('Client validation passed for transaction')
           return { valid: true, usingServer: false, data: result.data }
         } else {
           const errorMessages = result.error.issues.map(issue => issue.message)
@@ -243,7 +244,7 @@ export function useHybridValidation() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Validation failed'
       validationError.value = errorMessage
-      console.error('❌ Transaction validation failed:', errorMessage)
+      logger.error('❌ Transaction validation failed:', errorMessage)
       return { valid: false, error: errorMessage, usingServer: usingServerValidation.value }
     } finally {
       isValidating.value = false

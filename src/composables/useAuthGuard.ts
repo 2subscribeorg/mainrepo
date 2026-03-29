@@ -1,4 +1,5 @@
 import { useAuth } from './useAuth'
+import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
 import { isAppBootstrapped, bootstrapApp } from '@/config/bootstrap'
@@ -25,7 +26,7 @@ export async function requireAuth(
 ) {
   // Ensure app is bootstrapped before checking auth
   if (!isAppBootstrapped()) {
-    console.warn('Auth guard called before bootstrap complete - waiting...')
+    logger.warn('Auth guard called before bootstrap complete - waiting...')
     await bootstrapApp()
   }
 

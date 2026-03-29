@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { logger } from '@/utils/logger'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
@@ -60,7 +61,7 @@ export function useSubscriptionFeedback() {
         return feedback
       } catch (err: any) {
         error.value = err.message || 'Failed to record feedback'
-        console.error('❌ Failed to record feedback:', err)
+        logger.error('❌ Failed to record feedback:', err)
         return null
       }
     })
@@ -79,7 +80,7 @@ export function useSubscriptionFeedback() {
       })
 
       if (!feedbackSuccess) {
-        console.error('❌ Feedback recording failed, but continuing with subscription creation')
+        logger.error('❌ Feedback recording failed, but continuing with subscription creation')
         // Don't throw error here - continue with subscription creation even if feedback fails
       }
 
@@ -94,7 +95,7 @@ export function useSubscriptionFeedback() {
 
       } catch (err: any) {
         error.value = err.message
-        console.error('Error confirming subscription:', err)
+        logger.error('Error confirming subscription:', err)
         return false
       }
     })
@@ -151,7 +152,7 @@ export function useSubscriptionFeedback() {
         
         await transactionsStore.save(updatedTransaction)
 
-        console.log(`✅ Subscription created and linked: ${params.merchantName}`)
+        logger.success(`Subscription created and linked: ${params.merchantName}`)
         
         // Clean up
         pendingSubscriptionData.value = null
@@ -161,7 +162,7 @@ export function useSubscriptionFeedback() {
 
       } catch (err: any) {
         error.value = err.message
-        console.error('Error creating subscription:', err)
+        logger.error('Error creating subscription:', err)
         return false
       }
     })
@@ -199,7 +200,7 @@ export function useSubscriptionFeedback() {
 
       } catch (err: any) {
         error.value = err.message || 'Failed to create category and subscription'
-        console.error('❌ Failed to create category and subscription:', err)
+        logger.error('❌ Failed to create category and subscription:', err)
         return false
       } finally {
         showCategoryModal.value = false
@@ -235,7 +236,7 @@ export function useSubscriptionFeedback() {
           wasAddedToCache = true
         }
       } catch (err) {
-        console.warn('Failed to cache rejection locally:', err)
+        logger.warn('Failed to cache rejection locally:', err)
       }
     }
 
@@ -253,9 +254,9 @@ export function useSubscriptionFeedback() {
       if (wasAddedToCache && cacheKey && previousCacheState !== null) {
         try {
           localStorage.setItem(cacheKey, JSON.stringify(previousCacheState))
-          console.warn('Rolled back localStorage cache due to database write failure:', err)
+          logger.warn('Rolled back localStorage cache due to database write failure:', err)
         } catch (rollbackErr) {
-          console.error('Failed to rollback localStorage cache:', rollbackErr)
+          logger.error('Failed to rollback localStorage cache:', rollbackErr)
         }
       }
       
@@ -300,13 +301,13 @@ export function useSubscriptionFeedback() {
             })
           }
         } catch (err) {
-          console.warn('Failed to merge cached rejections:', err)
+          logger.warn('Failed to merge cached rejections:', err)
         }
         
         return dbFeedback
       } catch (err: any) {
         error.value = err.message
-        console.error('Error fetching feedback:', err)
+        logger.error('Error fetching feedback:', err)
         return []
       }
     })
@@ -332,7 +333,7 @@ export function useSubscriptionFeedback() {
         }
       } catch (err: any) {
         error.value = err.message
-        console.error('Error fetching stats:', err)
+        logger.error('Error fetching stats:', err)
         return null
       }
     })
@@ -354,7 +355,7 @@ export function useSubscriptionFeedback() {
               localStorage.setItem(cacheKey, JSON.stringify(filtered))
             }
           } catch (err) {
-            console.warn('Failed to remove from cache:', err)
+            logger.warn('Failed to remove from cache:', err)
           }
         }
 
@@ -362,7 +363,7 @@ export function useSubscriptionFeedback() {
         return true
       } catch (err: any) {
         error.value = err.message
-        console.error('Error undoing feedback:', err)
+        logger.error('Error undoing feedback:', err)
         return false
       }
     })

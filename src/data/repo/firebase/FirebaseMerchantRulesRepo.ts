@@ -13,6 +13,7 @@ import {
   orderBy,
 } from 'firebase/firestore'
 import type { ID, MerchantCategoryRule } from '@/domain/models'
+import { logger } from '@/utils/logger'
 import type {
   IMerchantRulesRepo,
   DataChangeCallback,
@@ -134,7 +135,7 @@ export class FirebaseMerchantRulesRepo implements IMerchantRulesRepo {
         callback(results)
       },
       (error) => {
-        console.error('Firebase merchant rules error:', error)
+        logger.error('Firebase merchant rules error:', error)
         callback([])
       }
     )

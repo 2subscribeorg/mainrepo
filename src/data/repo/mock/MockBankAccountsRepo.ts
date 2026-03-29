@@ -1,4 +1,5 @@
 import type { ID, BankConnection, BankAccount } from '@/domain/models'
+import { logger } from '@/utils/logger'
 import type { IBankAccountsRepo } from '../interfaces/IBankAccountsRepo'
 
 export class MockBankAccountsRepo implements IBankAccountsRepo {
@@ -92,7 +93,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     }
     
     this.connections.push(connection)
-    console.log('🏦 Mock bank connected:', randomBank.name, publicToken)
+    logger.debug('🏦 Mock bank connected:', randomBank.name, publicToken)
     
     return connection
   }
@@ -103,7 +104,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     const index = this.connections.findIndex(c => c.id === connectionId)
     if (index !== -1) {
       const connection = this.connections[index]
-      console.log('🔌 Mock bank disconnected:', connection.institutionName)
+      logger.debug('🔌 Mock bank disconnected:', connection.institutionName)
       this.connections.splice(index, 1)
     }
   }
@@ -117,7 +118,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
       connection.accounts.forEach(account => {
         account.lastSynced = new Date().toISOString()
       })
-      console.log('🔄 Mock transactions synced for:', connection.institutionName)
+      logger.debug('🔄 Mock transactions synced for:', connection.institutionName)
     }
   }
   

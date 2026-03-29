@@ -112,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { computed, ref } from 'vue'
 import type { Transaction, Subscription } from '@/domain/models'
 import { formatMoney, formatDate } from '@/utils/formatters'
@@ -246,7 +247,7 @@ async function handleSaveCategory() {
     
     closeCategoryModal()
   } catch (error) {
-    console.error('Failed to create category:', error)
+    logger.error('Failed to create category:', error)
     categoryValidationErrors.value.push('Failed to create category. Please try again.')
   } finally {
     savingCategory.value = false

@@ -226,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, onMounted, computed } from 'vue'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import ConnectionExpirationBanner from '@/components/ConnectionExpirationBanner.vue'
@@ -300,7 +301,7 @@ async function handleMockComplete(publicToken: string) {
   try {
     await bankAccountsStore.completeConnection(publicToken)
   } catch (e) {
-    console.error('Failed to complete connection:', e)
+    logger.error('Failed to complete connection:', e)
   }
 }
 
@@ -308,11 +309,11 @@ async function handlePlaidSuccess() {
   // Refresh connections list after successful Plaid connection
   await bankAccountsStore.fetchConnections()
   await transactionsStore.fetchTransactions()
-  console.log('✅ Bank connected via Plaid backend!')
+  logger.success('Bank connected via Plaid backend!')
 }
 
 function handlePlaidError(error: string) {
-  console.error('❌ Plaid connection error:', error)
+  logger.error('❌ Plaid connection error:', error)
 }
 
 function openReconnectionWizard(connection: any) {
@@ -338,7 +339,7 @@ async function handleSync(connectionId: string) {
     
     alert('✅ Transactions synced and patterns detected!')
   } catch (e) {
-    console.error('Failed to sync transactions:', e)
+    logger.error('Failed to sync transactions:', e)
   }
 }
 
@@ -346,7 +347,7 @@ async function handleDisconnect(connectionId: string) {
   try {
     await bankAccountsStore.disconnectBank(connectionId)
   } catch (e) {
-    console.error('Failed to disconnect bank:', e)
+    logger.error('Failed to disconnect bank:', e)
   }
 }
 

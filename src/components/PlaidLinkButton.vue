@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, onMounted } from 'vue'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionsStore } from '@/stores/transactions'
@@ -73,7 +74,7 @@ function loadPlaidScript() {
     }
     script.onerror = () => {
       window.plaidScriptLoading = false
-      console.error('Failed to load Plaid Link script')
+      logger.error('Failed to load Plaid Link script')
     }
     document.head.appendChild(script)
   }
@@ -89,20 +90,20 @@ async function openPlaidLink(event: MouseEvent) {
   error.value = ''
   
   try {
-    console.log('🔗 Initializing Plaid Link...')
-    console.log('Environment:', import.meta.env.VITE_PLAID_ENV)
-    console.log('Client ID:', import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...')
+    logger.debug('🔗 Initializing Plaid Link...')
+    logger.debug('Environment:', import.meta.env.VITE_PLAID_ENV)
+    logger.debug('Client ID:', import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...')
     
     // Check authentication
     if (!authStore.user) {
       throw new Error('You must be logged in to connect a bank account')
     }
-    console.log('✅ User authenticated:', authStore.user.email)
+    logger.success('User authenticated:', authStore.user.email)
     
     // Get link token from backend
-    console.log('📝 Requesting link token...')
+    logger.debug('📝 Requesting link token...')
     const { linkToken } = await bankStore.connectBank()
-    console.log('✅ Link token received:', linkToken.substring(0, 20) + '...')
+    logger.success('Link token received:', linkToken.substring(0, 20) + '...')
     
     // Check if Plaid SDK is loaded
     if (!window.Plaid) {
@@ -110,7 +111,7 @@ async function openPlaidLink(event: MouseEvent) {
     }
     
     // Initialize Plaid Link
-    console.log('🚀 Opening Plaid Link UI...')
+    logger.debug('🚀 Opening Plaid Link UI...')
     const handler = window.Plaid.create({
       token: linkToken,
       onSuccess: handleSuccess,
@@ -126,9 +127,9 @@ async function openPlaidLink(event: MouseEvent) {
     error.value = errorMessage
     emit('error', errorMessage)
     
-    console.error('❌ Plaid Link initialization failed:')
-    console.error('Error:', err)
-    console.error('Error details:', {
+    logger.error('❌ Plaid Link initialization failed:')
+    logger.error('Error:', err)
+    logger.error('Error details:', {
       message: errorMessage,
       stack: err instanceof Error ? err.stack : 'No stack trace',
       type: err instanceof Error ? err.constructor.name : typeof err
@@ -143,7 +144,7 @@ async function handleSuccess(publicToken: string, metadata: any) {
   error.value = ''
   
   try {
-    console.log('✅ Plaid Link success:', metadata?.institution?.name || 'Bank connected')
+    logger.success('Plaid Link success:', metadata?.institution?.name || 'Bank connected')
     
     // Complete the connection (exchange token)
     await bankStore.completeConnection(publicToken)
@@ -153,7 +154,7 @@ async function handleSuccess(publicToken: string, metadata: any) {
     const newConnection = connections[connections.length - 1]
     
     if (newConnection) {
-      console.log('🔄 Syncing transactions for', newConnection.institutionName)
+      logger.debug('🔄 Syncing transactions for', newConnection.institutionName)
       
       // Sync transactions immediately
       await bankStore.syncTransactions(newConnection.id)
@@ -162,17 +163,17 @@ async function handleSuccess(publicToken: string, metadata: any) {
       await transactionStore.fetchTransactions()
       
       // Detect patterns in the new transactions
-      console.log('🔍 Running subscription detection...')
+      logger.debug('🔍 Running subscription detection...')
       await detectPatterns()
     }
     
     emit('success')
-    console.log('🎉 Bank connection complete!')
+    logger.debug('🎉 Bank connection complete!')
     
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to complete connection'
     emit('error', error.value)
-    console.error('❌ Failed to complete connection:', err)
+    logger.error('❌ Failed to complete connection:', err)
   } finally {
     connectingBank.value = false
   }
@@ -181,15 +182,15 @@ async function handleSuccess(publicToken: string, metadata: any) {
 function handleExit(err: any, _metadata: any) {
   if (err) {
     error.value = 'Connection cancelled or failed'
-    console.log('⚠️ Plaid Link exited with error:', err)
+    logger.debug('⚠️ Plaid Link exited with error:', err)
   } else {
-    console.log('ℹ️ User closed Plaid Link')
+    logger.debug('ℹ️ User closed Plaid Link')
   }
   connectingBank.value = false
 }
 
 function handleEvent(eventName: string, _metadata: any) {
-  console.log('📊 Plaid event:', eventName)
+  logger.debug('📊 Plaid event:', eventName)
 }
 
 // Declare Plaid on window

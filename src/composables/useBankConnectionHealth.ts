@@ -4,6 +4,7 @@
  */
 
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { logger } from '@/utils/logger'
 import { useAuth } from './useAuth'
 import { getFirebaseAuthToken } from '../utils/authHelpers'
 
@@ -159,7 +160,7 @@ export function useBankConnectionHealth() {
   // Methods
   async function checkConnectionHealth(connectionId: string): Promise<ConnectionHealth | null> {
     if (!user.value?.id) {
-      console.warn('User not authenticated')
+      logger.warn('User not authenticated')
       return null
     }
 
@@ -194,7 +195,7 @@ export function useBankConnectionHealth() {
         throw new Error(data.error || 'Health check failed')
       }
     } catch (err: any) {
-      console.error(`Health check failed for connection ${connectionId}:`, err)
+      logger.error(`Health check failed for connection ${connectionId}:`, err)
       error.value = err.message || 'Health check failed'
       return null
     } finally {
@@ -204,7 +205,7 @@ export function useBankConnectionHealth() {
 
   async function checkAllConnectionsHealth(): Promise<void> {
     if (!user.value?.id) {
-      console.warn('User not authenticated')
+      logger.warn('User not authenticated')
       return
     }
 
@@ -244,7 +245,7 @@ export function useBankConnectionHealth() {
         throw new Error(data.error || 'Health check failed')
       }
     } catch (err: any) {
-      console.error('All connections health check failed:', err)
+      logger.error('All connections health check failed:', err)
       error.value = err.message || 'Health check failed'
     } finally {
       isLoading.value = false
@@ -253,7 +254,7 @@ export function useBankConnectionHealth() {
 
   async function initiateReconnection(connectionId: string): Promise<boolean> {
     if (!user.value?.id) {
-      console.warn('User not authenticated')
+      logger.warn('User not authenticated')
       return false
     }
 
@@ -293,7 +294,7 @@ export function useBankConnectionHealth() {
         throw new Error(data.error || 'Reconnection initiation failed')
       }
     } catch (err: any) {
-      console.error(`Reconnection initiation failed for ${connectionId}:`, err)
+      logger.error(`Reconnection initiation failed for ${connectionId}:`, err)
       error.value = err.message || 'Reconnection initiation failed'
       return false
     } finally {
@@ -303,7 +304,7 @@ export function useBankConnectionHealth() {
 
   async function getReconnectionWorkflow(connectionId: string): Promise<ReconnectionWorkflow | null> {
     if (!user.value?.id) {
-      console.warn('User not authenticated')
+      logger.warn('User not authenticated')
       return null
     }
 
@@ -337,7 +338,7 @@ export function useBankConnectionHealth() {
         return null
       }
     } catch (err: any) {
-      console.error(`Failed to get reconnection workflow for ${connectionId}:`, err)
+      logger.error(`Failed to get reconnection workflow for ${connectionId}:`, err)
       return null
     }
   }
@@ -409,7 +410,7 @@ export function useBankConnectionHealth() {
 
     healthCheckInterval = setInterval(async () => {
       if (user.value?.id && allConnectionsHealth.value.length > 0) {
-        console.log('🏥 Running periodic health checks...')
+        logger.debug('🏥 Running periodic health checks...')
         await checkAllConnectionsHealth()
       }
     }, HEALTH_CHECK_INTERVAL)

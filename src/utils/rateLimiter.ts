@@ -89,8 +89,14 @@ export const RATE_LIMITS = {
   // Search queries
   SEARCH: { maxAttempts: 20, windowMs: 60000 }, // 20 per minute
   
-  // Password attempts (if adding auth later)
-  PASSWORD: { maxAttempts: 3, windowMs: 300000 }, // 3 per 5 minutes
+  // Authentication - CRITICAL for security
+  LOGIN: { maxAttempts: 5, windowMs: 900000 }, // 5 per 15 minutes
+  SIGNUP: { maxAttempts: 3, windowMs: 3600000 }, // 3 per hour
+  PASSWORD_RESET: { maxAttempts: 3, windowMs: 3600000 }, // 3 per hour
+  PASSWORD_CHANGE: { maxAttempts: 3, windowMs: 900000 }, // 3 per 15 minutes
+  
+  // API calls
+  API_CALL: { maxAttempts: 30, windowMs: 60000 }, // 30 per minute
 } as const
 
 /**

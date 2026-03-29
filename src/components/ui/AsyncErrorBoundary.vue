@@ -36,6 +36,7 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '@/utils/logger'
 import { ref, computed, onErrorCaptured } from 'vue'
 
 interface AsyncErrorBoundaryProps {
@@ -98,7 +99,7 @@ const errorMessage = computed(() => {
 })
 
 onErrorCaptured((err: Error) => {
-  console.error('AsyncErrorBoundary caught error:', err)
+  logger.error('AsyncErrorBoundary caught error:', err)
   error.value = err
   return false
 })

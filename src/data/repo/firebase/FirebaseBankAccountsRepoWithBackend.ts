@@ -7,6 +7,7 @@ import {
   getDoc,
 } from 'firebase/firestore'
 import type { ID, BankConnection, BankAccount } from '@/domain/models'
+import { logger } from '@/utils/logger'
 import type { IBankAccountsRepo } from '../interfaces/IBankAccountsRepo'
 import { PlaidBackendService } from '@/services/plaid/PlaidBackendService'
 import { PlaidTokenService } from '@/services/plaid/PlaidTokenService'
@@ -41,10 +42,10 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
         id: doc.id,
       })) as BankConnection[]
       
-      console.log(`✅ Fetched ${connections.length} bank connections`)
+      logger.success(`Fetched ${connections.length} bank connections`)
       return connections
     } catch (error) {
-      console.error('❌ Failed to list connections:', error)
+      logger.error('❌ Failed to list connections:', error)
       throw new Error('Failed to fetch bank connections')
     }
   }
@@ -68,13 +69,13 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
       
       // Verify ownership
       if (connection.userId !== userId) {
-        console.warn('⚠️ Attempted to access connection from different user')
+        logger.warn('⚠️ Attempted to access connection from different user')
         return null
       }
       
       return connection
     } catch (error) {
-      console.error('❌ Failed to get connection:', error)
+      logger.error('❌ Failed to get connection:', error)
       return null
     }
   }
@@ -84,15 +85,15 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    */
   async initializeConnection(): Promise<{ linkToken: string }> {
     try {
-      console.log('📝 Initializing connection via backend...')
+      logger.debug('📝 Initializing connection via backend...')
       const userId = this.tokens.getCurrentUserId()
       
       const linkToken = await this.backend.createLinkToken(userId)
       
-      console.log('✅ Link token created via backend')
+      logger.success('Link token created via backend')
       return { linkToken }
     } catch (error) {
-      console.error('❌ Failed to initialize connection:', error)
+      logger.error('❌ Failed to initialize connection:', error)
       if (error instanceof Error) {
         throw new Error(`Failed to initialize bank connection: ${error.message}`)
       }
@@ -109,7 +110,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
       const userId = this.tokens.getCurrentUserId()
       const db = getFirebaseDb()
       
-      console.log('🔄 Completing connection via backend...')
+      logger.debug('🔄 Completing connection via backend...')
       
       // Backend does all the heavy lifting
       const { itemId } = await this.backend.exchangePublicToken(publicToken, userId)
@@ -124,10 +125,10 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
       
       const connection = { ...connectionDoc.data(), id: connectionDoc.id } as BankConnection
       
-      console.log(`✅ Connection completed: ${connection.institutionName}`)
+      logger.success(`Connection completed: ${connection.institutionName}`)
       return connection
     } catch (error) {
-      console.error('❌ Failed to complete connection:', error)
+      logger.error('❌ Failed to complete connection:', error)
       if (error instanceof Error) {
         throw new Error(`Failed to complete bank connection: ${error.message}`)
       }
@@ -142,14 +143,14 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
     try {
       const userId = this.tokens.getCurrentUserId()
       
-      console.log('🔌 Disconnecting bank via backend...')
+      logger.debug('🔌 Disconnecting bank via backend...')
       
       // Backend handles Plaid item removal and Firestore cleanup
       await this.backend.disconnectBank(connectionId, userId)
       
-      console.log(`✅ Bank connection disconnected: ${connectionId}`)
+      logger.success(`Bank connection disconnected: ${connectionId}`)
     } catch (error) {
-      console.error('❌ Failed to disconnect bank:', error)
+      logger.error('❌ Failed to disconnect bank:', error)
       throw new Error('Failed to disconnect bank')
     }
   }
@@ -162,14 +163,14 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
     try {
       const userId = this.tokens.getCurrentUserId()
       
-      console.log('🔄 Syncing transactions via backend...')
+      logger.debug('🔄 Syncing transactions via backend...')
       
       // Backend does all the work
       const { count } = await this.backend.syncTransactions(connectionId, userId)
       
-      console.log(`✅ Synced ${count} transactions`)
+      logger.success(`Synced ${count} transactions`)
     } catch (error) {
-      console.error('❌ Failed to sync transactions:', error)
+      logger.error('❌ Failed to sync transactions:', error)
       throw new Error('Failed to sync transactions')
     }
   }
@@ -193,10 +194,10 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
         id: doc.id,
       })) as BankAccount[]
       
-      console.log(`✅ Fetched ${accounts.length} bank accounts`)
+      logger.success(`Fetched ${accounts.length} bank accounts`)
       return accounts
     } catch (error) {
-      console.error('❌ Failed to list accounts:', error)
+      logger.error('❌ Failed to list accounts:', error)
       throw new Error('Failed to fetch bank accounts')
     }
   }

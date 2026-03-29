@@ -1,4 +1,5 @@
 import { ref, computed, onMounted } from 'vue'
+import { logger } from '@/utils/logger'
 import type { Ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { renewalWarningService } from '@/services/RenewalWarningService'
@@ -41,7 +42,7 @@ export function useRenewalWarnings() {
       warnings.value = await renewalWarningService.getWarnings(userId.value)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch warnings'
-      console.error('Error fetching warnings:', e)
+      logger.error('Error fetching warnings:', e)
     } finally {
       loading.value = false
     }
@@ -61,7 +62,7 @@ export function useRenewalWarnings() {
       await fetchWarnings()
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to calculate warnings'
-      console.error('Error calculating warnings:', e)
+      logger.error('Error calculating warnings:', e)
     } finally {
       calculating.value = false
     }
@@ -82,7 +83,7 @@ export function useRenewalWarnings() {
       )
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to dismiss warning'
-      console.error('Error dismissing warning:', e)
+      logger.error('Error dismissing warning:', e)
       
       // Revert on error
       await fetchWarnings()
