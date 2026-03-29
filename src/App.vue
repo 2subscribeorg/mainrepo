@@ -1,5 +1,14 @@
 <template>
-  <ErrorBoundary @error="handleGlobalError">
+  <ErrorBoundaryWithRecovery 
+    @error="handleGlobalError"
+    @retry="handleRetry"
+    @recovered="handleRecovery"
+    :enable-auto-retry="true"
+    :max-retries="3"
+    :retry-strategy="'exponential'"
+    :enable-partial-recovery="true"
+    component="Application"
+  >
     <div>
       <!-- Skip to main content link for keyboard users -->
       <a 
@@ -27,8 +36,16 @@
           <button @click="clearGlobalError" class="close-button">×</button>
         </div>
       </div>
+      
+      <!-- Recovery notification -->
+      <div v-if="showRecoveryNotification" class="recovery-notification">
+        <div class="recovery-content">
+          <span>✅ Application recovered successfully!</span>
+          <button @click="showRecoveryNotification = false" class="close-button">×</button>
+        </div>
+      </div>
     </div>
-  </ErrorBoundary>
+  </ErrorBoundaryWithRecovery>
 </template>
 
 <script setup lang="ts">
@@ -36,7 +53,7 @@ import { ref, computed, onMounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
-import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
+import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
 
@@ -45,6 +62,7 @@ const { reportError, onError } = useErrorManager()
 
 const globalError = ref<Error | null>(null)
 const isDevelopment = computed(() => import.meta.env.DEV)
+const showRecoveryNotification = ref(false)
 
 // Listen for global errors
 onError((errorReport) => {
@@ -59,6 +77,20 @@ onError((errorReport) => {
 
 function handleGlobalError(error: Error, errorInfo: any) {
   reportError(error, 'Global', window.location.pathname)
+}
+
+function handleRetry(retryCount: number) {
+  console.log(`Application retry attempt ${retryCount}`)
+}
+
+function handleRecovery() {
+  console.log('Application recovered successfully')
+  showRecoveryNotification.value = true
+  
+  // Auto-hide recovery notification after 5 seconds
+  setTimeout(() => {
+    showRecoveryNotification.value = false
+  }, 5000)
 }
 
 function clearGlobalError() {
@@ -113,5 +145,39 @@ onMounted(async () => {
 
 .close-button:hover {
   color: #dc2626;
+}
+
+.recovery-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.recovery-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #166534;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 </style>

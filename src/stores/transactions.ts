@@ -22,9 +22,15 @@ export interface TransactionFilterConfig {
 /**
  * UI layer - Filtering and display logic only
  * Single Responsibility: UI state management and presentation logic
+ * 
+ * Architecture:
+ * - Data store (transactionsData) owns the raw transaction data
+ * - UI store (this) owns filtering/presentation logic
+ * - Computed properties create a facade to avoid tight coupling
+ * - Single source of truth: data lives in data store, filters live here
  */
 export const useTransactionsStore = defineStore('transactions', () => {
-  // Import data store
+  // Get data store instance (computed to avoid tight coupling)
   const dataStore = useTransactionsDataStore()
 
   // Filtering state - single source of truth
@@ -33,9 +39,14 @@ export const useTransactionsStore = defineStore('transactions', () => {
     subscriptionFilter: 'all'
   })
 
+  // Computed facade for raw transactions (single source of truth from data store)
+  const rawTransactions = computed(() => dataStore.transactions)
+  
   // Memoization key for filter result caching
+  // Uses hash instead of concatenating all IDs for better performance
   const filterMemoKey = computed(() => {
-    const transactionIds = dataStore.transactions.map(t => `${t.id}-${t.updatedAt}`).join(',')
+    // Create a lightweight hash of transaction state
+    const txHash = `${rawTransactions.value.length}-${rawTransactions.value[0]?.updatedAt || ''}-${rawTransactions.value[rawTransactions.value.length - 1]?.updatedAt || ''}`
     const filterState = JSON.stringify({
       account: filters.value.selectedAccount,
       subscription: filters.value.subscriptionFilter,
@@ -45,16 +56,16 @@ export const useTransactionsStore = defineStore('transactions', () => {
       categories: filters.value.categories?.sort(),
       status: filters.value.status?.sort()
     })
-    return `${transactionIds}|${filterState}`
+    return `${txHash}|${filterState}`
   })
 
   // Cache for filtered results
   const filterCache = new Map<string, any>()
 
-  // Indexed lookups for performance
+  // Indexed lookups for performance (computed from facade)
   const transactionsByAccount = computed(() => {
     const map = new Map<string, any[]>()
-    dataStore.transactions.forEach(t => {
+    rawTransactions.value.forEach(t => {
       if (!map.has(t.accountId || '')) {
         map.set(t.accountId || '', [])
       }
@@ -65,7 +76,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
 
   const transactionsByCategory = computed(() => {
     const map = new Map<string, any[]>()
-    dataStore.transactions.forEach(t => {
+    rawTransactions.value.forEach(t => {
       const key = t.categoryId || 'uncategorized'
       if (!map.has(key)) {
         map.set(key, [])
@@ -84,7 +95,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
       return filterCache.get(memoKey)
     }
 
-    let filtered = dataStore.transactions
+    let filtered = rawTransactions.value
 
     // Use indexed lookup for account filter (most common)
     if (filters.value.selectedAccount) {
@@ -227,25 +238,71 @@ export const useTransactionsStore = defineStore('transactions', () => {
     }
   }
 
+  // Computed facades for data store properties (avoid direct exposure)
+  const loading = computed(() => dataStore.loading)
+  const error = computed(() => dataStore.error)
+  
+  // Delegate data operations to data store (clear ownership)
+  async function fetchTransactions() {
+    return dataStore.fetchTransactions()
+  }
+  
+  async function getById(id: string) {
+    return dataStore.getById(id)
+  }
+  
+  async function save(transaction: any) {
+    return dataStore.save(transaction)
+  }
+  
+  async function updateTransaction(transaction: any) {
+    return dataStore.updateTransaction(transaction)
+  }
+  
+  async function seed() {
+    return dataStore.seed()
+  }
+  
+  async function clear() {
+    return dataStore.clear()
+  }
+  
+  // Real-time features (delegated with clear interface)
+  function startListening(filter?: any) {
+    return dataStore.startListening(filter)
+  }
+  
+  function stopListening() {
+    return dataStore.stopListening()
+  }
+  
+  function isRealtime() {
+    return dataStore.isRealtime()
+  }
+
   return {
-    // Data layer (delegated to data store)
-    transactions: dataStore.transactions,
-    loading: dataStore.loading,
-    error: dataStore.error,
-    fetchTransactions: dataStore.fetchTransactions,
-    getById: dataStore.getById,
-    save: dataStore.save,
-    updateTransaction: dataStore.updateTransaction,
-    seed: dataStore.seed,
-    clear: dataStore.clear,
-    // Real-time features (delegated to data store)
-    startListening: dataStore.startListening,
-    stopListening: dataStore.stopListening,
-    isRealtime: dataStore.isRealtime,
-    // Filtering - single source of truth
+    // Data layer (computed facades - single source of truth)
+    transactions: rawTransactions,
+    loading,
+    error,
+    // Data operations (delegated with clear ownership)
+    fetchTransactions,
+    getById,
+    save,
+    updateTransaction,
+    seed,
+    clear,
+    // Real-time features (delegated)
+    startListening,
+    stopListening,
+    isRealtime,
+    // Filtering state and logic (owned by UI store)
     filters,
     filteredTransactions,
     activeFilterCount,
+    transactionsByAccount,
+    transactionsByCategory,
+    // Filter management (UI store responsibility)
     setAccountFilter,
     setSubscriptionFilter,
     setMerchantSearch,

@@ -117,7 +117,21 @@ const selectedIcon = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+// Memoization for filtered icons
+const filterMemoKey = computed(() => 
+  `${searchQuery.value.toLowerCase()}-${Object.keys(ICON_CATEGORIES).length}`
+)
+
+const filterCache = new Map<string, Record<string, string[]>>()
+
 const filteredIcons = computed(() => {
+  const key = filterMemoKey.value
+  
+  // Return cached result if available
+  if (filterCache.has(key)) {
+    return filterCache.get(key)!
+  }
+  
   const filtered: Record<string, string[]> = {}
   
   Object.entries(ICON_CATEGORIES).forEach(([category, icons]) => {
@@ -128,6 +142,17 @@ const filteredIcons = computed(() => {
       filtered[category] = matchingIcons
     }
   })
+  
+  // Cache the result
+  filterCache.set(key, filtered)
+  
+  // LRU cleanup - keep last 20 entries
+  if (filterCache.size > 20) {
+    const oldest = filterCache.keys().next().value
+    if (oldest !== undefined) {
+      filterCache.delete(oldest)
+    }
+  }
   
   return filtered
 })

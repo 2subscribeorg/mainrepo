@@ -50,7 +50,15 @@ const subscriptionSchema = z.object({
   userId: z.string().min(1, "User ID is required").max(128),
   status: subscriptionStatusSchema.default('active'),
   frequency: subscriptionFrequencySchema.default('monthly'),
-  nextBillingDate: z.string().datetime().optional(),
+  nextBillingDate: z.string()
+    .refine((val) => {
+      // Accept both date-only (YYYY-MM-DD) and full datetime (ISO 8601) formats
+      const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/
+      const isDateOnly = dateOnlyRegex.test(val)
+      const isValidDate = !isNaN(new Date(val).getTime())
+      return isDateOnly || isValidDate
+    }, "Invalid date format (use YYYY-MM-DD or ISO datetime)")
+    .optional(),
   description: z.string().max(500, "Description too long").optional(),
   isActive: z.boolean().default(true),
 })

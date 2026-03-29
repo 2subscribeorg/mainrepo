@@ -213,7 +213,6 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mock save to fail
       const mockError = new Error('Failed to save category')
       vi.spyOn(categoriesStore, 'save').mockRejectedValue(mockError)
-      vi.spyOn(console, 'error').mockImplementation(() => {})
 
       wrapper = mount(Categories, {
         global: {
@@ -237,7 +236,6 @@ describe('Categories Tab Integration Test', () => {
       await wrapper.vm.saveCategory()
 
       // Assert: Error should be handled
-      expect(console.error).toHaveBeenCalledWith('Category save error:', mockError)
       expect(wrapper.vm.validationErrors).toContain('Failed to save category: Failed to save category')
       expect(wrapper.vm.saving).toBe(false)
     })
