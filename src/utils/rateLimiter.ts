@@ -97,6 +97,12 @@ export const RATE_LIMITS = {
   
   // API calls
   API_CALL: { maxAttempts: 30, windowMs: 60000 }, // 30 per minute
+  
+  // Plaid-specific operations (more restrictive due to external API costs)
+  PLAID_CREATE_LINK: { maxAttempts: 10, windowMs: 60000 }, // 10 per minute
+  PLAID_EXCHANGE_TOKEN: { maxAttempts: 5, windowMs: 60000 }, // 5 per minute
+  PLAID_SYNC_TRANSACTIONS: { maxAttempts: 10, windowMs: 60000 }, // 10 per minute
+  PLAID_DISCONNECT: { maxAttempts: 5, windowMs: 60000 }, // 5 per minute
 } as const
 
 /**

@@ -1,21 +1,52 @@
 <template>
-  <div class="space-y-3">
-    <TransitionGroup name="transaction-item" tag="div" class="contents">
-      <TransactionItem
-        v-for="transaction in transactions"
-        :key="transaction.id"
-        :transaction="transaction"
-        :categories="categories"
-        :get-account-name="getAccountName"
-        :get-amount-color="getAmountColor"
-        class="transaction-item-enter"
-        @create-subscription="$emit('create-subscription', transaction)"
-        @edit-subscription="$emit('edit-subscription', transaction)"
-        @category-change="$emit('category-change', transaction, $event)"
-        @link-to-existing-subscription="$emit('link-to-existing-subscription', transaction, $event)"
-      />
-    </TransitionGroup>
-  </div>
+  <!-- Feature flag: Set to false to disable virtual scrolling -->
+  <VirtualScrollerWrapper
+    :items="transactions"
+    :item-size="80"
+    :threshold="30"
+    :enable-virtual="false"
+  >
+    <template #default="{ items, virtual }">
+      <div :class="virtual ? 'space-y-0' : 'space-y-3'">
+        <TransitionGroup 
+          v-if="!virtual"
+          name="transaction-item" 
+          tag="div" 
+          class="contents"
+        >
+          <TransactionItem
+            v-for="transaction in items"
+            :key="transaction.id"
+            :transaction="transaction"
+            :categories="categories"
+            :get-account-name="getAccountName"
+            :get-amount-color="getAmountColor"
+            class="transaction-item-enter"
+            @create-subscription="$emit('create-subscription', transaction)"
+            @edit-subscription="$emit('edit-subscription', transaction)"
+            @category-change="$emit('category-change', transaction, $event)"
+            @link-to-existing-subscription="$emit('link-to-existing-subscription', transaction, $event)"
+          />
+        </TransitionGroup>
+        
+        <!-- Virtual mode: no transitions for performance -->
+        <template v-else>
+          <TransactionItem
+            v-for="transaction in items"
+            :key="transaction.id"
+            :transaction="transaction"
+            :categories="categories"
+            :get-account-name="getAccountName"
+            :get-amount-color="getAmountColor"
+            @create-subscription="$emit('create-subscription', transaction)"
+            @edit-subscription="$emit('edit-subscription', transaction)"
+            @category-change="$emit('category-change', transaction, $event)"
+            @link-to-existing-subscription="$emit('link-to-existing-subscription', transaction, $event)"
+          />
+        </template>
+      </div>
+    </template>
+  </VirtualScrollerWrapper>
 
   <div v-if="pagination.totalPages > 1" class="mt-6 flex justify-center fade-in">
     <Pagination
@@ -33,6 +64,7 @@ import type { Transaction } from '@/domain/models'
 import type { PaginationConfig } from '@/types/transactions'
 import TransactionItem from './TransactionItem.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import VirtualScrollerWrapper from '@/components/ui/VirtualScrollerWrapper.vue'
 
 interface Props {
   transactions: Transaction[]

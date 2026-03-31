@@ -18,6 +18,7 @@ import {
   validateSyncTransactionsResponse,
   PlaidValidationError
 } from './validation'
+import { rateLimiter, RATE_LIMITS } from '@/utils/rateLimiter'
 
 const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001/api'
 
@@ -44,6 +45,12 @@ export class PlaidBackendService {
    */
   async createLinkToken(userId: string): Promise<string> {
     try {
+      // Client-side rate limiting check
+      const rateLimitKey = `plaid:create-link-token:${userId}`
+      if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.PLAID_CREATE_LINK.maxAttempts, RATE_LIMITS.PLAID_CREATE_LINK.windowMs)) {
+        throw new Error('Too many Plaid requests. Please wait a moment and try again.')
+      }
+      
       // Validate and sanitize input
       const validatedUserId = validateUserId(userId)
       
@@ -82,6 +89,12 @@ export class PlaidBackendService {
    */
   async exchangePublicToken(publicToken: string, userId: string): Promise<{ itemId: string }> {
     try {
+      // Client-side rate limiting check
+      const rateLimitKey = `plaid:exchange-token:${userId}`
+      if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.PLAID_EXCHANGE_TOKEN.maxAttempts, RATE_LIMITS.PLAID_EXCHANGE_TOKEN.windowMs)) {
+        throw new Error('Too many Plaid requests. Please wait a moment and try again.')
+      }
+      
       // Validate and sanitize inputs
       const validatedPublicToken = validatePublicToken(publicToken)
       const validatedUserId = validateUserId(userId)
@@ -121,6 +134,12 @@ export class PlaidBackendService {
    */
   async syncTransactions(connectionId: string, userId: string): Promise<{ count: number }> {
     try {
+      // Client-side rate limiting check (more restrictive for sync operations)
+      const rateLimitKey = `plaid:sync-transactions:${userId}`
+      if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.PLAID_SYNC_TRANSACTIONS.maxAttempts, RATE_LIMITS.PLAID_SYNC_TRANSACTIONS.windowMs)) {
+        throw new Error('Too many transaction sync requests. Please wait a moment and try again.')
+      }
+      
       // Validate and sanitize inputs
       const validatedConnectionId = validateConnectionId(connectionId)
       const validatedUserId = validateUserId(userId)

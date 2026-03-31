@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { logger } from '@/utils/logger'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
@@ -6,6 +6,7 @@ import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useCategoriesStore } from '@/stores/categories'
 import { FirebaseSubscriptionFeedbackRepo } from '@/data/repo/firebase/FirebaseSubscriptionFeedbackRepo'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import { secureStorage } from '@/utils/secureStorage'
 import type { Subscription, Category, SubscriptionFeedback } from '@/domain/models'
 
 interface RecordFeedbackParams {
@@ -23,6 +24,20 @@ interface RecordFeedbackParams {
   actualCategoryId?: string
 }
 
+interface RejectionCache {
+  confirmed: string[]
+  pending: PendingRejection[]
+  timestamp: number
+}
+
+interface PendingRejection {
+  merchantName: string
+  timestamp: number
+  transactionId?: string
+  retryCount?: number
+  status?: 'pending' | 'failed' | 'confirmed'
+}
+
 export function useSubscriptionFeedback() {
   const { user } = useAuth()
   const subscriptionsStore = useSubscriptionsStore()
@@ -30,13 +45,83 @@ export function useSubscriptionFeedback() {
   const categoriesStore = useCategoriesStore()
   const feedbackRepo = new FirebaseSubscriptionFeedbackRepo()
   
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const loading = isLoading('feedback')
   const error = ref<string | null>(null)
   
   // Category selection modal state
   const showCategoryModal = ref(false)
   const pendingSubscriptionData = ref<any>(null)
+
+  /**
+   * Helper functions for encrypted cache management
+   */
+  async function getRejectionCache(cacheKey: string): Promise<RejectionCache> {
+    try {
+      const cached = await secureStorage.get(cacheKey, user.value?.id)
+      if (!cached) {
+        return { confirmed: [], pending: [], timestamp: Date.now() }
+      }
+      
+      // Handle legacy format (old array format)
+      if (Array.isArray(cached)) {
+        return { confirmed: cached, pending: [], timestamp: Date.now() }
+      }
+      
+      // Ensure structure is valid
+      const cache = cached as RejectionCache
+      return {
+        confirmed: cache.confirmed || [],
+        pending: cache.pending || [],
+        timestamp: cache.timestamp || Date.now()
+      }
+    } catch (err) {
+      logger.warn('Failed to parse rejection cache, using default', { error: err })
+      return { confirmed: [], pending: [], timestamp: Date.now() }
+    }
+  }
+
+  async function saveRejectionCache(cacheKey: string, cache: RejectionCache): Promise<void> {
+    try {
+      await secureStorage.set(cacheKey, cache, user.value?.id)
+    } catch (err) {
+      logger.warn('Failed to save rejection cache', { error: err })
+    }
+  }
+
+  /**
+   * Clean up stale pending rejections (older than 5 minutes)
+   * This should be called on app initialization
+   */
+  async function cleanupStalePendingRejections(cacheKey: string): Promise<void> {
+    try {
+      const cache = await getRejectionCache(cacheKey)
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000)
+      
+      const originalLength = cache.pending.length
+      cache.pending = cache.pending.filter((pending: PendingRejection) => pending.timestamp > fiveMinutesAgo)
+      
+      if (cache.pending.length !== originalLength) {
+        await saveRejectionCache(cacheKey, cache)
+        logger.debug(`Cleaned up ${originalLength - cache.pending.length} stale pending rejections`)
+      }
+    } catch (err) {
+      logger.warn('Failed to cleanup stale pending rejections', { error: err })
+    }
+  }
+
+  // Initialize cleanup of stale pending rejections and retry failed ones
+  watch(user, async (newUser) => {
+    if (newUser?.id) {
+      const cacheKey = `rejected_merchants_${newUser.id}`
+      await cleanupStalePendingRejections(cacheKey)
+      
+      // Retry failed rejections after a short delay to ensure app is fully loaded
+      setTimeout(async () => {
+        await retryFailedRejections()
+      }, 2000)
+    }
+  }, { immediate: true })
 
   async function recordFeedback(params: RecordFeedbackParams): Promise<SubscriptionFeedback | null> {
     return await withLoading('feedback', async () => {
@@ -215,53 +300,141 @@ export function useSubscriptionFeedback() {
   }
 
   async function rejectSubscription(params: Omit<RecordFeedbackParams, 'userAction'>): Promise<string | null> {
-    let wasAddedToCache = false
-    let previousCacheState: string[] | null = null
     const cacheKey = user.value?.id ? `rejected_merchants_${user.value.id}` : null
+    const merchantLower = params.merchantName.toLowerCase()
     
-    // Optimistically cache the rejection in localStorage with rollback capability
-    if (cacheKey) {
-      try {
-        const cached = localStorage.getItem(cacheKey)
-        const rejectedMerchants = cached ? JSON.parse(cached) : []
-        
-        // Store previous state for potential rollback
-        previousCacheState = [...rejectedMerchants]
-        
-        // Add this merchant if not already cached (case-insensitive)
-        const merchantLower = params.merchantName.toLowerCase()
-        if (!rejectedMerchants.includes(merchantLower)) {
-          rejectedMerchants.push(merchantLower)
-          localStorage.setItem(cacheKey, JSON.stringify(rejectedMerchants))
-          wasAddedToCache = true
-        }
-      } catch (err) {
-        logger.warn('Failed to cache rejection locally:', err)
-      }
+    if (!cacheKey) {
+      // No cache key, proceed with database only
+      const result = await recordFeedback({
+        ...params,
+        userAction: 'rejected',
+        detectionMethod: params.detectionMethod || 'pattern_matching',
+      })
+      return result?.id || null
     }
 
+    // Atomic cache operation with validation
+    let operationId: string | null = null
     try {
+      const cache = await getRejectionCache(cacheKey)
+      
+      // Check if already processed (idempotency check)
+      if (cache.confirmed.includes(merchantLower)) {
+        logger.debug('Merchant already confirmed', { merchant: merchantLower })
+        return null
+      }
+      
+      // Check if already pending (avoid duplicate operations)
+      const existingPending = cache.pending.find(p => p.merchantName === merchantLower)
+      if (existingPending && existingPending.status !== 'failed') {
+        logger.debug('Merchant already pending', { merchant: merchantLower })
+        return null
+      }
+      
+      // Generate operation ID for tracking
+      operationId = `${merchantLower}_${Date.now()}`
+      
+      // Add to pending state with operation tracking
+      cache.pending = cache.pending.filter(p => p.merchantName !== merchantLower) // Remove any existing failed entries
+      cache.pending.push({
+        merchantName: merchantLower,
+        timestamp: Date.now(),
+        transactionId: params.transactionId,
+        retryCount: 0,
+        status: 'pending'
+      })
+      
+      await saveRejectionCache(cacheKey, cache)
+      logger.debug('Added merchant to pending state', { merchant: merchantLower, operationId })
+      
+      // Attempt database write
       const result = await recordFeedback({
         ...params,
         userAction: 'rejected',
         detectionMethod: params.detectionMethod || 'pattern_matching',
       })
       
-      // Database write successful, return result
+      // Success: move from pending to confirmed
+      const updatedCache = await getRejectionCache(cacheKey)
+      updatedCache.pending = updatedCache.pending.filter(p => p.merchantName !== merchantLower)
+      if (!updatedCache.confirmed.includes(merchantLower)) {
+        updatedCache.confirmed.push(merchantLower)
+      }
+      await saveRejectionCache(cacheKey, updatedCache)
+      
+      logger.success('Merchant rejection confirmed', { merchant: merchantLower, operationId })
       return result?.id || null
+      
     } catch (err) {
-      // Database write failed - rollback localStorage changes
-      if (wasAddedToCache && cacheKey && previousCacheState !== null) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify(previousCacheState))
-          logger.warn('Rolled back localStorage cache due to database write failure:', err)
-        } catch (rollbackErr) {
-          logger.error('Failed to rollback localStorage cache:', rollbackErr)
+      logger.error('Database write failed for merchant rejection', { merchant: merchantLower, operationId, error: err })
+      
+      // Mark as failed but keep in pending for retry logic
+      try {
+        const cache = await getRejectionCache(cacheKey)
+        const pendingItem = cache.pending.find(p => p.merchantName === merchantLower)
+        if (pendingItem) {
+          pendingItem.status = 'failed'
+          pendingItem.retryCount = (pendingItem.retryCount || 0) + 1
+          
+          // If too many retries, remove from pending to prevent infinite loops
+          if (pendingItem.retryCount >= 3) {
+            cache.pending = cache.pending.filter(p => p.merchantName !== merchantLower)
+            logger.warn('Merchant rejection failed after 3 retries, removing from pending', { merchant: merchantLower })
+          }
         }
+        await saveRejectionCache(cacheKey, cache)
+      } catch (cleanupErr) {
+        logger.error('Failed to update pending state after database error', { error: cleanupErr })
       }
       
       // Re-throw the original error to maintain existing error handling behavior
       throw err
+    }
+  }
+
+  /**
+   * Retry failed merchant rejections
+   * Called on app initialization to handle temporary database failures
+   */
+  async function retryFailedRejections(): Promise<void> {
+    if (!user.value?.id) return
+    
+    const cacheKey = `rejected_merchants_${user.value.id}`
+    try {
+      const cache = await getRejectionCache(cacheKey)
+      const failedRejections = cache.pending.filter(p => p.status === 'failed' && (p.retryCount || 0) < 3)
+      
+      if (failedRejections.length > 0) {
+        logger.info('Retrying failed merchant rejections', { count: failedRejections.length })
+        
+        for (const failed of failedRejections) {
+          try {
+            // Find the original transaction if available
+            const transaction = failed.transactionId ? 
+              await transactionsStore.getById(failed.transactionId) : null
+            
+            if (transaction) {
+              await rejectSubscription({
+                transactionId: transaction.id,
+                merchantName: failed.merchantName,
+                amount: transaction.amount,
+                date: transaction.date,
+                detectionConfidence: 0.8, // Default confidence for retries
+                detectionMethod: 'pattern_matching'
+              })
+              logger.success('Successfully retried merchant rejection', { merchant: failed.merchantName })
+            } else {
+              // Remove stale entry if transaction no longer exists
+              cache.pending = cache.pending.filter(p => p.merchantName !== failed.merchantName)
+              await saveRejectionCache(cacheKey, cache)
+            }
+          } catch (err) {
+            logger.warn('Failed to retry merchant rejection', { merchant: failed.merchantName, error: err })
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn('Failed to retry failed rejections', { error: err })
     }
   }
 
@@ -279,29 +452,42 @@ export function useSubscriptionFeedback() {
         // Merge with locally cached rejections to handle race conditions
         try {
           const cacheKey = `rejected_merchants_${user.value.id}`
-          const cached = localStorage.getItem(cacheKey)
-          if (cached) {
-            const cachedMerchants: string[] = JSON.parse(cached)
-            const dbMerchants = new Set(dbFeedback.map(f => f.merchantName.toLowerCase()))
-            
-            // Add synthetic feedback entries for cached merchants not yet in DB
-            cachedMerchants.forEach(merchantName => {
-              if (!dbMerchants.has(merchantName)) {
-                dbFeedback.push({
-                  id: `cached_${merchantName}`,
-                  transactionId: 'pending',
-                  userId: user.value!.id,
-                  merchantName: merchantName,
-                  amount: { amount: 0, currency: 'GBP' },
-                  date: new Date().toISOString(),
-                  userAction: 'rejected',
-                  timestamp: new Date().toISOString()
-                } as SubscriptionFeedback)
-              }
-            })
-          }
+          const cache = await getRejectionCache(cacheKey)
+          const dbMerchants = new Set(dbFeedback.map(f => f.merchantName.toLowerCase()))
+          
+          // Add synthetic feedback entries for confirmed merchants not yet in DB
+          cache.confirmed.forEach((merchantName: string) => {
+            if (!dbMerchants.has(merchantName)) {
+              dbFeedback.push({
+                id: `cached_${merchantName}`,
+                transactionId: 'pending',
+                userId: user.value!.id,
+                merchantName: merchantName,
+                amount: { amount: 0, currency: 'GBP' },
+                date: new Date().toISOString(),
+                userAction: 'rejected',
+                timestamp: new Date().toISOString()
+              } as SubscriptionFeedback)
+            }
+          })
+          
+          // Add synthetic feedback entries for pending merchants
+          cache.pending.forEach((pending: PendingRejection) => {
+            if (!dbMerchants.has(pending.merchantName)) {
+              dbFeedback.push({
+                id: `pending_${pending.merchantName}`,
+                transactionId: pending.transactionId || 'pending',
+                userId: user.value!.id,
+                merchantName: pending.merchantName,
+                amount: { amount: 0, currency: 'GBP' },
+                date: new Date(pending.timestamp).toISOString(),
+                userAction: 'rejected',
+                timestamp: new Date(pending.timestamp).toISOString()
+              } as SubscriptionFeedback)
+            }
+          })
         } catch (err) {
-          logger.warn('Failed to merge cached rejections:', err)
+          logger.warn('Failed to merge cached rejections', { error: err })
         }
         
         return dbFeedback
@@ -344,18 +530,21 @@ export function useSubscriptionFeedback() {
       error.value = null
 
       try {
-        // Remove from localStorage cache if merchant name provided
+        // Remove from encrypted cache if merchant name provided
         if (merchantName && user.value?.id) {
           try {
             const cacheKey = `rejected_merchants_${user.value.id}`
-            const cached = localStorage.getItem(cacheKey)
-            if (cached) {
-              const rejectedMerchants: string[] = JSON.parse(cached)
-              const filtered = rejectedMerchants.filter(m => m !== merchantName.toLowerCase())
-              localStorage.setItem(cacheKey, JSON.stringify(filtered))
-            }
+            const cache = await getRejectionCache(cacheKey)
+            
+            // Remove from confirmed list
+            cache.confirmed = cache.confirmed.filter(m => m !== merchantName.toLowerCase())
+            
+            // Remove from pending list
+            cache.pending = cache.pending.filter(p => p.merchantName !== merchantName.toLowerCase())
+            
+            await saveRejectionCache(cacheKey, cache)
           } catch (err) {
-            logger.warn('Failed to remove from cache:', err)
+            logger.warn('Failed to remove from encrypted cache', { error: err })
           }
         }
 
@@ -384,5 +573,6 @@ export function useSubscriptionFeedback() {
     handleCategorySelection,
     handleCategoryCreation,
     cancelCategorySelection,
+    retryFailedRejections,
   }
 }

@@ -42,21 +42,43 @@ export const useTransactionsStore = defineStore('transactions', () => {
   // Computed facade for raw transactions (single source of truth from data store)
   const rawTransactions = computed(() => dataStore.transactions)
   
+  // Feature flag for testing improved hash (safe to toggle)
+  const USE_IMPROVED_HASH = false // Set to true to test, false to fallback
+  
   // Memoization key for filter result caching
   // Uses hash instead of concatenating all IDs for better performance
   const filterMemoKey = computed(() => {
-    // Create a lightweight hash of transaction state
-    const txHash = `${rawTransactions.value.length}-${rawTransactions.value[0]?.updatedAt || ''}-${rawTransactions.value[rawTransactions.value.length - 1]?.updatedAt || ''}`
-    const filterState = JSON.stringify({
-      account: filters.value.selectedAccount,
-      subscription: filters.value.subscriptionFilter,
-      dateRange: filters.value.dateRange,
-      amountRange: filters.value.amountRange,
-      merchantSearch: filters.value.merchantSearch,
-      categories: filters.value.categories?.sort(),
-      status: filters.value.status?.sort()
-    })
-    return `${txHash}|${filterState}`
+    if (USE_IMPROVED_HASH) {
+      // Improved hash: checksum of critical data points
+      const checksum = rawTransactions.value.reduce((hash, tx) => {
+        return hash + (tx.updatedAt?.charCodeAt(0) || 0) + (tx.amount?.amount || 0)
+      }, 0)
+      
+      const filterState = JSON.stringify({
+        account: filters.value.selectedAccount,
+        subscription: filters.value.subscriptionFilter,
+        dateRange: filters.value.dateRange,
+        amountRange: filters.value.amountRange,
+        merchantSearch: filters.value.merchantSearch,
+        categories: filters.value.categories?.sort(),
+        status: filters.value.status?.sort()
+      })
+      
+      return `${rawTransactions.value.length}-${checksum}-${filterState}`
+    } else {
+      // Original hash (existing behavior)
+      const txHash = `${rawTransactions.value.length}-${rawTransactions.value[0]?.updatedAt || ''}-${rawTransactions.value[rawTransactions.value.length - 1]?.updatedAt || ''}`
+      const filterState = JSON.stringify({
+        account: filters.value.selectedAccount,
+        subscription: filters.value.subscriptionFilter,
+        dateRange: filters.value.dateRange,
+        amountRange: filters.value.amountRange,
+        merchantSearch: filters.value.merchantSearch,
+        categories: filters.value.categories?.sort(),
+        status: filters.value.status?.sort()
+      })
+      return `${txHash}|${filterState}`
+    }
   })
 
   // Cache for filtered results
@@ -90,9 +112,16 @@ export const useTransactionsStore = defineStore('transactions', () => {
   const filteredTransactions = computed(() => {
     const memoKey = filterMemoKey.value
     
+    // Performance monitoring (safe - no behavior changes)
+    const startTime = performance.now()
+    const cacheHit = filterCache.has(memoKey)
+    
     // Return cached result if available
-    if (filterCache.has(memoKey)) {
-      return filterCache.get(memoKey)
+    if (cacheHit) {
+      const result = filterCache.get(memoKey)
+      const endTime = performance.now()
+      console.debug(`[PERF] Cache hit: ${(endTime - startTime).toFixed(2)}ms, key: ${memoKey.substring(0, 50)}...`)
+      return result
     }
 
     let filtered = rawTransactions.value
@@ -162,10 +191,17 @@ export const useTransactionsStore = defineStore('transactions', () => {
     // Cache the result
     filterCache.set(memoKey, filtered)
     
+    // Performance monitoring (safe - no behavior changes)
+    const endTime = performance.now()
+    console.debug(`[PERF] Cache miss: ${(endTime - startTime).toFixed(2)}ms, filtered ${filtered.length}/${rawTransactions.value.length} items`)
+    console.debug(`[PERF] Cache size: ${filterCache.size}/20, key: ${memoKey.substring(0, 50)}...`)
+    
     // Clean up old cache entries (keep last 20)
     if (filterCache.size > 20) {
       const oldestKey = filterCache.keys().next().value
-      filterCache.delete(oldestKey)
+      if (oldestKey) {
+        filterCache.delete(oldestKey)
+      }
     }
 
     return filtered

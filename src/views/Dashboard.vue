@@ -124,15 +124,27 @@
               <p>No subscription suggestions at the moment.</p>
             </div>
             
-            <div v-else class="space-y-4">
-              <div v-for="suggestion in visibleSuggestions" :key="suggestion.merchant">
-                <SubscriptionSuggestionCard 
-                  :pattern="suggestion"
-                  @confirmed="handleSuggestionConfirmed"
-                  @rejected="handleSuggestionRejected"
-                  class="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow"
-                />
-              </div>
+            <div v-else>
+              <!-- Feature flag: Set to false to disable virtual scrolling -->
+              <VirtualScrollerWrapper
+                :items="visibleSuggestions"
+                :item-size="120"
+                :threshold="10"
+                :enable-virtual="false"
+              >
+                <template #default="{ items, virtual }">
+                  <div :class="virtual ? 'space-y-0' : 'space-y-4'">
+                    <div v-for="suggestion in items" :key="suggestion.merchant">
+                      <SubscriptionSuggestionCard 
+                        :pattern="suggestion"
+                        @confirmed="handleSuggestionConfirmed"
+                        @rejected="handleSuggestionRejected"
+                        :class="virtual ? 'border border-gray-100 rounded-xl p-4' : 'border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow'"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </VirtualScrollerWrapper>
             </div>
           </AsyncErrorBoundary>
         </div>
@@ -175,6 +187,7 @@ import type { RecurringPattern } from '@/services/PatternDetector'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
+import VirtualScrollerWrapper from '@/components/ui/VirtualScrollerWrapper.vue'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()

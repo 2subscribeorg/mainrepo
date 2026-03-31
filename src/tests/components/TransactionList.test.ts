@@ -21,6 +21,14 @@ vi.mock('@/components/ui/Pagination.vue', () => ({
   }
 }))
 
+vi.mock('@/components/ui/VirtualScrollerWrapper.vue', () => ({
+  default: {
+    name: 'VirtualScrollerWrapper',
+    template: '<div><slot :items="items" :virtual="false" /></div>',
+    props: ['items', 'itemSize', 'threshold', 'enableVirtual']
+  }
+}))
+
 describe('TransactionList', () => {
   const mockTransactions: Transaction[] = [
     {
