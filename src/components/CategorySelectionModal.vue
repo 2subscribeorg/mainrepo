@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <Transition 
     :enter-active-class="modalTransition.enterActiveClass"
     :leave-active-class="modalTransition.leaveActiveClass"
@@ -174,6 +175,7 @@
       </div>
     </div>
   </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
