@@ -67,7 +67,10 @@ export class PlaidBackendService {
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to create link token')
+        const errorMessage = typeof error.error?.message === 'string'
+          ? error.error.message
+          : (typeof error.error === 'string' ? error.error : (typeof error.message === 'string' ? error.message : JSON.stringify(error)))
+        throw new Error(errorMessage || 'Failed to create link token')
       }
       
       const data = await response.json()
@@ -80,7 +83,10 @@ export class PlaidBackendService {
       if (error instanceof PlaidValidationError) {
         throw error
       }
-      throw new Error(`Failed to create link token: ${error.message}`)
+      if (error instanceof Error) {
+        throw new Error(`Failed to create link token: ${error.message}`)
+      }
+      throw new Error(`Failed to create link token: ${JSON.stringify(error)}`)
     }
   }
 
@@ -112,7 +118,10 @@ export class PlaidBackendService {
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to exchange token')
+        const errorMessage = typeof error.error?.message === 'string'
+          ? error.error.message
+          : (typeof error.error === 'string' ? error.error : (typeof error.message === 'string' ? error.message : JSON.stringify(error)))
+        throw new Error(errorMessage || 'Failed to exchange token')
       }
       
       const data = await response.json()
@@ -125,7 +134,10 @@ export class PlaidBackendService {
       if (error instanceof PlaidValidationError) {
         throw error
       }
-      throw new Error(`Failed to exchange token: ${error.message}`)
+      if (error instanceof Error) {
+        throw new Error(`Failed to exchange token: ${error.message}`)
+      }
+      throw new Error(`Failed to exchange token: ${JSON.stringify(error)}`)
     }
   }
 
@@ -157,7 +169,10 @@ export class PlaidBackendService {
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to sync transactions')
+        const errorMessage = typeof error.error?.message === 'string'
+          ? error.error.message
+          : (typeof error.error === 'string' ? error.error : (typeof error.message === 'string' ? error.message : JSON.stringify(error)))
+        throw new Error(errorMessage || 'Failed to sync transactions')
       }
       
       const data = await response.json()
@@ -170,7 +185,10 @@ export class PlaidBackendService {
       if (error instanceof PlaidValidationError) {
         throw error
       }
-      throw new Error(`Failed to sync transactions: ${error.message}`)
+      if (error instanceof Error) {
+        throw new Error(`Failed to sync transactions: ${error.message}`)
+      }
+      throw new Error(`Failed to sync transactions: ${JSON.stringify(error)}`)
     }
   }
 
@@ -196,14 +214,20 @@ export class PlaidBackendService {
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to disconnect bank')
+        const errorMessage = typeof error.error?.message === 'string'
+          ? error.error.message
+          : (typeof error.error === 'string' ? error.error : (typeof error.message === 'string' ? error.message : JSON.stringify(error)))
+        throw new Error(errorMessage || 'Failed to disconnect bank')
       }
       
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
         throw error
       }
-      throw new Error(`Failed to disconnect bank: ${error.message}`)
+      if (error instanceof Error) {
+        throw new Error(`Failed to disconnect bank: ${error.message}`)
+      }
+      throw new Error(`Failed to disconnect bank: ${JSON.stringify(error)}`)
     }
   }
 

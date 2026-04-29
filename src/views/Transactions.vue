@@ -229,12 +229,23 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
   const { name: categoryName, colour: color, icon } = categoryData
   
   try {
+    // Check for duplicate category name (case-insensitive, user-specific)
+    const duplicateName = categories.value.some(
+      cat => cat.name.toLowerCase() === categoryName.trim().toLowerCase()
+    )
+    
+    if (duplicateName) {
+      alert('❌ A category with this name already exists')
+      return
+    }
+
     // First create the new category
     const newCategory = {
       id: `cat_${Date.now()}`, // Generate temporary ID
-      name: categoryName,
+      name: categoryName.trim(),
       colour: color,
       icon: icon,
+      userId: authStore.userId || 'unknown',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
