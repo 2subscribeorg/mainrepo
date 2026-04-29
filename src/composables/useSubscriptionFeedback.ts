@@ -263,6 +263,18 @@ export function useSubscriptionFeedback() {
       error.value = null
 
       try {
+        // Check for duplicate category name (case-insensitive, user-specific)
+        const existingCategories = categoriesStore.categories
+        const duplicateName = existingCategories.some(
+          cat => cat.name.toLowerCase() === categoryData.name.trim().toLowerCase()
+        )
+        
+        if (duplicateName) {
+          error.value = 'A category with this name already exists'
+          logger.warn('⚠️ Attempted to create duplicate category:', categoryData.name)
+          return false
+        }
+
         // Create new category first - following the same pattern as useCategoryManagement.ts
         const newCategory: Category = {
           id: crypto.randomUUID(),
@@ -281,15 +293,20 @@ export function useSubscriptionFeedback() {
         await categoriesStore.save(newCategory)
         
         // Then create subscription with the new category
-        return await handleCategorySelection(newCategory.id)
+        const result = await handleCategorySelection(newCategory.id)
+        
+        // Only close modal and clear pending data on success
+        if (result) {
+          showCategoryModal.value = false
+          pendingSubscriptionData.value = null
+        }
+        
+        return result
 
       } catch (err: any) {
         error.value = err.message || 'Failed to create category and subscription'
         logger.error('❌ Failed to create category and subscription:', err)
         return false
-      } finally {
-        showCategoryModal.value = false
-        pendingSubscriptionData.value = null
       }
     })
   }

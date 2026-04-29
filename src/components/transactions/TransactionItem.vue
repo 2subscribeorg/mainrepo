@@ -120,6 +120,7 @@ import { DuplicateSubscriptionChecker, type DuplicateCheckResult } from '@/servi
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
+import { useAuth } from '@/composables/useAuth'
 import type { Category } from '@/domain/models'
 import type { CategoryFormData } from '@/schemas/form-validation.schema'
 import { validateCategoryForm } from '@/schemas/form-validation.schema'
@@ -152,6 +153,7 @@ const emit = defineEmits<{
 const subscriptionsStore = useSubscriptionsStore()
 const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
+const { user } = useAuth()
 const duplicateChecker = new DuplicateSubscriptionChecker()
 
 const showDuplicateModal = ref(false)
@@ -236,6 +238,7 @@ async function handleSaveCategory() {
       name: validation.data.name,
       colour: validation.data.colour,
       icon: validation.data.icon,
+      userId: user.value?.id || 'unknown',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
