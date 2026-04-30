@@ -2,7 +2,7 @@ import type { ID } from '@/domain/models'
 import type { RenewalWarning, WarningCalculationResult } from '@/types/renewalWarning'
 import { getFirebaseAuthToken } from '@/utils/authHelpers'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
 
 class RenewalWarningService {
   private async getAuthToken(): Promise<string> {
@@ -34,14 +34,14 @@ class RenewalWarningService {
   }
 
   async getWarnings(userId: ID): Promise<RenewalWarning[]> {
-    const response = await this.fetchWithAuth(`${API_BASE_URL}/api/warnings/${userId}`)
+    const response = await this.fetchWithAuth(`${API_BASE_URL}/warnings/${userId}`)
     const data = await response.json()
     return data.data || []
   }
 
   async calculateWarnings(userId: ID): Promise<WarningCalculationResult> {
     const response = await this.fetchWithAuth(
-      `${API_BASE_URL}/api/warnings/calculate/${userId}`,
+      `${API_BASE_URL}/warnings/calculate/${userId}`,
       { method: 'POST' }
     )
     const data = await response.json()
@@ -50,7 +50,7 @@ class RenewalWarningService {
 
   async dismissWarning(userId: ID, warningId: ID): Promise<void> {
     await this.fetchWithAuth(
-      `${API_BASE_URL}/api/warnings/${warningId}/dismiss`,
+      `${API_BASE_URL}/warnings/${warningId}/dismiss`,
       {
         method: 'PATCH',
         body: JSON.stringify({ userId }),

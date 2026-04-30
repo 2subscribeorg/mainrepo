@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "serve dist --single --listen ${PORT:-4173}",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:plaid": "vitest --config vitest.plaid.config.ts --run",
@@ -27,6 +28,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "serve": "^14.2.3",
     "@capacitor/android": "^6.1.2",
     "@capacitor/core": "^6.1.2",
     "@capacitor/ios": "^6.1.2",

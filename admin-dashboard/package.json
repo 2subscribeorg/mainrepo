@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "serve dist --single --listen ${PORT:-4173}"
   },
   "dependencies": {
+    "serve": "^14.2.3",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",
     "pinia": "^2.1.7",
