@@ -19,6 +19,7 @@ import { getFirebaseAuth, getFirebaseDb } from '@/config/firebase'
 import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncService'
 import { emailVerificationService } from '@/services/EmailVerificationService'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import { logger } from '@/utils/logger'
 
 /**
  * SECURITY: Secure error message handler for authentication
@@ -110,6 +111,11 @@ export const useAuthStore = defineStore('auth', () => {
   // Track if listener has been initialized to prevent duplicates
   let listenerInitialized = false
   
+  // Track initial auth state resolution
+  let initialAuthCheckComplete = false
+  let initialAuthCheckPromise: Promise<void> | null = null
+  let initialAuthCheckResolver: (() => void) | null = null
+  
   // Track pending auth state changes with promises
   // Key is user ID (or 'null' for sign out), value is resolver function
   const authStateResolvers = new Map<string, (user: User | null) => void>()
@@ -120,60 +126,149 @@ export const useAuthStore = defineStore('auth', () => {
    * Safe to call multiple times - only initializes once
    */
   function initAuthListener() {
-    if (!isFirebaseMode) return
+    if (!isFirebaseMode) {
+      // In mock mode, auth check is immediately complete
+      initialAuthCheckComplete = true
+      if (initialAuthCheckResolver) {
+        initialAuthCheckResolver()
+      }
+      return
+    }
     
     // Prevent multiple listener registrations
     if (listenerInitialized) {
+      logger.debug('Auth listener already initialized, skipping')
       return
     }
 
+    // Create promise to track initial auth check
+    if (!initialAuthCheckPromise) {
+      initialAuthCheckPromise = new Promise((resolve) => {
+        initialAuthCheckResolver = resolve
+      })
+    }
+
+    logger.debug('Initializing Firebase auth listener...')
     const auth = getFirebaseAuth()
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        // Sync user to Firestore on every auth state change
-        await syncUserToFirestore(firebaseUser)
+      try {
+        logger.debug('Auth state changed, firebaseUser:', firebaseUser ? firebaseUser.uid : 'null')
         
-        // Get ID token to check custom claims
-        const idTokenResult = await firebaseUser.getIdTokenResult()
-        const customClaims = idTokenResult.claims
-        
-        // Determine user role from custom claims
-        let role = 'user'
-        if (customClaims.admin === true && customClaims.superAdmin === true) {
-          role = 'superAdmin'
-        } else if (customClaims.admin === true) {
-          role = 'admin'
-        }
+        if (firebaseUser) {
+          try {
+            // Get ID token with timeout to prevent hanging
+            // Use Promise.race to implement timeout
+            logger.debug('Fetching ID token and custom claims...')
+            const idTokenPromise = firebaseUser.getIdTokenResult()
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Token fetch timeout')), 5000)
+            )
+            
+            const idTokenResult = await Promise.race([idTokenPromise, timeoutPromise]) as any
+            const customClaims = idTokenResult.claims
+            logger.debug('Custom claims received:', customClaims)
+            
+            // Determine user role from custom claims
+            let role = 'user'
+            if (customClaims.admin === true && customClaims.superAdmin === true) {
+              role = 'superAdmin'
+            } else if (customClaims.admin === true) {
+              role = 'admin'
+            }
 
-        user.value = {
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || 'User',
-          email: firebaseUser.email || '',
-          isSuperAdmin: customClaims.admin === true && customClaims.superAdmin === true,
-          emailVerified: firebaseUser.emailVerified,
-          role,
-          permissions: customClaims.permissions as string[] || [],
+            user.value = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
+              isSuperAdmin: customClaims.admin === true && customClaims.superAdmin === true,
+              emailVerified: firebaseUser.emailVerified,
+              role,
+              permissions: customClaims.permissions as string[] || [],
+            }
+            logger.debug('User object created successfully')
+          } catch (err) {
+            // If getting custom claims fails, create basic user object
+            logger.warn('Failed to get custom claims, using basic auth:', err)
+            user.value = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
+              isSuperAdmin: false,
+              emailVerified: firebaseUser.emailVerified,
+              role: 'user',
+              permissions: [],
+            }
+          }
+          
+          // Resolve any pending promises waiting for this user
+          // This MUST happen even if custom claims failed
+          logger.debug('Looking for resolver for user:', firebaseUser.uid)
+          const resolver = authStateResolvers.get(firebaseUser.uid)
+          if (resolver && user.value) {
+            logger.debug('Resolver found, calling it with user data')
+            resolver(user.value)
+            authStateResolvers.delete(firebaseUser.uid)
+            logger.success('Resolver completed successfully')
+          } else {
+            if (!resolver) {
+              logger.debug('No resolver found for this user - likely already authenticated or page refresh')
+            }
+            if (!user.value) {
+              logger.warn('User value not set, cannot resolve')
+            }
+          }
+          
+          // Sync user to Firestore in the background (non-blocking)
+          // Don't await this to avoid delaying sign-in completion
+          syncUserToFirestore(firebaseUser).catch((err) => {
+            logger.error('Failed to sync user to Firestore:', err)
+          })
+        } else {
+          user.value = null
+          
+          // Resolve any pending promises waiting for sign out
+          const resolver = authStateResolvers.get('null')
+          if (resolver) {
+            resolver(null)
+            authStateResolvers.delete('null')
+          }
         }
         
-        // Resolve any pending promises waiting for this user
-        const resolver = authStateResolvers.get(firebaseUser.uid)
-        if (resolver) {
-          resolver(user.value)
-          authStateResolvers.delete(firebaseUser.uid)
+        // Mark initial auth check as complete on first state change
+        if (!initialAuthCheckComplete) {
+          initialAuthCheckComplete = true
+          if (initialAuthCheckResolver) {
+            logger.debug('Initial auth check complete')
+            initialAuthCheckResolver()
+            initialAuthCheckResolver = null
+          }
         }
-      } else {
-        user.value = null
+      } catch (error) {
+        logger.error('Critical error in auth state listener:', error)
+        // Even on error, try to resolve pending promises to avoid hanging
+        if (firebaseUser) {
+          const resolver = authStateResolvers.get(firebaseUser.uid)
+          if (resolver) {
+            logger.warn('Resolving with null due to error')
+            authStateResolvers.delete(firebaseUser.uid)
+            // Don't call resolver with null as it expects User, this will reject
+          }
+        }
         
-        // Resolve any pending promises waiting for sign out
-        const resolver = authStateResolvers.get('null')
-        if (resolver) {
-          resolver(null)
-          authStateResolvers.delete('null')
+        // Complete initial auth check even on error
+        if (!initialAuthCheckComplete) {
+          initialAuthCheckComplete = true
+          if (initialAuthCheckResolver) {
+            logger.warn('Initial auth check completed with error')
+            initialAuthCheckResolver()
+            initialAuthCheckResolver = null
+          }
         }
       }
     })
     
     listenerInitialized = true
+    logger.success('Firebase auth listener initialized successfully')
   }
 
   /**
@@ -203,32 +298,62 @@ export const useAuthStore = defineStore('auth', () => {
       })
     }
 
+    // Ensure auth listener is initialized before attempting sign in
+    if (!listenerInitialized) {
+      logger.warn('Auth listener not initialized, initializing now...')
+      initAuthListener()
+      // Give listener a moment to set up
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
     return await withLoading('auth', async () => {
       error.value = null
 
       try {
         const auth = getFirebaseAuth()
+        logger.debug('Attempting sign in with Firebase...')
         const userCredential = await signInWithEmailAndPassword(auth, email, password)
+        logger.debug('Firebase sign in successful, waiting for auth state update...')
         
         // Return promise that resolves when onAuthStateChanged fires
         return new Promise<User>((resolve, reject) => {
+          // Set up resolver FIRST, before any async operations
           authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
             if (updatedUser) {
               // Record successful login
               authRateLimiter.recordLoginAttempt(email, true)
+              logger.success('Sign in complete with user data')
               resolve(updatedUser)
             } else {
               reject(new Error('Failed to get user data after sign in'))
             }
           })
           
-          // Timeout after 10 seconds to prevent hanging
+          // Use nextTick to check if auth state already updated (handles race condition)
+          setTimeout(() => {
+            // Check if user is already in store (auth state already updated)
+            // This handles race condition where onAuthStateChanged fires very quickly
+            if (user.value && user.value.id === userCredential.user.uid) {
+              logger.debug('User already in store from auth state change, resolving immediately')
+              if (authStateResolvers.has(userCredential.user.uid)) {
+                authRateLimiter.recordLoginAttempt(email, true)
+                authStateResolvers.delete(userCredential.user.uid)
+                resolve(user.value)
+              }
+            }
+          }, 100) // Give auth state listener 100ms to fire
+          
+          // Timeout after 15 seconds to prevent hanging
+          // Increased from 10s to accommodate token fetching timeout (5s) + buffer
           setTimeout(() => {
             if (authStateResolvers.has(userCredential.user.uid)) {
               authStateResolvers.delete(userCredential.user.uid)
+              logger.error('Sign in timed out - auth state listener did not respond in time')
+              logger.error('Current user value:', user.value)
+              logger.error('Expected user ID:', userCredential.user.uid)
               reject(new Error('Sign in timeout - please try again'))
             }
-          }, 10000)
+          }, 15000)
         })
       } catch (e) {
         // Record failed login attempt
@@ -237,6 +362,7 @@ export const useAuthStore = defineStore('auth', () => {
         // SECURITY: Never expose Firebase error messages that reveal user existence
         const secureMessage = getSecureAuthMessage(e)
         error.value = secureMessage
+        logger.error('Sign in failed:', e)
         // Don't reset rate limit on failed login - this is intentional for security
         throw new Error(secureMessage)
       }
@@ -567,6 +693,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Wait for initial auth state check to complete
+   * This is used by route guards to prevent redirecting before Firebase has checked for an existing session
+   */
+  async function waitForInitialAuthCheck(): Promise<void> {
+    if (initialAuthCheckComplete) {
+      return Promise.resolve()
+    }
+    
+    if (!initialAuthCheckPromise) {
+      // Create the promise if it doesn't exist yet
+      initialAuthCheckPromise = new Promise((resolve) => {
+        initialAuthCheckResolver = resolve
+      })
+    }
+    
+    // Wait for up to 2 seconds for auth check to complete
+    return Promise.race([
+      initialAuthCheckPromise,
+      new Promise<void>((resolve) => setTimeout(resolve, 2000))
+    ])
+  }
+
   return {
     user,
     loading,
@@ -576,6 +725,7 @@ export const useAuthStore = defineStore('auth', () => {
     userId,
     userEmail,
     initAuthListener,
+    waitForInitialAuthCheck,
     signIn,
     signUp,
     logout,

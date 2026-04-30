@@ -1,4 +1,5 @@
 import { useAuth } from './useAuth'
+import { useAuthStore } from '@/stores/auth'
 import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
@@ -31,6 +32,10 @@ export async function requireAuth(
   }
 
   const { isAuthenticated } = useAuth()
+  
+  // Wait for initial auth state to be resolved (prevents redirect on page refresh)
+  const authStore = useAuthStore()
+  await authStore.waitForInitialAuthCheck()
 
   // Skip auth check in Mock mode for development
   if (import.meta.env.VITE_DATA_BACKEND === 'MOCK') {
@@ -40,6 +45,7 @@ export async function requireAuth(
 
   if (!isAuthenticated.value) {
     // Redirect to login and save intended destination
+    logger.debug('User not authenticated, redirecting to login')
     next({
       path: '/login',
       query: { redirect: to.fullPath }

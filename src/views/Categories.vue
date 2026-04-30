@@ -69,8 +69,10 @@ import { useAnimations } from '@/utils/useAnimations'
 import { validateCategoryWithZod } from '@/schemas/category.schema'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
+import { useCategoryManagement } from '@/composables/useCategoryManagement'
 
 const categoriesStore = useCategoriesStore()
+const { createCategory, updateCategory } = useCategoryManagement()
 
 // Use animation utilities
 const { createRipple, prefersReducedMotion } = useAnimations()
@@ -170,6 +172,7 @@ async function saveCategory() {
   const input = {
     name: formData.value.name,
     colour: formData.value.colour,
+    icon: formData.value.icon
   }
 
   const validation = validateCategoryWithZod(input)
@@ -178,32 +181,33 @@ async function saveCategory() {
     return
   }
 
-  saving.value = true
   try {
-    // Use validated & sanitized data from Zod schema
-    const category: Category = {
-      id: editingCategory.value?.id || crypto.randomUUID(),
-      name: validation.data!.name,
-      colour: validation.data!.colour || DEFAULT_COLORS[0],
+    if (editingCategory.value) {
+      // Update existing category
+      await updateCategory(editingCategory.value.id, {
+        name: validation.data!.name,
+        colour: validation.data!.colour || DEFAULT_COLORS[0],
+        icon: formData.value.icon
+      })
+    } else {
+      // Create new category
+      await createCategory({
+        name: validation.data!.name,
+        colour: validation.data!.colour || DEFAULT_COLORS[0],
+        icon: formData.value.icon
+      })
     }
     
-    // Only add icon field if it has a value (Firestore doesn't accept undefined)
-    if (formData.value.icon) {
-      category.icon = formData.value.icon
-    }
-
-    await categoriesStore.save(category)
     closeModal()
     
     // Show success message
     const action = editingCategory.value ? 'updated' : 'created'
-    showSuccessMessage(`Category "${category.name}" ${action} successfully!`)
+    const categoryName = validation.data!.name
+    showSuccessMessage(`Category "${categoryName}" ${action} successfully!`)
   } catch (error) {
     // Show actual error message for debugging
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     validationErrors.value = [`Failed to save category: ${errorMessage}`]
-  } finally {
-    saving.value = false
   }
 }
 

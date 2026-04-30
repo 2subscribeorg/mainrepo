@@ -120,6 +120,7 @@ import { DuplicateSubscriptionChecker, type DuplicateCheckResult } from '@/servi
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
+import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import { useAuth } from '@/composables/useAuth'
 import type { Category } from '@/domain/models'
 import type { CategoryFormData } from '@/schemas/form-validation.schema'
@@ -154,6 +155,7 @@ const subscriptionsStore = useSubscriptionsStore()
 const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
 const { user } = useAuth()
+const { createCategory } = useCategoryManagement()
 const duplicateChecker = new DuplicateSubscriptionChecker()
 
 const showDuplicateModal = ref(false)
@@ -219,31 +221,15 @@ async function handleSaveCategory() {
     return
   }
   
-  // Check for duplicate names using validated data
-  const duplicateName = props.categories.some(
-    cat => cat.name.toLowerCase() === validation.data.name.toLowerCase()
-  )
-  
-  if (duplicateName) {
-    categoryValidationErrors.value.push('A category with this name already exists')
-    return
-  }
-  
   savingCategory.value = true
   
   try {
-    // Create new category using validated & sanitized data
-    const newCategory = {
-      id: `cat_${Date.now()}`,
+    // Create new category using the proper composable (it handles duplicate checking)
+    const newCategory = await createCategory({
       name: validation.data.name,
       colour: validation.data.colour,
-      icon: validation.data.icon,
-      userId: user.value?.id || 'unknown',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    await categoriesStore.save(newCategory)
+      icon: validation.data.icon
+    })
     
     // Automatically assign the new category to this transaction
     emit('category-change', newCategory.id)
@@ -251,7 +237,8 @@ async function handleSaveCategory() {
     closeCategoryModal()
   } catch (error) {
     logger.error('Failed to create category:', error)
-    categoryValidationErrors.value.push('Failed to create category. Please try again.')
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create category. Please try again.'
+    categoryValidationErrors.value.push(errorMessage)
   } finally {
     savingCategory.value = false
   }
