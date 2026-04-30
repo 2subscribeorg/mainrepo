@@ -249,9 +249,10 @@ export const useAuthStore = defineStore('auth', () => {
         if (firebaseUser) {
           const resolver = authStateResolvers.get(firebaseUser.uid)
           if (resolver) {
-            logger.warn('Resolving with null due to error')
+            logger.warn('Rejecting pending resolver due to auth listener error')
             authStateResolvers.delete(firebaseUser.uid)
-            // Don't call resolver with null as it expects User, this will reject
+            // Call resolver with null so the waiting promise rejects cleanly
+            resolver(null)
           }
         }
         
@@ -416,6 +417,14 @@ export const useAuthStore = defineStore('auth', () => {
           return { success: true, needsVerification: true }
         }
         
+        // onAuthStateChanged fires immediately after createUserWithEmailAndPassword,
+        // which means it may have already run BEFORE we get here (after awaiting
+        // createUserProfile). Check if user state is already set to avoid a
+        // race condition that causes the 10-second timeout every time.
+        if (user.value && user.value.id === userCredential.user.uid) {
+          return { success: true, needsVerification: false, user: user.value }
+        }
+
         // Return promise that resolves when onAuthStateChanged fires
         return new Promise((resolve, reject) => {
           authStateResolvers.set(userCredential.user.uid, (updatedUser) => {
@@ -430,7 +439,12 @@ export const useAuthStore = defineStore('auth', () => {
           setTimeout(() => {
             if (authStateResolvers.has(userCredential.user.uid)) {
               authStateResolvers.delete(userCredential.user.uid)
-              reject(new Error('Sign up timeout - please try again'))
+              // Last-chance check: user may be set even if resolver was missed
+              if (user.value && user.value.id === userCredential.user.uid) {
+                resolve({ success: true, needsVerification: false, user: user.value })
+              } else {
+                reject(new Error('Sign up timeout - please try again'))
+              }
             }
           }, 10000)
         })
@@ -709,10 +723,11 @@ export const useAuthStore = defineStore('auth', () => {
       })
     }
     
-    // Wait for up to 2 seconds for auth check to complete
+    // Wait up to 8 seconds for Firebase to confirm auth state.
+    // 2 seconds was too short for cold Railway/Firebase connections.
     return Promise.race([
       initialAuthCheckPromise,
-      new Promise<void>((resolve) => setTimeout(resolve, 2000))
+      new Promise<void>((resolve) => setTimeout(resolve, 8000))
     ])
   }
 

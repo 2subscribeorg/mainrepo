@@ -9,7 +9,7 @@ import { MockAdminService } from './MockAdminService'
 class AdminService {
   private mockService = new MockAdminService()
   private isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
-  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+  private baseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
 
   /**
    * Get authorization headers with current user's token
@@ -67,7 +67,7 @@ class AdminService {
     }
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users?${params}`,
+      `${this.baseUrl}/admin/users?${params}`,
       { headers }
     )
 
@@ -86,7 +86,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users/${userId}/activities?limit=${limit}`,
+      `${this.baseUrl}/admin/users/${userId}/activities?limit=${limit}`,
       { headers }
     )
 
@@ -105,7 +105,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users`,
+      `${this.baseUrl}/admin/users`,
       {
         method: 'POST',
         headers,
@@ -128,7 +128,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users/${userId}`,
+      `${this.baseUrl}/admin/users/${userId}`,
       {
         method: 'DELETE',
         headers
@@ -149,7 +149,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users/${userId}/password-reset`,
+      `${this.baseUrl}/admin/users/${userId}/password-reset`,
       {
         method: 'POST',
         headers
@@ -170,7 +170,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/users/password-reset-by-email`,
+      `${this.baseUrl}/admin/users/password-reset-by-email`,
       {
         method: 'POST',
         headers,
@@ -192,7 +192,7 @@ class AdminService {
     const headers = await this.getAuthHeaders()
 
     const response = await fetch(
-      `${this.baseUrl}/api/admin/me`,
+      `${this.baseUrl}/admin/me`,
       { headers }
     )
 

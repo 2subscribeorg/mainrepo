@@ -44,6 +44,18 @@ export async function requireAuth(
   }
 
   if (!isAuthenticated.value) {
+    // Double-check directly with Firebase before redirecting — the store
+    // reactive state can lag behind on first load / cold start
+    try {
+      const firebaseAuth = getFirebaseAuth()
+      if (firebaseAuth.currentUser) {
+        // Firebase says user is logged in — let them through
+        next()
+        return
+      }
+    } catch {
+      // Firebase not available, fall through to redirect
+    }
     // Redirect to login and save intended destination
     logger.debug('User not authenticated, redirecting to login')
     next({

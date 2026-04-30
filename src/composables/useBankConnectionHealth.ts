@@ -141,7 +141,7 @@ export function useBankConnectionHealth() {
   const healthSummary = computed(() => healthData.value.healthSummary)
 
   // API Base URL
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
 
   // Helper function for authenticated API calls
   async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
@@ -168,8 +168,8 @@ export function useBankConnectionHealth() {
       isLoading.value = true
       error.value = null
 
-      const response = await fetchWithAuth(`/api/bank-connections/${connectionId}/health`)
-      
+      const response = await fetchWithAuth(`/bank-connections/${connectionId}/health`)
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -213,8 +213,8 @@ export function useBankConnectionHealth() {
       isLoading.value = true
       error.value = null
 
-      const response = await fetchWithAuth('/api/bank-connections/health/all')
-      
+      const response = await fetchWithAuth('/bank-connections/health/all')
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -262,7 +262,7 @@ export function useBankConnectionHealth() {
       isLoading.value = true
       error.value = null
 
-      const response = await fetchWithAuth(`/api/bank-connections/${connectionId}/reconnect`, {
+      const response = await fetchWithAuth(`/bank-connections/${connectionId}/reconnect`, {
         method: 'POST'
       })
       
@@ -309,8 +309,8 @@ export function useBankConnectionHealth() {
     }
 
     try {
-      const response = await fetchWithAuth(`/api/bank-connections/${connectionId}/reconnection-workflow`)
-      
+      const response = await fetchWithAuth(`/bank-connections/${connectionId}/reconnection-workflow`)
+
       if (!response.ok) {
         if (response.status === 404) {
           return null

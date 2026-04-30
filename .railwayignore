@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.local
+*.test.ts
+*.spec.ts
+tests/
+scripts/
+.storybook/
+android/
+ios/
+*.apk
+*.timestamp-*.mjs
+
