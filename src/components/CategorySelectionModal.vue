@@ -211,12 +211,18 @@ const selectedCategoryId = ref('')
 const newCategoryName = ref('')
 const newCategoryColor = ref(DEFAULT_COLORS[0])
 const newCategoryIcon = ref<string | undefined>(undefined)
+const isSubmitting = ref(false) // Track if form is being submitted
 
 // Animation utilities
 const { modalTransition } = useTransitions()
 
 // Validation
 const validationErrors = computed(() => {
+  // Don't show validation errors while submitting (prevents showing duplicate error after creation)
+  if (isSubmitting.value) {
+    return []
+  }
+  
   const errors: string[] = []
   
   if (isCreatingNew.value) {
@@ -265,11 +271,15 @@ function handleEscape() {
 }
 
 function handleCancel() {
+  isSubmitting.value = false
   emit('cancel')
   emit('close')
 }
 
 function handleConfirm() {
+  // Set submitting flag to prevent validation errors during creation
+  isSubmitting.value = true
+  
   if (isCreatingNew.value) {
     // Pass raw data - parent will validate with Zod (which auto-sanitizes)
     emit('create-and-confirm', {
@@ -286,6 +296,7 @@ function handleConfirm() {
 watch(() => props.show, async (show) => {
   if (show) {
     // Reset form when modal opens
+    isSubmitting.value = false
     selectedCategoryId.value = ''
     newCategoryName.value = ''
     newCategoryColor.value = DEFAULT_COLORS[0]

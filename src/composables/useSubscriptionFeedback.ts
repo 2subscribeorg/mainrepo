@@ -4,6 +4,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useCategoriesStore } from '@/stores/categories'
+import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import { FirebaseSubscriptionFeedbackRepo } from '@/data/repo/firebase/FirebaseSubscriptionFeedbackRepo'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { secureStorage } from '@/utils/secureStorage'
@@ -43,6 +44,7 @@ export function useSubscriptionFeedback() {
   const subscriptionsStore = useSubscriptionsStore()
   const transactionsStore = useTransactionsDataStore()
   const categoriesStore = useCategoriesStore()
+  const { createCategory } = useCategoryManagement()
   const feedbackRepo = new FirebaseSubscriptionFeedbackRepo()
   
   const { withLoading, isLoading } = useLoadingStates()
@@ -259,47 +261,30 @@ export function useSubscriptionFeedback() {
       return false
     }
 
+    // Store pending data and close modal immediately to prevent validation errors
+    const pendingData = pendingSubscriptionData.value
+    showCategoryModal.value = false
+    pendingSubscriptionData.value = null
+
     return await withLoading('feedback', async () => {
       error.value = null
 
       try {
-        // Check for duplicate category name (case-insensitive, user-specific)
-        const existingCategories = categoriesStore.categories
-        const duplicateName = existingCategories.some(
-          cat => cat.name.toLowerCase() === categoryData.name.trim().toLowerCase()
-        )
-        
-        if (duplicateName) {
-          error.value = 'A category with this name already exists'
-          logger.warn('⚠️ Attempted to create duplicate category:', categoryData.name)
-          return false
-        }
-
-        // Create new category first - following the same pattern as useCategoryManagement.ts
-        const newCategory: Category = {
-          id: crypto.randomUUID(),
-          name: categoryData.name.trim(),
+        // Modal already validated - create the category
+        const newCategory = await createCategory({
+          name: categoryData.name,
           colour: categoryData.colour,
-          userId: user.value?.id || 'unknown',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          icon: categoryData.icon
+        })
         
-        // Only add icon field if it has a value (Firestore doesn't accept undefined)
-        if (categoryData.icon) {
-          newCategory.icon = categoryData.icon
-        }
-
-        await categoriesStore.save(newCategory)
+        // Restore pending data temporarily to create subscription
+        pendingSubscriptionData.value = pendingData
         
         // Then create subscription with the new category
         const result = await handleCategorySelection(newCategory.id)
         
-        // Only close modal and clear pending data on success
-        if (result) {
-          showCategoryModal.value = false
-          pendingSubscriptionData.value = null
-        }
+        // Clear pending data after creation
+        pendingSubscriptionData.value = null
         
         return result
 

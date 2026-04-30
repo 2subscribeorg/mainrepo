@@ -85,6 +85,7 @@ import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
+import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import type { Transaction } from '@/domain/models'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import TransactionFilterPanel from '@/components/transactions/TransactionFilterPanel.vue'
@@ -121,6 +122,7 @@ const subscriptionsStore = useSubscriptionsStore()
 const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
 const authStore = useAuthStore()
+const { createCategory } = useCategoryManagement()
 
 // Load transactions on component mount
 onMounted(() => {
@@ -228,43 +230,31 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
   
   const { name: categoryName, colour: color, icon } = categoryData
   
+  // Close modal immediately to prevent validation errors from showing while we create
+  const transactionToProcess = selectedTransaction.value
+  showCategoryModal.value = false
+  selectedTransaction.value = null
+  
   try {
-    // Check for duplicate category name (case-insensitive, user-specific)
-    const duplicateName = categories.value.some(
-      cat => cat.name.toLowerCase() === categoryName.trim().toLowerCase()
-    )
-    
-    if (duplicateName) {
-      alert('❌ A category with this name already exists')
-      return
-    }
-
-    // First create the new category
-    const newCategory = {
-      id: `cat_${Date.now()}`, // Generate temporary ID
-      name: categoryName.trim(),
+    // Modal already validated - no duplicates, so create the category
+    const newCategory = await createCategory({
+      name: categoryName,
       colour: color,
-      icon: icon,
-      userId: authStore.userId || 'unknown',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    // Save the new category
-    await categoriesStore.save(newCategory)
+      icon: icon
+    })
     
     // Then create subscription with the new category
     const subscription = {
       id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
-      merchantName: selectedTransaction.value.merchantName,
-      amount: selectedTransaction.value.amount,
+      merchantName: transactionToProcess.merchantName,
+      amount: transactionToProcess.amount,
       recurrence: 'monthly' as const, // Default to monthly
-      nextPaymentDate: selectedTransaction.value.date,
+      nextPaymentDate: transactionToProcess.date,
       categoryId: newCategory.id,
       status: 'active' as const,
       source: 'manual' as const,
       userId: authStore.userId || '',
-      plaidTransactionIds: [selectedTransaction.value.id],
+      plaidTransactionIds: [transactionToProcess.id],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -274,7 +264,7 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     
     // Update the transaction to link it to the subscription
     const updatedTransaction = {
-      ...selectedTransaction.value,
+      ...transactionToProcess,
       subscriptionId: subscription.id,
       categoryId: newCategory.id
     }
@@ -283,10 +273,8 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     alert(`✅ New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
-    alert('❌ Failed to create category and subscription')
-  } finally {
-    showCategoryModal.value = false
-    selectedTransaction.value = null
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    alert(`❌ Failed to create category and subscription: ${errorMessage}`)
   }
 }
 
