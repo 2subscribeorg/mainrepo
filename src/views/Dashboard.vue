@@ -1,12 +1,13 @@
 <template>
-  <div>
-    <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
+  <PullToRefresh :onRefresh="handleRefresh">
+    <div>
+      <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
 
-    <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>
+      <div v-if="loading" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
 
-    <div v-else class="mt-6 space-y-6">
+      <div v-else class="mt-6 space-y-6">
       <!-- Expiring connections banner -->
       <ErrorBoundary component="ConnectionExpirationBanner">
         <ConnectionExpirationBanner />
@@ -162,6 +163,7 @@
       </div>
     </div>
   </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
@@ -169,6 +171,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
+import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useToast } from '@/composables/useToast'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
@@ -676,6 +679,16 @@ function highlightSegment(index: number) {
 
 function clearHighlight() {
   highlightedIndex.value = null
+}
+
+async function handleRefresh() {
+  await Promise.all([
+    loadSubscriptionSuggestions(),
+    subscriptionsStore.fetchAll().catch(() => []),
+    transactionsStore.fetchTransactions().catch(() => []),
+    categoriesStore.fetchAll().catch(() => []),
+    bankAccountsStore.fetchConnections().catch(() => []),
+  ])
 }
 
 

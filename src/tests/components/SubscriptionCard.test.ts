@@ -15,14 +15,16 @@ describe('SubscriptionCard', () => {
     nextPaymentDate: '2024-04-15',
     status: 'active',
     categoryId: 'cat-entertainment',
+    source: 'manual',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   }
 
+  let pinia: ReturnType<typeof createPinia>
+
   beforeEach(() => {
-    setActivePinia(createPinia())
-    
-    // Setup categories store with mock category
+    pinia = createPinia()
+    setActivePinia(pinia)
     const categoriesStore = useCategoriesStore()
     categoriesStore.categoriesById.set('cat-entertainment', {
       id: 'cat-entertainment',
@@ -40,6 +42,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -52,6 +55,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -62,6 +66,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -72,6 +77,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -82,6 +88,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -94,6 +101,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -156,6 +164,7 @@ describe('SubscriptionCard', () => {
       // Arrange
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Act
@@ -170,6 +179,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -181,6 +191,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -370,6 +381,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -381,6 +393,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -392,6 +405,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert
@@ -403,6 +417,7 @@ describe('SubscriptionCard', () => {
       // Arrange & Act
       const wrapper = mount(SubscriptionCard, {
         props: { subscription: mockSubscription },
+        global: { plugins: [pinia] },
       })
 
       // Assert

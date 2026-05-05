@@ -1,4 +1,5 @@
 <template>
+  <PullToRefresh :onRefresh="handleRefresh">
   <div>
     <!-- Success Message Announcement -->
     <div 
@@ -53,10 +54,12 @@
       />
     </ErrorBoundary>
   </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Category } from '@/domain/models'
@@ -238,6 +241,10 @@ async function deleteCategory() {
       validationErrors.value = [`Failed to delete category: ${errorMessage}`]
     }
   }
+}
+
+async function handleRefresh() {
+  await categoriesStore.fetchAll()
 }
 
 onMounted(async () => {

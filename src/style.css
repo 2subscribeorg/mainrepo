@@ -21,6 +21,16 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   min-height: 100vh;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Disable hover states on touch devices (mobile/tablet) */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable all hover effects on touch devices */
+  *:hover {
+    all: unset !important;
+  }
 }
 
 #app {

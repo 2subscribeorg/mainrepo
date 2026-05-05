@@ -56,15 +56,17 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { Category } from '@/domain/models'
 import { formatMoney } from '@/utils/formatters'
 import { useAnimations } from '@/utils/useAnimations'
+import { useHaptics } from '@/composables/useHaptics'
 import CategoryIcon from '@/components/ui/CategoryIcon.vue'
 
 const props = defineProps<{ category: Category }>()
-const emit = defineEmits<{ 
+const emit = defineEmits<{
   (e: 'edit', category: Category): void
   (e: 'delete', category: Category): void
 }>()
 
 const { useSwipeGesture, useLongPress } = useAnimations()
+const { impactMedium } = useHaptics()
 
 // Swipe gesture state
 const cardRef = ref<HTMLElement>()
@@ -87,6 +89,7 @@ const handleSwipeRight = () => {
 }
 
 const handleDelete = () => {
+  impactMedium()
   emit('delete', props.category)
 }
 

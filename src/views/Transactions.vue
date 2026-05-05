@@ -1,4 +1,5 @@
 <template>
+  <PullToRefresh :onRefresh="handleRefresh">
   <div class="max-w-full overflow-x-hidden">
     <!-- Page Header -->
     <div class="mb-6 space-y-4">
@@ -76,10 +77,12 @@
     </ErrorBoundary>
 
   </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useTransactions } from '@/composables/useTransactions'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
@@ -129,6 +132,9 @@ onMounted(() => {
   refreshTransactions()
 })
 
+async function handleRefresh() {
+  await refreshTransactions()
+}
 
 // Modal state
 const showCategoryModal = ref(false)

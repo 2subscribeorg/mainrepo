@@ -10,6 +10,7 @@ import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
 
 describe('Categories Tab Integration Test', () => {
+  let pinia: ReturnType<typeof createPinia>
   let categoriesStore: any
   let wrapper: any
 
@@ -20,7 +21,8 @@ describe('Categories Tab Integration Test', () => {
   ]
 
   const createTestSetup = () => {
-    setActivePinia(createPinia())
+    pinia = createPinia()
+    setActivePinia(pinia)
     
     // Initialize store
     categoriesStore = useCategoriesStore()
@@ -48,6 +50,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -68,6 +71,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -92,6 +96,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -118,6 +123,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Open modal
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -147,6 +153,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view and open create modal
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -182,6 +189,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view and open create modal
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -216,6 +224,7 @@ describe('Categories Tab Integration Test', () => {
 
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -246,6 +255,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view and open edit modal
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -283,6 +293,7 @@ describe('Categories Tab Integration Test', () => {
       // Arrange: Mount Categories view and open edit modal
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -323,6 +334,7 @@ describe('Categories Tab Integration Test', () => {
 
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -352,6 +364,7 @@ describe('Categories Tab Integration Test', () => {
 
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -387,6 +400,7 @@ describe('Categories Tab Integration Test', () => {
 
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -465,6 +479,7 @@ describe('Categories Tab Integration Test', () => {
       // Step 1: Mount Categories view
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,
@@ -502,6 +517,7 @@ describe('Categories Tab Integration Test', () => {
       // Step 1: Mount Categories view
       wrapper = mount(Categories, {
         global: {
+          plugins: [pinia],
           stubs: {
             LoadingSpinner: true,
             CategoryCard: true,

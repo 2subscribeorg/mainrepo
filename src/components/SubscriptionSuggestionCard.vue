@@ -117,7 +117,10 @@ import type { RecurringPattern } from '@/services/PatternDetector'
 import { formatMoney, formatRecurrence } from '@/utils/formatters'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { useCategoriesStore } from '@/stores/categories'
+import { useHaptics } from '@/composables/useHaptics'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
+
+const { impactLight, notifySuccess } = useHaptics()
 
 const props = withDefaults(defineProps<{
   pattern: RecurringPattern
@@ -200,7 +203,7 @@ const formattedFrequency = computed(() => {
 
 async function handleConfirm() {
   const lastTransaction = props.pattern.transactions[props.pattern.transactions.length - 1]
-  
+
   // This will now trigger the category selection modal
   const success = await confirmSubscription({
     transactionId: lastTransaction.id,
@@ -217,6 +220,9 @@ async function handleConfirm() {
   // The modal will handle the actual subscription creation
   // We emit confirmed only after the modal completes successfully
   if (success) {
+    // Haptic feedback - fire and forget
+    impactLight().catch(() => {})
+    notifySuccess().catch(() => {})
     // Note: The actual subscription creation happens in the modal handlers
     // We'll emit confirmed when the category selection is complete
   }

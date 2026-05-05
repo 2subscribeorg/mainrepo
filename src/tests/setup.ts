@@ -1,11 +1,18 @@
 import { vi, beforeEach } from 'vitest'
 import { config } from '@vue/test-utils'
+import { createTestingPinia } from '@pinia/testing'
 
 // Global test setup
 config.global.stubs = {
   'router-link': true,
   'router-view': true,
 }
+
+// Global plugins - use testing pinia for store mocking
+config.global.plugins = [createTestingPinia({
+  stubActions: false,
+  createSpy: vi.fn,
+})]
 
 // Mock Firebase config to prevent initialization in tests
 vi.mock('@/config/firebase', () => ({

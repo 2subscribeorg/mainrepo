@@ -21,7 +21,11 @@
       <RouteErrorBoundary>
         <MobileLayout>
           <main id="main-content">
-            <router-view />
+            <router-view v-slot="{ Component, route }">
+              <transition :name="(route.meta.transition as string) || 'fade'" mode="out-in">
+                <component :is="Component" :key="route.path" />
+              </transition>
+            </router-view>
           </main>
         </MobileLayout>
       </RouteErrorBoundary>
@@ -50,7 +54,9 @@
 
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { App } from '@capacitor/app'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
@@ -60,6 +66,7 @@ import { useErrorManager } from '@/utils/errorManager'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
+const router = useRouter()
 
 const globalError = ref<Error | null>(null)
 const isDevelopment = computed(() => import.meta.env.DEV)
@@ -108,6 +115,22 @@ onMounted(async () => {
       reportError(error as Error, 'AppBootstrap', '/')
     }
   }
+
+  // Handle Android hardware back button
+  App.addListener('backButton', ({ canGoBack }) => {
+    if (!canGoBack) {
+      // If there's no history, let the default behavior happen (exit app)
+      App.exitApp()
+    } else {
+      // Navigate back through Vue Router history
+      router.back()
+    }
+  })
+})
+
+onUnmounted(() => {
+  // Clean up back button listener
+  App.removeAllListeners()
 })
 </script>
 
@@ -180,5 +203,32 @@ onMounted(async () => {
   color: #166534;
   font-size: 0.875rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Native-style page transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide transition for iOS-like navigation */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateX(-20%);
+  opacity: 0;
 }
 </style>
