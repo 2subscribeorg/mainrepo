@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { mockPaddle } from './mockPaddle'
 import { mockRevenueCat } from './mockRevenueCat'
 import type { PricingPlan, PurchaseResult } from '@/types/billing'
+import { Purchases } from '@revenuecat/purchases-capacitor'
 
 /**
  * Main billing service that wraps Paddle + RevenueCat integration
@@ -28,9 +29,9 @@ class BillingService {
       paddlePriceId: 'free'
     },
     {
-      id: 'monthly',
+      id: '$rc_monthly',
       name: 'Monthly Pro',
-      price: 4.99,
+      price: 5,
       currency: 'GBP',
       interval: 'month',
       features: [
@@ -44,9 +45,9 @@ class BillingService {
       paddlePriceId: 'pri_01jh8xm9k2n3p4q5r6s7t8u9v0'
     },
     {
-      id: 'annual',
+      id: '$rc_annual',
       name: 'Annual Pro',
-      price: 49.99,
+      price: 50,
       currency: 'GBP',
       interval: 'year',
       features: [
@@ -109,10 +110,6 @@ class BillingService {
    * Purchase a subscription plan
    */
   async purchase(planId: string): Promise<PurchaseResult> {
-    if (!this.initialized) {
-      throw new Error('Billing service not initialized. Call initialize() first.')
-    }
-
     const plan = this.plans.find(p => p.id === planId)
     if (!plan) {
       return {
@@ -129,28 +126,43 @@ class BillingService {
     }
 
     try {
-      // Start Paddle checkout
-      const paddleResult = await mockPaddle.startCheckout({
-        priceId: plan.paddlePriceId,
-        customData: { planId }
-      })
-
-      if (!paddleResult.success) {
-        return paddleResult
+      const offerings = await Purchases.getOfferings();
+      if (!offerings.current || !offerings.current.availablePackages.length) {
+        return {
+          success: false,
+          error: 'No available packages found in RevenueCat.'
+        };
       }
+      // Find the package that matches the planId (if possible)
+      const selectedPackage = offerings.current.availablePackages.find(pkg => pkg.identifier === planId) || offerings.current.availablePackages[0];
+      if (!selectedPackage) {
+        return {
+          success: false,
+          error: 'No matching package found for planId.'
+        };
+      }
+      const purchaseResult = await Purchases.purchasePackage({
+        aPackage: selectedPackage
+      });
+
+      const isPro = purchaseResult.customerInfo.entitlements.active['2Subscribe Pro']?.isActive;
 
       // If Paddle payment succeeded, grant access via RevenueCat
-      if (paddleResult.transactionId) {
-        await mockRevenueCat.grantProAccess(paddleResult.transactionId)
+      if (isPro) {
+        await mockRevenueCat.grantProAccess();
       }
 
-      return paddleResult
+      return {
+        success: true,
+        transactionId: purchaseResult.customerInfo.originalAppUserId
+      };
     } catch (error: any) {
+      console.error('RevenueCat purchase error:', error);
       return {
         success: false,
-        error: error.message || 'Purchase failed'
-      }
-    }
+        error: error.message || 'RevenueCat purchase failed'
+      };
+    } 
   }
 
   /**

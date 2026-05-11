@@ -5,6 +5,8 @@ import router from './router'
 import './style.css'
 import { bootstrapApp } from './config/bootstrap'
 import { initializeStorageMigration } from './utils/storageMigration'
+import { Capacitor } from '@capacitor/core';
+import { Purchases } from '@revenuecat/purchases-capacitor';
 
 const app = createApp(App)
 
@@ -25,3 +27,7 @@ app.use(router)
   
   app.mount('#app')
 })()
+
+if (Capacitor.isNativePlatform()) {
+  Purchases.configure({ apiKey: 'test_kwJGoVxciLoquOeReKaEVUTyaZe' });
+}
