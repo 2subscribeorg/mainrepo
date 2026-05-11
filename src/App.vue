@@ -30,9 +30,13 @@
         </MobileLayout>
       </RouteErrorBoundary>
       
+      <!-- Consent banner (web) or modal (native mobile) -->
+      <ConsentBanner />
+      <ConsentModal />
+
       <!-- Global toast notifications -->
       <ToastContainer />
-      
+
       <!-- Global error notification (for development) -->
       <div v-if="globalError && isDevelopment" class="global-error-toast">
         <div class="error-content">
@@ -57,9 +61,12 @@ import { logger } from '@/utils/logger'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { App } from '@capacitor/app'
+import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
+import ConsentBanner from '@/components/ConsentBanner.vue'
+import ConsentModal from '@/components/ConsentModal.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
@@ -106,6 +113,14 @@ function clearGlobalError() {
 }
 
 onMounted(async () => {
+  // Initialize Crashlytics
+  try {
+    await FirebaseCrashlytics.setEnabled({ enabled: true })
+    logger.debug('Crashlytics initialized')
+  } catch (error) {
+    logger.warn('Failed to initialize Crashlytics:', { error })
+  }
+
   // In Firebase mode, auth listener is initialized in bootstrap
   // In Mock mode, seed database on first launch
   if (!isFirebaseMode) {
@@ -124,6 +139,24 @@ onMounted(async () => {
     } else {
       // Navigate back through Vue Router history
       router.back()
+    }
+  })
+
+  // Handle deep links (e.g., from Google Play Store subscription management)
+  App.addListener('appUrlOpen', (data) => {
+    logger.debug('Deep link opened:', { url: data.url })
+    
+    // Parse the deep link URL
+    const url = new URL(data.url)
+    
+    // Handle custom scheme deep links
+    if (url.protocol === 'twosubscribe:') {
+      const path = url.pathname || url.host
+      
+      // Map deep link paths to router paths
+      if (path === 'manage-subscriptions' || path === '/manage-subscriptions') {
+        router.push('/platform-subscription')
+      }
     }
   })
 })

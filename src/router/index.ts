@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { requireAuth, redirectIfAuthenticated } from '@/composables/useAuthGuard'
+import { useBankAccountsStore } from '@/stores/bankAccounts'
+import { useBankTransactionsStore } from '@/stores/bankTransactions'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,6 +56,21 @@ const router = createRouter({
       redirect: '/',
     },
   ],
+})
+
+// Navigation-Aware Resets: clear sensitive bank data when leaving bank-related routes
+const BANK_SENSITIVE_ROUTE_NAMES = ['dashboard', 'settings', 'transactions']
+
+router.afterEach((to, from) => {
+  const leavingBankContext = BANK_SENSITIVE_ROUTE_NAMES.includes(from.name as string)
+  const enteringBankContext = BANK_SENSITIVE_ROUTE_NAMES.includes(to.name as string)
+
+  if (leavingBankContext && !enteringBankContext) {
+    const bankAccounts = useBankAccountsStore()
+    const bankTransactions = useBankTransactionsStore()
+    bankAccounts.reset()
+    bankTransactions.reset()
+  }
 })
 
 // Global error handler for route loading

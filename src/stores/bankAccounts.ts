@@ -10,7 +10,7 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
   const connectingBank = ref(false)
   
   // Consolidated loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const loading = isLoading('bankAccounts')
 
   const repo = repoFactory.getBankAccountsRepo()
@@ -86,9 +86,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         await repo.syncTransactions(connectionId)
         
         // Show success message
-        const connection = connections.value.find(c => c.id === connectionId)
-        const institutionName = connection?.institutionName || 'Unknown Bank'
-        
         // Optionally refresh connections to get updated sync status
         await fetchConnections()
       } catch (e) {
@@ -120,6 +117,12 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     }
   }
 
+  function reset() {
+    connections.value = []
+    error.value = null
+    connectingBank.value = false
+  }
+
   return {
     connections,
     loading,
@@ -131,5 +134,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     disconnectBank,
     syncTransactions,
     getAllAccounts,
+    reset,
   }
 })

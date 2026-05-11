@@ -17,6 +17,15 @@
       </span>
     </button>
     
+    <div v-if="!consentGranted && consentUndecided" class="consent-prompt">
+      <p class="consent-prompt__text">
+        Connecting your bank requires privacy consent.
+      </p>
+      <button class="consent-prompt__btn" @click="grantConsent">
+        Grant Consent
+      </button>
+    </div>
+
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
@@ -31,6 +40,7 @@ import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
 import { useAnimations } from '@/utils/useAnimations'
 import { useTransactionManagement } from '@/composables/useTransactionManagement'
+import { useConsent } from '@/composables/useConsent'
 
 // TypeScript declarations for global window properties
 declare global {
@@ -52,14 +62,17 @@ const bankStore = useBankAccountsStore()
 const transactionStore = useTransactionsStore()
 const authStore = useAuthStore()
 const { detectPatterns } = useTransactionManagement()
+const { granted: consentGranted, undecided: consentUndecided, grant: grantConsent } = useConsent()
 
 // Use animation utilities
 const { createRipple, prefersReducedMotion } = useAnimations()
 const buttonRef = ref<HTMLElement>()
 
-// Load Plaid Link script (singleton pattern)
+// Load Plaid Link script (singleton pattern, gated by consent)
 onMounted(() => {
-  loadPlaidScript()
+  if (consentGranted.value) {
+    loadPlaidScript()
+  }
 })
 
 // Global function to ensure Plaid script is loaded only once
@@ -67,7 +80,7 @@ function loadPlaidScript() {
   if (!window.Plaid && !window.plaidScriptLoading) {
     window.plaidScriptLoading = true
     const script = document.createElement('script')
-    script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js'
+    script.src = '/plaid-link-initialize.js'
     script.async = true
     script.onload = () => {
       window.plaidScriptLoading = false
@@ -85,15 +98,20 @@ async function openPlaidLink(event: MouseEvent) {
   if (buttonRef.value && !prefersReducedMotion.value) {
     createRipple(event, buttonRef.value)
   }
-  
+
   loading.value = true
   error.value = ''
-  
+
   try {
+    // Block if consent is not granted
+    if (!consentGranted.value) {
+      throw new Error('Bank linking requires privacy consent. Please grant consent to continue.')
+    }
+
     logger.debug('🔗 Initializing Plaid Link...')
     logger.debug('Environment:', import.meta.env.VITE_PLAID_ENV)
     logger.debug('Client ID:', import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...')
-    
+
     // Check authentication
     if (!authStore.user) {
       throw new Error('You must be logged in to connect a bank account')
@@ -239,6 +257,38 @@ declare global {
 .connect-bank-button svg {
   width: 20px;
   height: 20px;
+}
+
+.consent-prompt {
+  padding: 0.75rem 1rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.consent-prompt__text {
+  font-size: 0.875rem;
+  color: #0369a1;
+}
+
+.consent-prompt__btn {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background: #0284c7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.consent-prompt__btn:hover {
+  background: #0369a1;
 }
 
 .error-message {

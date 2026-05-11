@@ -1,6 +1,7 @@
 import { vi, beforeEach } from 'vitest'
 import { config } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
+import 'fake-indexeddb/auto'
 
 // Global test setup
 config.global.stubs = {
