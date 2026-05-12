@@ -1,6 +1,7 @@
 /**
  * Billing system types for Paddle + RevenueCat integration
  */
+import type { PurchasesEntitlementInfo, } from '@revenuecat/purchases-capacitor';
 
 export interface PricingPlan {
   id: string
@@ -16,11 +17,11 @@ export interface CustomerInfo {
   userId: string
   entitlements: {
     active: {
-      [key: string]: Entitlement
+      [key: string]: PurchasesEntitlementInfo
     }
   }
   activeSubscriptions: string[]
-  allPurchaseDates: { [key: string]: string }
+  allPurchaseDates: { [key: string]: string | null }
   latestExpirationDate: string | null
   originalPurchaseDate: string | null
 }

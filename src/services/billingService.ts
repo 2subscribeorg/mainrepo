@@ -1,5 +1,4 @@
 import { computed } from 'vue'
-import { mockPaddle } from './mockPaddle'
 import { mockRevenueCat } from './mockRevenueCat'
 import type { PricingPlan, PurchaseResult } from '@/types/billing'
 import { Purchases } from '@revenuecat/purchases-capacitor'
@@ -72,7 +71,6 @@ class BillingService {
     try {
       // Initialize both Paddle and RevenueCat
       await Promise.all([
-        mockPaddle.initialize(),
         mockRevenueCat.configure(userId)
       ])
 

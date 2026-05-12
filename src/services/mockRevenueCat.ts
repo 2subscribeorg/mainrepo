@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { CustomerInfo, Entitlement } from '@/types/billing'
+import { LOG_LEVEL, Purchases } from '@revenuecat/purchases-capacitor'
 
 const STORAGE_KEY = 'mock_revenuecat_customer'
 
@@ -24,10 +25,43 @@ class MockRevenueCatService {
    * Initialize the service (simulates Purchases.configure)
    */
   async configure(userId: string): Promise<void> {
-    if (!this._customerInfo.value || this._customerInfo.value.userId !== userId) {
-      this._customerInfo.value = this.createDefaultCustomerInfo(userId)
-      this.saveToStorage()
+    try {
+      const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
+      if (!apiKey) {
+        console.error('RevenueCat API key is missing! Please set VITE_REVENUECAT_API_KEY in your .env file.');
+        return;
+      }
+
+      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+      await Purchases.configure({
+        apiKey,
+        appUserID: userId
+      });
+
+      const rcCustomerInfo = await Purchases.getCustomerInfo();
+      if (!rcCustomerInfo) {
+        throw new Error('User ID mismatch')
+      }
+      this._customerInfo.value = {
+        userId : rcCustomerInfo.customerInfo.originalAppUserId,
+        entitlements: {
+          active: {
+            '2Subscribe Pro': rcCustomerInfo.customerInfo.entitlements.active['2Subscribe Pro']
+          }
+        },
+        activeSubscriptions: rcCustomerInfo.customerInfo.activeSubscriptions,
+        allPurchaseDates: rcCustomerInfo.customerInfo.allPurchaseDates,
+        latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
+        originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate
+      };
+      this.saveToStorage();
+    } catch (error) {
+      console.error('RevenueCat configuration error:', error)
     }
+    // if (!this._customerInfo.value || this._customerInfo.value.userId !== userId) {
+    //   this._customerInfo.value = this.createDefaultCustomerInfo(userId)
+    //   this.saveToStorage()
+    // }
   }
 
   /**
