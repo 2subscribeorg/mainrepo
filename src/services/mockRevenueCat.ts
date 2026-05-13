@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import type { CustomerInfo, Entitlement } from '@/types/billing'
 import { LOG_LEVEL, Purchases } from '@revenuecat/purchases-capacitor'
 
-const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
+const STORAGE_KEY = 'mock_revenuecat_customer'
 
 /**
  * Mock RevenueCat service that simulates the @revenuecat/purchases-js SDK
@@ -26,6 +26,7 @@ class MockRevenueCatService {
    */
   async configure(userId: string): Promise<void> {
     try {
+      const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
       if (!apiKey) {
         console.error('RevenueCat API key is missing! Please set VITE_REVENUECAT_API_KEY in your .env file.');
         return;
@@ -53,14 +54,10 @@ class MockRevenueCatService {
         latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
         originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate
       };
-      this.saveToStorage();
+      this.saveToStorage()
     } catch (error) {
       console.error('RevenueCat configuration error:', error)
     }
-    // if (!this._customerInfo.value || this._customerInfo.value.userId !== userId) {
-    //   this._customerInfo.value = this.createDefaultCustomerInfo(userId)
-    //   this.saveToStorage()
-    // }
   }
 
   /**
