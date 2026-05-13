@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import type { CustomerInfo, Entitlement } from '@/types/billing'
 import { LOG_LEVEL, Purchases } from '@revenuecat/purchases-capacitor'
 
-const STORAGE_KEY = 'mock_revenuecat_customer'
+const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
 
 /**
  * Mock RevenueCat service that simulates the @revenuecat/purchases-js SDK
@@ -26,7 +26,6 @@ class MockRevenueCatService {
    */
   async configure(userId: string): Promise<void> {
     try {
-      const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
       if (!apiKey) {
         console.error('RevenueCat API key is missing! Please set VITE_REVENUECAT_API_KEY in your .env file.');
         return;
