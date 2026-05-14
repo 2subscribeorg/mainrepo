@@ -69,11 +69,11 @@ class BillingService {
     if (this.initialized) return
 
     try {
-      // Initialize both Paddle and RevenueCat
-      await Promise.all([
-        mockRevenueCat.configure(userId)
-      ])
-
+      if(!this.customerInfo.value) {
+        await Promise.all([
+          //mockRevenueCat.configure(userId)
+        ])
+      }
       this.initialized = true
     } catch (error) {
       throw error
@@ -92,8 +92,7 @@ class BillingService {
    */
   get isProReactive() {
     return computed(() => {
-      const customerInfo = mockRevenueCat.customerInfo.value
-      return customerInfo?.entitlements.active['pro_access']?.isActive ?? false
+      return mockRevenueCat.hasProAccess()
     })
   }
 
@@ -131,7 +130,7 @@ class BillingService {
           error: 'No available packages found in RevenueCat.'
         };
       }
-      // Find the package that matches the planId (if possible)
+
       const selectedPackage = offerings.current.availablePackages.find(pkg => pkg.identifier === planId) || offerings.current.availablePackages[0];
       if (!selectedPackage) {
         return {
@@ -139,21 +138,10 @@ class BillingService {
           error: 'No matching package found for planId.'
         };
       }
-      const purchaseResult = await Purchases.purchasePackage({
-        aPackage: selectedPackage
-      });
-
-      const isPro = purchaseResult.customerInfo.entitlements.active['2Subscribe Pro']?.isActive;
-
-      // If Paddle payment succeeded, grant access via RevenueCat
-      if (isPro) {
-        await mockRevenueCat.grantProAccess();
-      }
 
       return {
-        success: true,
-        transactionId: purchaseResult.customerInfo.originalAppUserId
-      };
+        success: await mockRevenueCat.purchase(selectedPackage)
+      }
     } catch (error: any) {
       console.error('RevenueCat purchase error:', error);
       return {

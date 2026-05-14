@@ -20,6 +20,7 @@ import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncServi
 import { emailVerificationService } from '@/services/EmailVerificationService'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { logger } from '@/utils/logger'
+import { mockRevenueCat } from '@/services/mockRevenueCat'
 
 /**
  * SECURITY: Secure error message handler for authentication
@@ -186,6 +187,8 @@ export const useAuthStore = defineStore('auth', () => {
               permissions: customClaims.permissions as string[] || [],
             }
             logger.debug('User object created successfully')
+            // Configure RevenueCat here
+            await mockRevenueCat.configure(firebaseUser.uid)
           } catch (err) {
             // If getting custom claims fails, create basic user object
             logger.warn('Failed to get custom claims, using basic auth:', err)

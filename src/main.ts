@@ -5,6 +5,8 @@ import router from './router'
 import './style.css'
 import { bootstrapApp } from './config/bootstrap'
 import { initializeStorageMigration } from './utils/storageMigration'
+import { App as CapacitorApp } from '@capacitor/app'
+import { mockRevenueCat } from './services/mockRevenueCat'
 
 const app = createApp(App)
 
@@ -22,6 +24,12 @@ app.use(router)
   } catch (error) {
     console.warn('Storage migration initialization failed:', error)
   }
+
+  CapacitorApp.addListener('appStateChange', async ({ isActive }: { isActive: boolean }) => {
+    if (isActive) {
+      await mockRevenueCat.refreshSubscriptionStatus()
+    }
+  })
   
   app.mount('#app')
 })()

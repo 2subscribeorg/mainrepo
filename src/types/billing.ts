@@ -24,6 +24,7 @@ export interface CustomerInfo {
   allPurchaseDates: { [key: string]: string | null }
   latestExpirationDate: string | null
   originalPurchaseDate: string | null
+  managementURL: string | null
 }
 
 export interface Entitlement {

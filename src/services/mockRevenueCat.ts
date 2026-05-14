@@ -1,14 +1,18 @@
 import { ref } from 'vue'
 import type { CustomerInfo, Entitlement } from '@/types/billing'
-import { LOG_LEVEL, Purchases } from '@revenuecat/purchases-capacitor'
+import { LOG_LEVEL, MakePurchaseResult, Purchases } from '@revenuecat/purchases-capacitor'
+import { Browser } from '@capacitor/browser'
 
 const STORAGE_KEY = 'mock_revenuecat_customer'
+const ENTITLEMENT_ID = '2Subscribe Pro'
+const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY
 
 /**
  * Mock RevenueCat service that simulates the @revenuecat/purchases-js SDK
  */
 class MockRevenueCatService {
   private _customerInfo = ref<CustomerInfo | null>(null)
+  private _cancel = false
 
   constructor() {
     this.loadFromStorage()
@@ -22,100 +26,131 @@ class MockRevenueCatService {
   }
 
   /**
-   * Initialize the service (simulates Purchases.configure)
+   * Initialize the service
    */
   async configure(userId: string): Promise<void> {
     try {
-      const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY;
-      if (!apiKey) {
-        console.error('RevenueCat API key is missing! Please set VITE_REVENUECAT_API_KEY in your .env file.');
-        return;
+      if (!apiKey || this._cancel) {
+        console.error(
+          'RevenueCat API key is missing! Please set VITE_REVENUECAT_API_KEY in your .env file.'
+        )
+        return
       }
 
-      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
       await Purchases.configure({
         apiKey,
         appUserID: userId
-      });
+      })
 
-      const rcCustomerInfo = await Purchases.getCustomerInfo();
+      const rcCustomerInfo = await Purchases.getCustomerInfo()
       if (!rcCustomerInfo) {
         throw new Error('User ID mismatch')
       }
+
       this._customerInfo.value = {
-        userId : rcCustomerInfo.customerInfo.originalAppUserId,
-        entitlements: {
-          active: {
-            '2Subscribe Pro': rcCustomerInfo.customerInfo.entitlements.active['2Subscribe Pro']
-          }
-        },
+        userId: rcCustomerInfo.customerInfo.originalAppUserId,
+        entitlements: rcCustomerInfo.customerInfo.entitlements,
         activeSubscriptions: rcCustomerInfo.customerInfo.activeSubscriptions,
         allPurchaseDates: rcCustomerInfo.customerInfo.allPurchaseDates,
         latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
-        originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate
-      };
+        originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate,
+        managementURL: rcCustomerInfo.customerInfo.managementURL,
+      }
       this.saveToStorage()
     } catch (error) {
       console.error('RevenueCat configuration error:', error)
     }
   }
 
+  async refreshSubscriptionStatus(): Promise<void> {
+    // const rcCustomerInfo = await Purchases.getCustomerInfo()
+
+    // this._customerInfo.value = {
+    //   userId: rcCustomerInfo.customerInfo.originalAppUserId,
+    //   entitlements: rcCustomerInfo.customerInfo.entitlements,
+    //   activeSubscriptions: rcCustomerInfo.customerInfo.activeSubscriptions,
+    //   allPurchaseDates: rcCustomerInfo.customerInfo.allPurchaseDates,
+    //   latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
+    //   originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate,
+    //   managementURL: rcCustomerInfo.customerInfo.managementURL,
+    // }
+
+    // this.saveToStorage()
+  }
+
   /**
    * Get current customer info (simulates Purchases.getCustomerInfo)
    */
-  async getCustomerInfo(): Promise<CustomerInfo> {
+  async getCustomerInfo() {
     if (!this._customerInfo.value) {
       throw new Error('RevenueCat not configured. Call configure() first.')
     }
     return this._customerInfo.value
   }
 
-  /**
-   * Grant pro access (called when Paddle purchase succeeds)
-   */
-  async grantProAccess(): Promise<void> {
+  async purchase(selectedPackage: any): Promise<boolean> {
     if (!this._customerInfo.value) {
       throw new Error('RevenueCat not configured')
     }
 
-    const now = new Date()
-    const expirationDate = new Date()
-    expirationDate.setFullYear(expirationDate.getFullYear() + 1) // 1 year from now
-
-    const entitlement: Entitlement = {
-      identifier: 'pro_access',
-      isActive: true,
-      willRenew: true,
-      periodType: 'normal',
-      latestPurchaseDate: now.toISOString(),
-      originalPurchaseDate: now.toISOString(),
-      expirationDate: expirationDate.toISOString(),
-      store: 'stripe', // Using stripe as the store since we're mocking Paddle
-      productIdentifier: 'pro_monthly',
-      isSandbox: true
+    const response =  await Purchases.purchasePackage({
+      aPackage: selectedPackage,
+    })
+    if (!response || !response.customerInfo) {
+      return false
     }
 
-    this._customerInfo.value.entitlements.active['pro_access'] = entitlement
-    this._customerInfo.value.activeSubscriptions = ['pro_monthly']
-    this._customerInfo.value.allPurchaseDates['pro_monthly'] = now.toISOString()
-    this._customerInfo.value.latestExpirationDate = expirationDate.toISOString()
-    this._customerInfo.value.originalPurchaseDate = now.toISOString()
-
+    this._customerInfo.value = {
+      userId: response.customerInfo.originalAppUserId,
+      entitlements: response.customerInfo.entitlements,
+      activeSubscriptions: response.customerInfo.activeSubscriptions,
+      allPurchaseDates: response.customerInfo.allPurchaseDates,
+      latestExpirationDate: response.customerInfo.latestExpirationDate,
+      originalPurchaseDate: response.customerInfo.originalPurchaseDate,
+      managementURL: response.customerInfo.managementURL,
+    }
+    console.log(this._customerInfo.value)
     this.saveToStorage()
+    this._cancel = false
+
+    return true
   }
 
   /**
    * Revoke pro access (for testing)
    */
   async revokeProAccess(): Promise<void> {
-    if (!this._customerInfo.value) {
-      return
+    const managementURL =
+      this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.managementURL
+
+    if (managementURL) {
+      await Browser.open({ url: managementURL })
+    } else {
+      const info = this._customerInfo.value
+      if (!info) {
+        return
+      }
+
+      const entitlement = info.entitlements.active?.[ENTITLEMENT_ID]
+
+      this._customerInfo.value = {
+        ...info,
+        entitlements: {
+          ...info.entitlements,
+          active: {
+            ...info.entitlements.active,
+            [ENTITLEMENT_ID]: {
+              ...entitlement,
+              willRenew: false,
+              isActive: false,
+              unsubscribeDetectedAt: new Date().toISOString(),
+              unsubscribeDetectedAtMillis: Date.now(),
+            },
+          },
+        },
+      }
     }
-
-    delete this._customerInfo.value.entitlements.active['pro_access']
-    this._customerInfo.value.activeSubscriptions = []
-    this._customerInfo.value.latestExpirationDate = null
-
+    this._cancel = true
     this.saveToStorage()
   }
 
@@ -123,20 +158,9 @@ class MockRevenueCatService {
    * Check if user has pro access
    */
   hasProAccess(): boolean {
-    return this._customerInfo.value?.entitlements.active['pro_access']?.isActive ?? false
-  }
-
-  private createDefaultCustomerInfo(userId: string): CustomerInfo {
-    return {
-      userId,
-      entitlements: {
-        active: {}
-      },
-      activeSubscriptions: [],
-      allPurchaseDates: {},
-      latestExpirationDate: null,
-      originalPurchaseDate: null
-    }
+    console.log('Checking pro access for user:', this._customerInfo.value)
+    console.log(this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.isActive)
+    return this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.isActive ?? false
   }
 
   private loadFromStorage(): void {
@@ -153,6 +177,7 @@ class MockRevenueCatService {
   private saveToStorage(): void {
     try {
       if (this._customerInfo.value) {
+        console.log(JSON.stringify(this._customerInfo.value.entitlements.active))
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._customerInfo.value))
       }
     } catch (error) {
