@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { mockRevenueCat } from './mockRevenueCat'
+import { revenueCat } from './revenueCat'
 import type { PricingPlan, PurchaseResult } from '@/types/billing'
 import { Purchases } from '@revenuecat/purchases-capacitor'
 
@@ -71,7 +71,7 @@ class BillingService {
     try {
       if(!this.customerInfo.value) {
         await Promise.all([
-          //mockRevenueCat.configure(userId)
+          //revenueCat.configure(userId)
         ])
       }
       this.initialized = true
@@ -84,7 +84,7 @@ class BillingService {
    * Check if user has pro access
    */
   isPro(): boolean {
-    return mockRevenueCat.hasProAccess()
+    return revenueCat.hasProAccess()
   }
 
   /**
@@ -92,7 +92,7 @@ class BillingService {
    */
   get isProReactive() {
     return computed(() => {
-      return mockRevenueCat.hasProAccess()
+      return revenueCat.hasProAccess()
     })
   }
 
@@ -100,7 +100,7 @@ class BillingService {
    * Get customer info reactively
    */
   get customerInfo() {
-    return mockRevenueCat.customerInfo
+    return revenueCat.customerInfo
   }
 
   /**
@@ -140,7 +140,7 @@ class BillingService {
       }
 
       return {
-        success: await mockRevenueCat.purchase(selectedPackage)
+        success: await revenueCat.purchase(selectedPackage)
       }
     } catch (error: any) {
       console.error('RevenueCat purchase error:', error);
@@ -155,7 +155,7 @@ class BillingService {
    * Cancel subscription (for testing)
    */
   async cancelSubscription(): Promise<void> {
-    await mockRevenueCat.revokeProAccess()
+    await revenueCat.revokeProAccess()
   }
 
   /**

@@ -6,7 +6,7 @@ import './style.css'
 import { bootstrapApp } from './config/bootstrap'
 import { initializeStorageMigration } from './utils/storageMigration'
 import { App as CapacitorApp } from '@capacitor/app'
-import { mockRevenueCat } from './services/mockRevenueCat'
+import { revenueCat } from './services/revenueCat'
 
 const app = createApp(App)
 
@@ -27,7 +27,7 @@ app.use(router)
 
   CapacitorApp.addListener('appStateChange', async ({ isActive }: { isActive: boolean }) => {
     if (isActive) {
-      await mockRevenueCat.refreshSubscriptionStatus()
+      await revenueCat.refreshSubscriptionStatus()
     }
   })
   

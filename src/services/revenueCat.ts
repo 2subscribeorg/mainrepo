@@ -187,4 +187,4 @@ class MockRevenueCatService {
 }
 
 // Export singleton instance
-export const mockRevenueCat = new MockRevenueCatService()
+export const revenueCat = new MockRevenueCatService()
