@@ -2,10 +2,25 @@ import { ref } from 'vue'
 import type { CustomerInfo, Entitlement } from '@/types/billing'
 import { LOG_LEVEL, MakePurchaseResult, Purchases } from '@revenuecat/purchases-capacitor'
 import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
+import { getFirebaseAuth } from '@/config/firebase'
 
 const STORAGE_KEY = 'mock_revenuecat_customer'
 const ENTITLEMENT_ID = '2Subscribe Pro'
 const apiKey = import.meta.env.VITE_REVENUECAT_API_KEY
+const baseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+const PLAN_PRICES: Record<string, number> = { '$rc_monthly': 5, '$rc_annual': 50 }
+
+export interface PurchaseTransaction {
+  id: string
+  productId: string
+  amount: number
+  currency: string
+  type: 'purchase' | 'refund' | 'subscription' | 'renewal'
+  status: 'completed' | 'failed' | 'pending'
+  timestamp: string
+  autoRenews: boolean
+}
 
 /**
  * Mock RevenueCat service that simulates the @revenuecat/purchases-js SDK
@@ -63,19 +78,20 @@ class MockRevenueCatService {
   }
 
   async refreshSubscriptionStatus(): Promise<void> {
-    // const rcCustomerInfo = await Purchases.getCustomerInfo()
+    const rcCustomerInfo = await Purchases.getCustomerInfo()
+    if (!rcCustomerInfo?.customerInfo) return
 
-    // this._customerInfo.value = {
-    //   userId: rcCustomerInfo.customerInfo.originalAppUserId,
-    //   entitlements: rcCustomerInfo.customerInfo.entitlements,
-    //   activeSubscriptions: rcCustomerInfo.customerInfo.activeSubscriptions,
-    //   allPurchaseDates: rcCustomerInfo.customerInfo.allPurchaseDates,
-    //   latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
-    //   originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate,
-    //   managementURL: rcCustomerInfo.customerInfo.managementURL,
-    // }
+    this._customerInfo.value = {
+      userId: rcCustomerInfo.customerInfo.originalAppUserId,
+      entitlements: rcCustomerInfo.customerInfo.entitlements,
+      activeSubscriptions: rcCustomerInfo.customerInfo.activeSubscriptions,
+      allPurchaseDates: rcCustomerInfo.customerInfo.allPurchaseDates,
+      latestExpirationDate: rcCustomerInfo.customerInfo.latestExpirationDate,
+      originalPurchaseDate: rcCustomerInfo.customerInfo.originalPurchaseDate,
+      managementURL: rcCustomerInfo.customerInfo.managementURL,
+    }
 
-    // this.saveToStorage()
+    this.saveToStorage()
   }
 
   /**
@@ -109,11 +125,25 @@ class MockRevenueCatService {
       originalPurchaseDate: response.customerInfo.originalPurchaseDate,
       managementURL: response.customerInfo.managementURL,
     }
-    console.log(this._customerInfo.value)
+    await this.recordPurchase(selectedPackage.product.identifier, this._customerInfo.value!)
+
     this.saveToStorage()
     this._cancel = false
-
     return true
+  }
+
+  private async recordPurchase(productId: string, customerInfo: CustomerInfo): Promise<void> {
+    const rawPlatform = Capacitor.getPlatform()
+    const platform = (rawPlatform === 'ios' || rawPlatform === 'android') ? rawPlatform : 'web'
+
+    const token = await getFirebaseAuth().currentUser?.getIdToken()
+    if (!token) throw new Error('Not authenticated')
+
+    await fetch(`${baseUrl}/purchases/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ productId, platform, customerInfo }),
+    })
   }
 
   /**
@@ -174,10 +204,51 @@ class MockRevenueCatService {
     }
   }
 
+  async fetchTransactionHistory(): Promise<PurchaseTransaction[]> {
+    const rcCustomerInfo = await Purchases.getCustomerInfo()
+    if (!rcCustomerInfo?.customerInfo) return []
+
+    const { allPurchaseDates, allExpirationDates, activeSubscriptions, entitlements, nonSubscriptionTransactions } = rcCustomerInfo.customerInfo
+    const willRenew = entitlements.active[ENTITLEMENT_ID]?.willRenew ?? false
+    const transactions: PurchaseTransaction[] = []
+
+    for (const [productId, purchaseDate] of Object.entries(allPurchaseDates)) {
+      if (!purchaseDate) continue
+      const expiresDate = allExpirationDates?.[productId]
+      const isActive = activeSubscriptions.includes(productId)
+      const isExpired = expiresDate ? new Date(expiresDate) < new Date() : false
+
+      transactions.push({
+        id: `${productId}_${purchaseDate}`,
+        productId,
+        amount: PLAN_PRICES[productId] ?? 0,
+        currency: 'GBP',
+        type: isActive ? 'subscription' : isExpired ? 'renewal' : 'purchase',
+        status: 'completed',
+        timestamp: purchaseDate,
+        autoRenews: isActive ? willRenew : false,
+      })
+    }
+
+    for (const t of nonSubscriptionTransactions ?? []) {
+      transactions.push({
+        id: t.transactionIdentifier,
+        productId: t.productIdentifier,
+        amount: PLAN_PRICES[t.productIdentifier] ?? 0,
+        currency: 'GBP',
+        type: 'purchase',
+        status: 'completed',
+        timestamp: t.purchaseDate,
+        autoRenews: false,
+      })
+    }
+
+    return transactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }
+
   private saveToStorage(): void {
     try {
       if (this._customerInfo.value) {
-        console.log(JSON.stringify(this._customerInfo.value.entitlements.active))
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._customerInfo.value))
       }
     } catch (error) {
@@ -186,5 +257,4 @@ class MockRevenueCatService {
   }
 }
 
-// Export singleton instance
 export const revenueCat = new MockRevenueCatService()

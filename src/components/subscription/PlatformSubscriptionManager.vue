@@ -100,12 +100,72 @@
         {{ successMessage }}
       </div>
     </div>
+
+    <!-- Transaction History — always visible if there are past transactions -->
+    <div v-if="!loading && transactions.length > 0" class="transaction-history">
+      <button class="transaction-history-toggle" @click="showHistory = !showHistory">
+        <h3>Transaction History</h3>
+        <span class="toggle-icon">{{ showHistory ? '▲' : '▼' }}</span>
+      </button>
+
+      <template v-if="showHistory">
+      <p class="transaction-subtitle">Your billing history from RevenueCat</p>
+
+      <div class="transactions-list">
+        <div
+          v-for="transaction in transactions"
+          :key="transaction.id"
+          class="transaction-item"
+          :class="{ 'transaction-failed': transaction.status === 'failed' }"
+        >
+          <div class="transaction-main">
+            <div class="transaction-info">
+              <div class="transaction-type">{{ formatTransactionType(transaction.type) }}</div>
+              <div class="transaction-date">{{ formatDate(transaction.timestamp) }}</div>
+            </div>
+            <div class="transaction-amount" :class="transaction.type === 'refund' ? 'refund' : ''">
+              {{ transaction.type === 'refund' ? '-' : '+' }}{{ formatCurrency(transaction.amount) }}
+            </div>
+          </div>
+
+          <div class="transaction-details">
+            <div class="detail">
+              <span class="detail-label">Product:</span>
+              <span class="detail-value">{{ formatProductName(transaction.productId) }}</span>
+            </div>
+            <div class="detail">
+              <span class="detail-label">Status:</span>
+              <span class="detail-value" :class="`status-${transaction.status}`">
+                {{ transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1) }}
+              </span>
+            </div>
+            <div v-if="transaction.autoRenews" class="detail">
+              <span class="detail-label">Auto-Renew:</span>
+              <span class="detail-value auto-renew">Enabled</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="transaction-summary">
+        <div class="summary-item">
+          <span class="summary-label">Total Spent:</span>
+          <span class="summary-value">{{ formatCurrency(totalSpent) }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Transaction Count:</span>
+          <span class="summary-value">{{ transactions.length }}</span>
+        </div>
+      </div>
+      </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { billingService } from '@/services/billingService'
+import { revenueCat, type PurchaseTransaction } from '@/services/revenueCat'
 import { useAuth } from '@/composables/useAuth'
 
 const { userId } = useAuth()
@@ -116,13 +176,55 @@ const purchasing = ref(false)
 const actionInProgress = ref(false)
 const successMessage = ref<string | null>(null)
 
+const transactions = ref<PurchaseTransaction[]>([])
+const showHistory = ref(false)
+
 // Reactive pro status from billing service
 const isPro = billingService.isProReactive
+
+const totalSpent = computed(() => {
+  return transactions.value
+    .filter(t => t.type !== 'refund' && t.status === 'completed')
+    .reduce((sum, t) => sum + t.amount, 0)
+})
 
 // Available plans (excluding free)
 const availablePlans = computed(() => 
   billingService.getPricingPlans().filter(plan => plan.id !== 'free')
 )
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount)
+}
+
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+const formatTransactionType = (type: string): string => {
+  const types: Record<string, string> = {
+    purchase: 'Purchase',
+    refund: 'Refund',
+    subscription: 'New Subscription',
+    renewal: 'Renewal'
+  }
+  return types[type] || type
+}
+
+const formatProductName = (productId: string): string => {
+  const products: Record<string, string> = {
+    '2subscribe_pro_monthly': '2Subscribe Pro (Monthly)',
+    '2subscribe_pro_annual': '2Subscribe Pro (Annual)'
+  }
+  return products[productId] || productId
+}
 
 onMounted(async () => {
   await initialize()
@@ -139,6 +241,7 @@ async function initialize() {
     loading.value = true
     error.value = null
     await billingService.initialize(userId.value)
+    transactions.value = await revenueCat.fetchTransactionHistory()
   } catch (err: any) {
     error.value = err.message || 'Failed to initialize billing service'
   } finally {
@@ -616,5 +719,186 @@ async function cancelSubscription() {
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Transaction History Styles */
+.transaction-history {
+  background: var(--color-bg-primary);
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-top: 2rem;
+}
+
+.transaction-history-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.transaction-history-toggle h3 {
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.toggle-icon {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.transaction-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.no-transactions {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--color-text-secondary);
+}
+
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.transaction-item {
+  background: var(--color-bg-secondary);
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.2s;
+}
+
+.transaction-item:hover {
+  border-color: rgba(31, 41, 55, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.transaction-item.transaction-failed {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.transaction-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.transaction-info {
+  flex: 1;
+}
+
+.transaction-type {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.transaction-date {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.transaction-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-income);
+}
+
+.transaction-amount.refund {
+  color: var(--color-expense);
+}
+
+.transaction-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.08);
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.detail-value.status-completed {
+  color: var(--color-income);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.detail-value.status-failed {
+  color: var(--color-expense);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.detail-value.status-pending {
+  color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.detail-value.auto-renew {
+  color: var(--color-income);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.transaction-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.08);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.summary-value {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 1.125rem;
 }
 </style>
