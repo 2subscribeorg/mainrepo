@@ -69,7 +69,7 @@
       <div class="subscription-card">
         <div class="subscription-header">
           <div>
-            <h3>Pro Plan Active</h3>
+            <h3>{{ currentPlan?.name }} Active</h3>
             <span class="status-badge status-active">Active</span>
           </div>
           <div class="subscription-actions">
@@ -85,13 +85,24 @@
 
         <div class="subscription-details">
           <div class="detail-row">
+            <span class="label">Plan:</span>
+            <span class="value">{{ currentPlan ? `£${currentPlan.price}/${currentPlan.interval}` : 'Pro' }}</span>
+          </div>
+          <div class="detail-row">
             <span class="label">Status:</span>
             <span class="value">Premium features unlocked</span>
           </div>
-          <div class="detail-row">
-            <span class="label">Access:</span>
-            <span class="value">All features available</span>
-          </div>
+        </div>
+
+        <div v-if="alternatePlan" class="upgrade-section">
+          <p class="upgrade-text">Switch to <strong>{{ alternatePlan.name }}</strong> — £{{ alternatePlan.price }}/{{ alternatePlan.interval }}</p>
+          <button
+            @click="purchase(alternatePlan.id)"
+            :disabled="purchasing"
+            class="btn-upgrade"
+          >
+            {{ purchasing ? 'Processing...' : `Switch to ${alternatePlan.name}` }}
+          </button>
         </div>
       </div>
 
@@ -181,6 +192,18 @@ const showHistory = ref(false)
 
 // Reactive pro status from billing service
 const isPro = billingService.isProReactive
+
+// Current plan from stored planId (set at purchase time)
+const currentPlan = billingService.activePlan
+
+// The other paid plan the user can switch to
+const alternatePlan = computed(() => {
+  const active = currentPlan.value
+  if (!active) return null
+  return billingService.getPricingPlans().find(
+    p => p.id !== 'free' && p.id !== active.id
+  ) ?? null
+})
 
 const totalSpent = computed(() => {
   return transactions.value
@@ -598,8 +621,7 @@ async function cancelSubscription() {
 }
 
 .btn-cancel,
-.btn-reactivate,
-.btn-upgrade {
+.btn-reactivate {
   flex: 1;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
@@ -629,9 +651,33 @@ async function cancelSubscription() {
   background: #1d4ed8;
 }
 
+.upgrade-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upgrade-text {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
 .btn-upgrade {
+  flex: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
   background: var(--color-income);
   color: #fff;
+  white-space: nowrap;
 }
 
 .btn-upgrade:hover:not(:disabled) {

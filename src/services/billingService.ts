@@ -1,14 +1,21 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { revenueCat } from './revenueCat'
 import type { PricingPlan, PurchaseResult } from '@/types/billing'
 import { Purchases } from '@revenuecat/purchases-capacitor'
 
-/**
- * Main billing service that wraps Paddle + RevenueCat integration
- * This is the only service Vue components should interact with
- */
+const ACTIVE_PLAN_KEY = 'billing_active_plan_id'
+
 class BillingService {
   private initialized = false
+  private _activePlanId = ref<string | null>(localStorage.getItem(ACTIVE_PLAN_KEY))
+
+  get activePlanId() {
+    return this._activePlanId
+  }
+
+  get activePlan() {
+    return computed(() => this.plans.find(p => p.id === this._activePlanId.value) ?? null)
+  }
 
   /**
    * Available pricing plans
@@ -74,9 +81,29 @@ class BillingService {
           //revenueCat.configure(userId)
         ])
       }
+      await this.syncActivePlanFromRC()
       this.initialized = true
     } catch (error) {
       throw error
+    }
+  }
+
+  private async syncActivePlanFromRC(): Promise<void> {
+    if (this._activePlanId.value) return
+
+    const customerInfo = this.customerInfo.value
+    if (!customerInfo) return
+
+    const activeProductId = customerInfo.entitlements.active['2Subscribe Pro']?.productIdentifier
+    if (!activeProductId) return
+
+    const offerings = await Purchases.getOfferings()
+    const activePackage = offerings?.current?.availablePackages.find(
+      p => p.product.identifier === activeProductId
+    )
+    if (activePackage) {
+      this._activePlanId.value = activePackage.identifier
+      localStorage.setItem(ACTIVE_PLAN_KEY, activePackage.identifier)
     }
   }
 
@@ -139,9 +166,12 @@ class BillingService {
         };
       }
 
-      return {
-        success: await revenueCat.purchase(selectedPackage)
+      const success = await revenueCat.purchase(selectedPackage)
+      if (success) {
+        this._activePlanId.value = planId
+        localStorage.setItem(ACTIVE_PLAN_KEY, planId)
       }
+      return { success }
     } catch (error: any) {
       console.error('RevenueCat purchase error:', error);
       return {
