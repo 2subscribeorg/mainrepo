@@ -8,9 +8,9 @@ export interface PricingPlan {
   name: string
   price: number
   currency: string
-  interval: 'month' | 'year'
+  interval: 'month' | 'year' | 'lifetime'
   features: string[]
-  paddlePriceId: string
+  paddlePriceId?: string
 }
 
 export interface CustomerInfo {
