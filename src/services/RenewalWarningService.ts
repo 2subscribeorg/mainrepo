@@ -1,8 +1,7 @@
 import type { ID } from '@/domain/models'
 import type { RenewalWarning, WarningCalculationResult } from '@/types/renewalWarning'
 import { getFirebaseAuthToken } from '@/utils/authHelpers'
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 class RenewalWarningService {
   private async getAuthToken(): Promise<string> {
@@ -16,7 +15,7 @@ class RenewalWarningService {
   private async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
     const token = await this.getAuthToken()
     
-    const response = await fetch(url, {
+    const response = await fetch(buildBackendApiUrl(url), {
       ...options,
       headers: {
         'Content-Type': 'application/json',

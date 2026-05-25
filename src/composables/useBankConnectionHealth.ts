@@ -7,6 +7,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { logger } from '@/utils/logger'
 import { useAuth } from './useAuth'
 import { getFirebaseAuthToken } from '../utils/authHelpers'
+import { BACKEND_API_BASE_URL } from '@/config/backendApi'
 
 export interface ConnectionHealth {
   connectionId: string
@@ -141,7 +142,7 @@ export function useBankConnectionHealth() {
   const healthSummary = computed(() => healthData.value.healthSummary)
 
   // API Base URL
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+  const API_BASE_URL = BACKEND_API_BASE_URL
 
   // Helper function for authenticated API calls
   async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {

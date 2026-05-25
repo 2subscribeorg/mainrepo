@@ -249,7 +249,6 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    const user = this.users[userIndex]
     this.users.splice(userIndex, 1)
   }
 
@@ -265,7 +264,9 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    return { success: true }
+    return
+
+  }
 
   /**
    * Send password reset email to user by email address
@@ -279,7 +280,9 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    return { success: true }
+    return
+
+  }
 
   /**
    * Get current admin user info

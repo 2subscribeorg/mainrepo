@@ -5,8 +5,7 @@ import { Purchases, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { Capacitor } from '@capacitor/core'
 import { getFirebaseAuth } from '@/config/firebase'
-
-const baseUrl = import.meta.env.VITE_BACKEND_API_URL
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 const ACTIVE_PLAN_KEY = 'billing_active_plan_id'
 const ENTITLEMENT_ID = '2Subscribe Pro'
@@ -107,6 +106,11 @@ class BillingService {
     this.initialized = true
   }
 
+  async refreshSubscriptionStatus(): Promise<void> {
+    await revenueCat.refreshSubscriptionStatus()
+    await this.syncActivePlanFromRC()
+  }
+
   async purchase(planId: string): Promise<PurchaseResult> {
     const plan = this._plans.value.find(p => p.id === planId)
     if (!plan || plan.id === 'free') {
@@ -114,6 +118,8 @@ class BillingService {
     }
 
     try {
+      await revenueCat.refreshSubscriptionStatus()
+
       const offerings = await Purchases.getOfferings()
       const packages = offerings?.current?.availablePackages ?? []
       if (!packages.length) {
@@ -121,12 +127,22 @@ class BillingService {
       }
 
       const selectedPackage = packages.find(pkg => pkg.identifier === planId) ?? packages[0]
-      const success = await revenueCat.purchase(selectedPackage)
+      const currentEntitlement = this.customerInfo.value?.entitlements.active[ENTITLEMENT_ID]
+      const currentProductId = currentEntitlement?.isActive
+        && currentEntitlement.productIdentifier
+        && this.customerInfo.value?.activeSubscriptions.includes(currentEntitlement.productIdentifier)
+        ? currentEntitlement.productIdentifier
+        : undefined
+      const success = await revenueCat.purchase(selectedPackage, currentProductId)
       if (success) {
         this._activePlanId.value = planId
         localStorage.setItem(ACTIVE_PLAN_KEY, planId)
         const customerInfo = revenueCat.customerInfo.value
-        if (customerInfo) this.recordPurchase(selectedPackage.product.identifier, customerInfo)
+        if (customerInfo) {
+          await this.recordPurchase(selectedPackage.product.identifier, customerInfo).catch(() => {
+            // Purchase succeeded; backend can reconcile from RevenueCat webhooks if configured.
+          })
+        }
       }
       return { success }
     } catch (error: unknown) {
@@ -135,7 +151,7 @@ class BillingService {
     }
   }
 
-  async cancelSubscription(): Promise<void> {
+  async cancelSubscription(): Promise<{ openedManagement: boolean }> {
     const hasManagementUrl = !!revenueCat.customerInfo.value?.managementURL
     await revenueCat.revokeProAccess()
 
@@ -144,13 +160,31 @@ class BillingService {
       localStorage.removeItem(ACTIVE_PLAN_KEY)
       await this.recordCancellation()
     }
+
+    return { openedManagement: hasManagementUrl }
+  }
+
+  async openSubscriptionManagement(): Promise<boolean> {
+    return revenueCat.openSubscriptionManagement()
+  }
+
+  async restorePurchases(): Promise<PurchaseResult> {
+    try {
+      const customerInfo = await revenueCat.restorePurchases()
+      if (!customerInfo) return { success: false, error: 'No purchases found to restore' }
+      await this.syncActivePlanFromRC()
+      return { success: revenueCat.hasProAccess() }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to restore purchases'
+      return { success: false, error: message }
+    }
   }
 
   private async recordCancellation(): Promise<void> {
     const token = await getFirebaseAuth().currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
 
-    await fetch(`${baseUrl}/purchases/cancel`, {
+    await fetch(buildBackendApiUrl('/purchases/cancel'), {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     })
@@ -163,7 +197,7 @@ class BillingService {
     const token = await getFirebaseAuth().currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
 
-    await fetch(`${baseUrl}/purchases/record`, {
+    await fetch(buildBackendApiUrl('/purchases/record'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ productId, platform, customerInfo }),
@@ -187,11 +221,13 @@ class BillingService {
   }
 
   private async syncActivePlanFromRC(): Promise<void> {
-    if (this._activePlanId.value) return
-
     const activeProductId = this.customerInfo.value
       ?.entitlements.active[ENTITLEMENT_ID]?.productIdentifier
-    if (!activeProductId) return
+    if (!activeProductId) {
+      this._activePlanId.value = null
+      localStorage.removeItem(ACTIVE_PLAN_KEY)
+      return
+    }
 
     try {
       const offerings = await Purchases.getOfferings()

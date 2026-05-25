@@ -1,8 +1,10 @@
 import { ref } from 'vue'
 import type { CustomerInfo } from '@/types/billing'
-import { Purchases } from '@revenuecat/purchases-capacitor'
+import { PACKAGE_TYPE, Purchases } from '@revenuecat/purchases-capacitor'
+import type { PurchasePackageOptions } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
 
 const STORAGE_KEY = 'revenuecat_customer'
 const ENTITLEMENT_ID = '2Subscribe Pro'
@@ -31,8 +33,18 @@ function mapCustomerInfo(rc: Awaited<ReturnType<typeof Purchases.getCustomerInfo
   }
 }
 
+function isSubscriptionPackage(pkg: PurchasesPackage): boolean {
+  return pkg.packageType !== PACKAGE_TYPE.LIFETIME
+}
+
+function isActiveSubscriptionProduct(info: CustomerInfo | null, productId?: string): boolean {
+  if (!info || !productId) return false
+  return info.activeSubscriptions.includes(productId)
+}
+
 class RevenueCatService {
   private _customerInfo = ref<CustomerInfo | null>(null)
+  private configuredUserId: string | null = null
 
   constructor() {
     this.loadFromStorage()
@@ -49,12 +61,40 @@ class RevenueCatService {
     }
 
     try {
-      await Purchases.configure({ apiKey, appUserID: userId })
-      const { customerInfo } = await Purchases.getCustomerInfo()
+      const { isConfigured } = await Purchases.isConfigured().catch(() => ({ isConfigured: false }))
+      let customerInfo
+
+      if (isConfigured) {
+        if (this.configuredUserId !== userId) {
+          ;({ customerInfo } = await Purchases.logIn({ appUserID: userId }))
+        } else {
+          ;({ customerInfo } = await Purchases.getCustomerInfo())
+        }
+      } else {
+        await Purchases.configure({ apiKey, appUserID: userId })
+        ;({ customerInfo } = await Purchases.getCustomerInfo())
+      }
+
+      this.configuredUserId = userId
       this._customerInfo.value = mapCustomerInfo(customerInfo)
       this.saveToStorage()
     } catch (error: unknown) {
       console.error('RevenueCat configuration error:', error)
+    }
+  }
+
+  async logOut(): Promise<void> {
+    try {
+      const { isConfigured } = await Purchases.isConfigured()
+      if (isConfigured) {
+        await Purchases.logOut()
+      }
+    } catch {
+      // RC may be unavailable on web or before configuration.
+    } finally {
+      this.configuredUserId = null
+      this._customerInfo.value = null
+      localStorage.removeItem(STORAGE_KEY)
     }
   }
 
@@ -69,12 +109,27 @@ class RevenueCatService {
     }
   }
 
-  async purchase(selectedPackage: PurchasesPackage): Promise<boolean> {
+  async purchase(selectedPackage: PurchasesPackage, currentProductId?: string): Promise<boolean> {
     if (!this._customerInfo.value) {
       throw new Error('RevenueCat not configured')
     }
 
-    const response = await Purchases.purchasePackage({ aPackage: selectedPackage })
+    const options: PurchasePackageOptions = { aPackage: selectedPackage }
+    const activeCurrentProductId = isActiveSubscriptionProduct(this._customerInfo.value, currentProductId)
+      ? currentProductId
+      : undefined
+    const shouldSendUpgradeInfo = Boolean(
+      activeCurrentProductId
+      && activeCurrentProductId !== selectedPackage.product.identifier
+      && Capacitor.getPlatform() === 'android'
+      && isSubscriptionPackage(selectedPackage)
+    )
+
+    if (shouldSendUpgradeInfo) {
+      options.storeProductChangeInfo = { oldProductIdentifier: activeCurrentProductId }
+    }
+
+    const response = await Purchases.purchasePackage(options)
     if (!response?.customerInfo) return false
 
     this._customerInfo.value = mapCustomerInfo(response.customerInfo)
@@ -82,12 +137,18 @@ class RevenueCatService {
     return true
   }
 
-  async revokeProAccess(): Promise<void> {
+  async openSubscriptionManagement(): Promise<boolean> {
     const managementURL = this._customerInfo.value?.managementURL
     if (managementURL) {
       await Browser.open({ url: managementURL })
-      return
+      return true
     }
+
+    return false
+  }
+
+  async revokeProAccess(): Promise<void> {
+    if (await this.openSubscriptionManagement()) return
 
     const info = this._customerInfo.value
     if (!info) return
@@ -171,8 +232,15 @@ class RevenueCatService {
 
       return transactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     } catch {
-      return []
+    return []
     }
+  }
+
+  async restorePurchases(): Promise<CustomerInfo | null> {
+    const { customerInfo } = await Purchases.restorePurchases()
+    this._customerInfo.value = mapCustomerInfo(customerInfo)
+    this.saveToStorage()
+    return this._customerInfo.value
   }
 
   private loadFromStorage(): void {

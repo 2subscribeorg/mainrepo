@@ -5,11 +5,12 @@ import {
   AdminApiResponse 
 } from '@/types/admin'
 import { MockAdminService } from './MockAdminService'
+import { BACKEND_API_BASE_URL } from '@/config/backendApi'
 
 class AdminService {
   private mockService = new MockAdminService()
   private isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
-  private baseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+  private baseUrl = BACKEND_API_BASE_URL
 
   /**
    * Get authorization headers with current user's token

@@ -19,8 +19,9 @@ import {
   PlaidValidationError
 } from './validation'
 import { rateLimiter, RATE_LIMITS } from '@/utils/rateLimiter'
+import { BACKEND_API_BASE_URL } from '@/config/backendApi'
 
-const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+const API_URL = BACKEND_API_BASE_URL
 
 export class PlaidBackendService {
   /**

@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: '2Subscribe',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'http'
   }
 };
 
