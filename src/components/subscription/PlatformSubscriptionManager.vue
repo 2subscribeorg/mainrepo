@@ -21,7 +21,6 @@
       <p>You have access to all premium features!</p>
     </div>
 
-    <!-- Free plan -->
     <div v-if="!isPro" class="no-subscription">
       <div class="current-plan-card">
         <h3>Current Plan: Free</h3>
@@ -57,7 +56,6 @@
       </div>
     </div>
 
-    <!-- Active subscription -->
     <div v-else class="active-subscription">
       <div class="subscription-card">
         <div class="subscription-header">
@@ -99,7 +97,6 @@
       </div>
     </div>
 
-    <!-- Transaction History -->
     <div v-if="!loading && transactions.length > 0" class="transaction-history">
       <button class="transaction-history-toggle" @click="showHistory = !showHistory">
         <h3>Transaction History</h3>

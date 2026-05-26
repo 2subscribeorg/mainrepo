@@ -33,14 +33,16 @@ export function useAuth() {
    */
   async function signIn(email: string, password: string) {
     try {
-      // Store now returns promise that resolves when auth state is ready
       await authStore.signIn(email, password)
-      
-      return { success: true, error: null }
+      return { success: true, error: null, mfaRequired: false }
     } catch (e) {
+      if (e instanceof Error && (e as any).code === 'MFA_REQUIRED') {
+        return { success: false, error: null, mfaRequired: true }
+      }
       return {
         success: false,
-        error: e instanceof Error ? e.message : 'Failed to sign in'
+        error: e instanceof Error ? e.message : 'Failed to sign in',
+        mfaRequired: false,
       }
     }
   }
@@ -159,53 +161,84 @@ export function useAuth() {
     }
   }
 
-  /**
-   * Check if user has a specific permission
-   * Uses role-based access control with Firebase custom claims
-   * 
-   * @param permission - Permission enum value to check
-   * @returns true if user has the permission, false otherwise
-   */
+  async function sendMfaChallengeCode(appVerifier: unknown) {
+    try {
+      await authStore.sendMfaChallengeCode(appVerifier as any)
+      return { success: true, error: null }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Failed to send code' }
+    }
+  }
+
+  async function completeMfaSignIn(otp: string) {
+    try {
+      await authStore.completeMfaSignIn(otp)
+      return { success: true, error: null }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Invalid code' }
+    }
+  }
+
+  async function sendMfaEnrollmentCode(phoneNumber: string, appVerifier: unknown) {
+    try {
+      await authStore.sendMfaEnrollmentCode(phoneNumber, appVerifier as any)
+      return { success: true, error: null }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Failed to send code' }
+    }
+  }
+
+  async function completeMfaEnrollment(otp: string) {
+    try {
+      await authStore.completeMfaEnrollment(otp)
+      return { success: true, error: null }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Invalid code' }
+    }
+  }
+
+  async function unenrollMfa() {
+    try {
+      await authStore.unenrollMfa()
+      return { success: true, error: null }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Failed to disable 2FA' }
+    }
+  }
+
+  function getMfaEnrolledFactors() {
+    return authStore.getMfaEnrolledFactors()
+  }
+
   function hasPermission(permission?: Permission | string): boolean {
     if (!isAuthenticated.value) return false
     if (!permission) return true
-    
+
     const currentUser = user.value
     if (!currentUser) return false
 
-    // Check custom permissions from Firebase claims first (highest priority)
     if (currentUser.permissions && currentUser.permissions.includes(permission as string)) {
       return true
     }
 
-    // Check role-based permissions
     const userRole = currentUser.role || 'user'
-    
-    // If permission is a Permission enum, check against role permissions
+
     if (Object.values(Permission).includes(permission as Permission)) {
       return roleHasPermission(userRole, permission as Permission)
     }
 
-    // Fallback: super admins have all permissions
     return currentUser.isSuperAdmin
   }
 
-  /**
-   * Check if user has any of the specified permissions
-   */
   function hasAnyPermission(...permissions: (Permission | string)[]): boolean {
     return permissions.some(p => hasPermission(p))
   }
 
-  /**
-   * Check if user has all of the specified permissions
-   */
   function hasAllPermissions(...permissions: (Permission | string)[]): boolean {
     return permissions.every(p => hasPermission(p))
   }
 
   return {
-    // State
     user,
     loading,
     error,
@@ -213,7 +246,6 @@ export function useAuth() {
     isSuperAdmin,
     userId,
     userEmail,
-    // Actions
     signIn,
     signUp,
     signOut,
@@ -222,9 +254,14 @@ export function useAuth() {
     updatePassword,
     deleteAccount,
     initAuthListener,
-    // Permissions
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    sendMfaChallengeCode,
+    completeMfaSignIn,
+    sendMfaEnrollmentCode,
+    completeMfaEnrollment,
+    unenrollMfa,
+    getMfaEnrolledFactors,
   }
 }

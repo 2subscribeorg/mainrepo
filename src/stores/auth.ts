@@ -14,6 +14,13 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   deleteUser,
+  getMultiFactorResolver,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  multiFactor,
+  type MultiFactorResolver,
+  type MultiFactorInfo,
+  type ApplicationVerifier,
 } from 'firebase/auth'
 import { getFirebaseAuth, getFirebaseDb } from '@/config/firebase'
 import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncService'
@@ -120,6 +127,10 @@ export const useAuthStore = defineStore('auth', () => {
   // Track pending auth state changes with promises
   // Key is user ID (or 'null' for sign out), value is resolver function
   const authStateResolvers = new Map<string, (user: User | null) => void>()
+
+  const pendingMfaResolver = ref<MultiFactorResolver | null>(null)
+  const pendingMfaVerificationId = ref<string | null>(null)
+  const pendingEnrollVerificationId = ref<string | null>(null)
 
   /**
    * Initialize Firebase auth listener
@@ -359,15 +370,21 @@ export const useAuthStore = defineStore('auth', () => {
             }
           }, 15000)
         })
-      } catch (e) {
+      } catch (e: unknown) {
+        if ((e as any)?.code === 'auth/multi-factor-auth-required') {
+          pendingMfaResolver.value = getMultiFactorResolver(getFirebaseAuth(), e as any)
+          const mfaErr = new Error('MFA_REQUIRED')
+          ;(mfaErr as any).code = 'MFA_REQUIRED'
+          throw mfaErr
+        }
+
         // Record failed login attempt
         authRateLimiter.recordLoginAttempt(email, false)
-        
+
         // SECURITY: Never expose Firebase error messages that reveal user existence
         const secureMessage = getSecureAuthMessage(e)
         error.value = secureMessage
         logger.error('Sign in failed:', e)
-        // Don't reset rate limit on failed login - this is intentional for security
         throw new Error(secureMessage)
       }
     })
@@ -734,6 +751,91 @@ export const useAuthStore = defineStore('auth', () => {
     ])
   }
 
+  async function sendMfaChallengeCode(appVerifier: ApplicationVerifier): Promise<void> {
+    if (!pendingMfaResolver.value) throw new Error('No pending MFA challenge')
+    const auth = getFirebaseAuth()
+    const phoneAuthProvider = new PhoneAuthProvider(auth)
+    const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+      {
+        multiFactorHint: pendingMfaResolver.value.hints[0],
+        session: pendingMfaResolver.value.session,
+      },
+      appVerifier
+    )
+    pendingMfaVerificationId.value = verificationId
+  }
+
+  async function completeMfaSignIn(otp: string): Promise<User> {
+    if (!pendingMfaResolver.value || !pendingMfaVerificationId.value) {
+      throw new Error('No pending MFA sign-in')
+    }
+    const credential = PhoneAuthProvider.credential(pendingMfaVerificationId.value, otp)
+    const assertion = PhoneMultiFactorGenerator.assertion(credential)
+    const result = await pendingMfaResolver.value.resolveSignIn(assertion)
+
+    pendingMfaResolver.value = null
+    pendingMfaVerificationId.value = null
+
+    return new Promise<User>((resolve, reject) => {
+      authStateResolvers.set(result.user.uid, (updatedUser) => {
+        if (updatedUser) resolve(updatedUser)
+        else reject(new Error('Failed to get user data after MFA sign-in'))
+      })
+      setTimeout(() => {
+        if (authStateResolvers.has(result.user.uid)) {
+          authStateResolvers.delete(result.user.uid)
+          if (user.value) resolve(user.value)
+          else reject(new Error('MFA sign-in timeout'))
+        }
+      }, 15000)
+    })
+  }
+
+  async function sendMfaEnrollmentCode(phoneNumber: string, appVerifier: ApplicationVerifier): Promise<void> {
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) throw new Error('No authenticated user')
+
+    const multiFactorUser = multiFactor(currentUser)
+    const session = await multiFactorUser.getSession()
+
+    const phoneAuthProvider = new PhoneAuthProvider(auth)
+    const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+      { phoneNumber, session },
+      appVerifier
+    )
+    pendingEnrollVerificationId.value = verificationId
+  }
+
+  async function completeMfaEnrollment(otp: string): Promise<void> {
+    if (!pendingEnrollVerificationId.value) throw new Error('No pending MFA enrollment')
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) throw new Error('No authenticated user')
+
+    const credential = PhoneAuthProvider.credential(pendingEnrollVerificationId.value, otp)
+    const assertion = PhoneMultiFactorGenerator.assertion(credential)
+    await multiFactor(currentUser).enroll(assertion, 'Phone')
+    pendingEnrollVerificationId.value = null
+  }
+
+  async function unenrollMfa(): Promise<void> {
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) throw new Error('No authenticated user')
+    const multiFactorUser = multiFactor(currentUser)
+    for (const factor of multiFactorUser.enrolledFactors) {
+      await multiFactorUser.unenroll(factor)
+    }
+  }
+
+  function getMfaEnrolledFactors(): MultiFactorInfo[] {
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) return []
+    return multiFactor(currentUser).enrolledFactors
+  }
+
   return {
     user,
     loading,
@@ -752,5 +854,11 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     deleteAccount,
     toggleSuperAdmin,
+    sendMfaChallengeCode,
+    completeMfaSignIn,
+    sendMfaEnrollmentCode,
+    completeMfaEnrollment,
+    unenrollMfa,
+    getMfaEnrolledFactors,
   }
 })
