@@ -13,7 +13,7 @@
       <!-- Skip to main content link for keyboard users -->
       <a 
         href="#main-content" 
-        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50 focus:outline-none focus:ring-2 focus:ring-white"
+        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-maximum focus:outline-none focus:ring-2 focus:ring-white"
       >
         Skip to main content
       </a>
@@ -31,8 +31,8 @@
       </RouteErrorBoundary>
       
       <!-- Consent banner (web) or modal (native mobile) -->
-      <ConsentBanner />
-      <ConsentModal />
+      <ConsentBanner v-if="!isNativePlatform" />
+      <ConsentModal v-else />
 
       <!-- Global toast notifications -->
       <ToastContainer />
@@ -61,6 +61,7 @@ import { logger } from '@/utils/logger'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
@@ -77,21 +78,28 @@ const router = useRouter()
 
 const globalError = ref<Error | null>(null)
 const isDevelopment = computed(() => import.meta.env.DEV)
+const isNativePlatform = computed(() => Capacitor.isNativePlatform())
 const showRecoveryNotification = ref(false)
+
+let errorTimeout: ReturnType<typeof setTimeout> | null = null
+let recoveryTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Listen for global errors
 onError((errorReport) => {
   if (isDevelopment.value) {
     globalError.value = errorReport.error
+    // Clear any existing timeout before setting a new one
+    if (errorTimeout) clearTimeout(errorTimeout)
     // Auto-clear after 5 seconds
-    setTimeout(() => {
+    errorTimeout = setTimeout(() => {
       globalError.value = null
     }, 5000)
   }
 })
 
 function handleGlobalError(error: Error, errorInfo: any) {
-  reportError(error, 'Global', window.location.pathname)
+  const route = typeof window !== 'undefined' ? window.location.pathname : ''
+  reportError(error, 'Global', route)
 }
 
 function handleRetry(retryCount: number) {
@@ -102,8 +110,10 @@ function handleRecovery() {
   logger.debug('Application recovered successfully')
   showRecoveryNotification.value = true
   
+  // Clear any existing timeout before setting a new one
+  if (recoveryTimeout) clearTimeout(recoveryTimeout)
   // Auto-hide recovery notification after 5 seconds
-  setTimeout(() => {
+  recoveryTimeout = setTimeout(() => {
     showRecoveryNotification.value = false
   }, 5000)
 }
@@ -145,18 +155,22 @@ onMounted(async () => {
   // Handle deep links (e.g., from Google Play Store subscription management)
   App.addListener('appUrlOpen', (data) => {
     logger.debug('Deep link opened:', { url: data.url })
-    
-    // Parse the deep link URL
-    const url = new URL(data.url)
-    
-    // Handle custom scheme deep links
-    if (url.protocol === 'twosubscribe:') {
-      const path = url.pathname || url.host
-      
-      // Map deep link paths to router paths
-      if (path === 'manage-subscriptions' || path === '/manage-subscriptions') {
-        router.push('/platform-subscription')
+
+    try {
+      // Parse the deep link URL
+      const url = new URL(data.url)
+
+      // Handle custom scheme deep links
+      if (url.protocol === 'twosubscribe:') {
+        const path = url.pathname || url.host
+
+        // Map deep link paths to router paths
+        if (path === 'manage-subscriptions' || path === '/manage-subscriptions') {
+          router.push('/platform-subscription')
+        }
       }
+    } catch (e) {
+      logger.warn('Failed to parse deep link URL:', { url: data.url, error: e })
     }
   })
 })
@@ -164,6 +178,9 @@ onMounted(async () => {
 onUnmounted(() => {
   // Clean up back button listener
   App.removeAllListeners()
+  // Clean up pending timeouts
+  if (errorTimeout) clearTimeout(errorTimeout)
+  if (recoveryTimeout) clearTimeout(recoveryTimeout)
 })
 </script>
 
@@ -172,7 +189,7 @@ onUnmounted(() => {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999;
+  z-index: var(--z-maximum);
   max-width: 400px;
 }
 
@@ -208,7 +225,7 @@ onUnmounted(() => {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999;
+  z-index: var(--z-maximum);
   max-width: 400px;
   animation: slideIn 0.3s ease-out;
 }

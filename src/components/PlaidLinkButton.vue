@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
 import { ref, onMounted } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
@@ -69,15 +70,21 @@ const { createRipple, prefersReducedMotion } = useAnimations()
 const buttonRef = ref<HTMLElement>()
 
 // Load Plaid Link script (singleton pattern, gated by consent)
+// Plaid is web-only; skip on native mobile builds
 onMounted(() => {
-  if (consentGranted.value) {
+  if (consentGranted.value && !Capacitor.isNativePlatform()) {
     loadPlaidScript()
   }
 })
 
 // Global function to ensure Plaid script is loaded only once
 function loadPlaidScript() {
-  if (!window.Plaid && !window.plaidScriptLoading) {
+  if (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    !window.Plaid &&
+    !window.plaidScriptLoading
+  ) {
     window.plaidScriptLoading = true
     const script = document.createElement('script')
     script.src = '/plaid-link-initialize.js'
@@ -110,21 +117,21 @@ async function openPlaidLink(event: MouseEvent) {
 
     logger.debug('🔗 Initializing Plaid Link...')
     logger.debug('Environment:', import.meta.env.VITE_PLAID_ENV)
-    logger.debug('Client ID:', import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...')
+    logger.debug('Client ID:', { id: import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...' })
 
     // Check authentication
     if (!authStore.user) {
       throw new Error('You must be logged in to connect a bank account')
     }
-    logger.success('User authenticated:', authStore.user.email)
+    logger.success('User authenticated:', { email: authStore.user.email })
     
     // Get link token from backend
     logger.debug('📝 Requesting link token...')
     const { linkToken } = await bankStore.connectBank()
-    logger.success('Link token received:', linkToken.substring(0, 20) + '...')
+    logger.success('Link token received:', { token: linkToken.substring(0, 20) + '...' })
     
     // Check if Plaid SDK is loaded
-    if (!window.Plaid) {
+    if (typeof window === 'undefined' || !window.Plaid) {
       throw new Error('Plaid SDK not loaded. Please refresh the page.')
     }
     
@@ -172,7 +179,7 @@ async function handleSuccess(publicToken: string, metadata: any) {
     const newConnection = connections[connections.length - 1]
     
     if (newConnection) {
-      logger.debug('🔄 Syncing transactions for', newConnection.institutionName)
+      logger.debug('🔄 Syncing transactions for', { institution: newConnection.institutionName })
       
       // Sync transactions immediately
       await bankStore.syncTransactions(newConnection.id)
@@ -208,7 +215,7 @@ function handleExit(err: any, _metadata: any) {
 }
 
 function handleEvent(eventName: string, _metadata: any) {
-  logger.debug('📊 Plaid event:', eventName)
+  logger.debug('📊 Plaid event:', { event: eventName })
 }
 
 // Declare Plaid on window

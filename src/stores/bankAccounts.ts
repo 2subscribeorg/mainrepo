@@ -63,10 +63,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
       throw new Error('Connection not found')
     }
     
-    if (!confirm(`Disconnect from ${connection.institutionName}? This will remove all linked accounts.`)) {
-      return
-    }
-
     return await withLoading('bankAccounts', async () => {
       error.value = null
       try {

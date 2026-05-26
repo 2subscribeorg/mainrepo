@@ -6,7 +6,7 @@
       v-if="showSuccess" 
       role="status" 
       aria-live="polite"
-      class="fixed top-4 right-4 z-50 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 fade-in"
+      class="fixed top-4 right-4 z-toast bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 fade-in"
     >
       <span aria-hidden="true" class="text-green-600">✓</span>
       <span class="font-medium">{{ successMessage }}</span>
@@ -53,12 +53,23 @@
         @update:formData="(value) => (formData = value)"
       />
     </ErrorBoundary>
+
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      :title="`Delete ${categoryToDelete?.name || 'Category'}?`"
+      :message="`Are you sure you want to delete this category? This action cannot be undone.`"
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      variant="danger"
+      @confirm="executeDelete"
+      @cancel="cancelDelete"
+    />
   </div>
   </PullToRefresh>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -73,6 +84,7 @@ import { validateCategoryWithZod } from '@/schemas/category.schema'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const categoriesStore = useCategoriesStore()
 const { createCategory, updateCategory } = useCategoryManagement()
@@ -100,6 +112,10 @@ const formData = ref<{
 const validationErrors = ref<string[]>([])
 const modalMode = ref<'create' | 'edit' | null>(null)
 const modalVisible = computed(() => Boolean(editingCategory.value) || modalMode.value === 'create')
+
+// Custom confirm dialog state for delete actions (replaces native confirm())
+const showDeleteConfirm = ref(false)
+const categoryToDelete = ref<Category | null>(null)
 
 function handleAddCategoryClick(event: MouseEvent) {
   // Add ripple effect
@@ -131,12 +147,8 @@ function editCategory(category: Category) {
 }
 
 function handleDeleteFromSwipe(category: Category) {
-  // Confirm deletion
-  if (!confirm(`Delete category "${category.name}"?`)) return
-  
-  // Set as editing category and trigger delete
-  editingCategory.value = category
-  deleteCategory()
+  categoryToDelete.value = category
+  showDeleteConfirm.value = true
 }
 
 function closeModal() {
@@ -150,12 +162,16 @@ function closeModal() {
   modalMode.value = null
 }
 
+let successTimeout: ReturnType<typeof setTimeout> | null = null
+
 function showSuccessMessage(message: string) {
   successMessage.value = message
   showSuccess.value = true
   
+  // Clear any existing timeout before setting a new one
+  if (successTimeout) clearTimeout(successTimeout)
   // Auto-hide after 3 seconds
-  setTimeout(() => {
+  successTimeout = setTimeout(() => {
     showSuccess.value = false
     successMessage.value = ''
   }, 3000)
@@ -214,33 +230,46 @@ async function saveCategory() {
   }
 }
 
-async function deleteCategory() {
+function deleteCategory() {
   if (!editingCategory.value) return
-  if (!confirm(`Delete category "${editingCategory.value.name}"?`)) return
+  categoryToDelete.value = editingCategory.value
+  showDeleteConfirm.value = true
+}
 
-  const categoryName = editingCategory.value.name
-  const categoryId = editingCategory.value.id
+async function executeDelete() {
+  const category = categoryToDelete.value
+  if (!category) return
+
+  const categoryName = category.name
+  const categoryId = category.id
 
   try {
     await categoriesStore.remove(categoryId)
     closeModal()
-    
-    // Show success message
+    showDeleteConfirm.value = false
+    categoryToDelete.value = null
+
     showSuccessMessage(`Category "${categoryName}" deleted successfully!`)
   } catch (error) {
-    // Check if category was actually deleted despite the error
     const categoryStillExists = categoriesStore.categories.some(c => c.id === categoryId)
-    
+
     if (!categoryStillExists) {
-      // Category was deleted successfully despite the error
       closeModal()
+      showDeleteConfirm.value = false
+      categoryToDelete.value = null
       showSuccessMessage(`Category "${categoryName}" deleted successfully!`)
     } else {
-      // Category deletion actually failed
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       validationErrors.value = [`Failed to delete category: ${errorMessage}`]
+      showDeleteConfirm.value = false
+      categoryToDelete.value = null
     }
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  categoryToDelete.value = null
 }
 
 async function handleRefresh() {
@@ -249,6 +278,10 @@ async function handleRefresh() {
 
 onMounted(async () => {
   await categoriesStore.fetchAll()
+})
+
+onUnmounted(() => {
+  if (successTimeout) clearTimeout(successTimeout)
 })
 </script>
 

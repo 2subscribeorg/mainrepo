@@ -10,7 +10,7 @@
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[60] overflow-y-auto"
+        class="fixed inset-0 z-modal overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -264,10 +264,18 @@ function handleKeyDown(e: KeyboardEvent) {
     const firstElement = focusableElements[0] as HTMLElement
     const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
 
-    if (e.shiftKey && document.activeElement === firstElement) {
+    if (
+      e.shiftKey &&
+      typeof document !== 'undefined' &&
+      document.activeElement === firstElement
+    ) {
       e.preventDefault()
       lastElement.focus()
-    } else if (!e.shiftKey && document.activeElement === lastElement) {
+    } else if (
+      !e.shiftKey &&
+      typeof document !== 'undefined' &&
+      document.activeElement === lastElement
+    ) {
       e.preventDefault()
       firstElement.focus()
     }
@@ -275,10 +283,14 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeyDown)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', handleKeyDown)
+  }
 })
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeyDown)
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('keydown', handleKeyDown)
+  }
 })
 </script>

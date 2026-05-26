@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref } from 'vue'
 import Categories from '@/views/Categories.vue'
-import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'
-import CategoryCard from '@/components/categories/CategoryCard.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
@@ -36,6 +34,15 @@ describe('Categories Tab Integration Test', () => {
     categoriesStore.categories = [...mockCategories]
   }
 
+  const commonStubs = {
+    LoadingSpinner: true,
+    CategoryCard: true,
+    CategoryFormModal: true,
+    Teleport: true,
+    PullToRefresh: false, // Don't stub so slots render
+    ErrorBoundary: false // Don't stub so slots render
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     createTestSetup()
@@ -51,11 +58,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -72,11 +75,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -97,11 +96,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -124,11 +119,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -154,11 +145,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -190,11 +177,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -225,11 +208,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -256,11 +235,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -294,11 +269,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -328,18 +299,10 @@ describe('Categories Tab Integration Test', () => {
 
   describe('Category Deletion Integration', () => {
     it('deletes category successfully', async () => {
-      // Arrange: Mock confirm dialog
-      const mockConfirm = vi.fn(() => true)
-      global.confirm = mockConfirm
-
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -350,26 +313,23 @@ describe('Categories Tab Integration Test', () => {
 
       // Act: Delete category
       await wrapper.vm.deleteCategory()
+      await wrapper.vm.$nextTick()
+
+      // Find ConfirmDialog and trigger confirm
+      const confirmDialog = wrapper.findComponent(ConfirmDialog)
+      expect(confirmDialog.props('isOpen')).toBe(true)
+      await confirmDialog.vm.$emit('confirm')
 
       // Assert: Category should be deleted
-      expect(mockConfirm).toHaveBeenCalledWith(`Delete category "${categoryToDelete.name}"?`)
       expect(categoriesStore.remove).toHaveBeenCalledWith(categoryToDelete.id)
       expect(wrapper.vm.modalVisible).toBe(false)
     })
 
     it('cancels deletion when user cancels confirm dialog', async () => {
-      // Arrange: Mock confirm dialog to return false
-      const mockConfirm = vi.fn(() => false)
-      global.confirm = mockConfirm
-
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -378,20 +338,22 @@ describe('Categories Tab Integration Test', () => {
       const categoryToDelete = mockCategories[0]
       wrapper.vm.editCategory(categoryToDelete)
 
-      // Act: Attempt to delete category (user cancels)
+      // Act: Attempt to delete category
       await wrapper.vm.deleteCategory()
+      await wrapper.vm.$nextTick()
+
+      // Find ConfirmDialog and trigger cancel
+      const confirmDialog = wrapper.findComponent(ConfirmDialog)
+      expect(confirmDialog.props('isOpen')).toBe(true)
+      await confirmDialog.vm.$emit('cancel')
 
       // Assert: Category should not be deleted
-      expect(mockConfirm).toHaveBeenCalledWith(`Delete category "${categoryToDelete.name}"?`)
       expect(categoriesStore.remove).not.toHaveBeenCalled()
       expect(wrapper.vm.modalVisible).toBe(true) // Modal should remain open
     })
 
     it('handles category deletion errors gracefully', async () => {
-      // Arrange: Mock confirm to return true, remove to fail
-      const mockConfirm = vi.fn(() => true)
-      global.confirm = mockConfirm
-
+      // Arrange: Mock remove to fail
       const mockError = new Error('Failed to delete category')
       vi.spyOn(categoriesStore, 'remove').mockRejectedValue(mockError)
 
@@ -401,11 +363,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -416,9 +374,14 @@ describe('Categories Tab Integration Test', () => {
 
       // Act: Attempt to delete category
       await wrapper.vm.deleteCategory()
+      await wrapper.vm.$nextTick()
 
-      // Assert: Error should be shown in validationErrors (not alert)
-      expect(mockConfirm).toHaveBeenCalledWith(`Delete category "${categoryToDelete.name}"?`)
+      // Find ConfirmDialog and trigger confirm
+      const confirmDialog = wrapper.findComponent(ConfirmDialog)
+      await confirmDialog.vm.$emit('confirm')
+      await wrapper.vm.$nextTick()
+
+      // Assert: Error should be shown in validationErrors
       expect(categoriesStore.remove).toHaveBeenCalledWith(categoryToDelete.id)
       expect(wrapper.vm.validationErrors).toContain('Failed to delete category: Failed to delete category')
     })
@@ -480,11 +443,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -518,11 +477,7 @@ describe('Categories Tab Integration Test', () => {
       wrapper = mount(Categories, {
         global: {
           plugins: [pinia],
-          stubs: {
-            LoadingSpinner: true,
-            CategoryCard: true,
-            CategoryFormModal: true
-          }
+          stubs: commonStubs
         }
       })
 
@@ -551,11 +506,15 @@ describe('Categories Tab Integration Test', () => {
       // Reset mocks
       vi.clearAllMocks()
       vi.spyOn(categoriesStore, 'remove').mockResolvedValue(undefined)
-      global.confirm = vi.fn(() => true)
 
       // Step 4: User deletes the updated category
       wrapper.vm.editCategory({ ...categoryToEdit, name: 'Updated Entertainment', colour: '#9C27B0' })
       await wrapper.vm.deleteCategory()
+      await wrapper.vm.$nextTick()
+
+      // Find ConfirmDialog and trigger confirm
+      const confirmDialog = wrapper.findComponent(ConfirmDialog)
+      await confirmDialog.vm.$emit('confirm')
 
       // Assert: Category deleted
       expect(categoriesStore.remove).toHaveBeenCalledWith(categoryToEdit.id)

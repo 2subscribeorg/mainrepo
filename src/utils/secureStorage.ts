@@ -53,7 +53,7 @@ class SecureStorage {
       const salt = crypto.getRandomValues(new Uint8Array(this.SALT_LENGTH))
       
       // Derive key from user ID + device fingerprint
-      const keyMaterial = await this.importKeyMaterial(userId, salt)
+      const keyMaterial = await this.importKeyMaterial(userId)
       
       // Derive encryption key
       const key = await crypto.subtle.deriveKey(
@@ -82,7 +82,7 @@ class SecureStorage {
   /**
    * Import key material from user ID
    */
-  private async importKeyMaterial(userId: string, salt: Uint8Array): Promise<CryptoKey> {
+  private async importKeyMaterial(userId: string): Promise<CryptoKey> {
     try {
       // Combine user ID with device fingerprint for uniqueness
       const deviceFingerprint = this.getDeviceFingerprint()
@@ -106,6 +106,16 @@ class SecureStorage {
    */
   private getDeviceFingerprint(): string {
     try {
+      if (
+        typeof document === 'undefined' ||
+        typeof navigator === 'undefined' ||
+        typeof screen === 'undefined' ||
+        typeof btoa !== 'function'
+      ) {
+        // Fallback for native mobile or restricted contexts
+        return 'native-fallback-' + Date.now()
+      }
+
       // Use browser characteristics for fingerprinting
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
@@ -114,7 +124,7 @@ class SecureStorage {
         ctx.font = '14px Arial'
         ctx.fillText('Device fingerprint', 2, 2)
       }
-      
+
       const fingerprint = [
         navigator.userAgent,
         navigator.language,
@@ -122,11 +132,12 @@ class SecureStorage {
         new Date().getTimezoneOffset(),
         canvas.toDataURL()
       ].join('|')
-      
+
       return btoa(fingerprint).slice(0, 32)
     } catch (error) {
       // Fallback to simple fingerprint
-      return btoa(navigator.userAgent + Date.now()).slice(0, 32)
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+      return btoa(ua + Date.now()).slice(0, 32)
     }
   }
 
@@ -158,10 +169,10 @@ class SecureStorage {
       const encrypted = await crypto.subtle.encrypt(
         {
           name: this.ALGORITHM,
-          iv: key.iv
+          iv: key.iv as any
         },
         key.key,
-        encoded
+        encoded as any
       )
 
       // Combine salt, iv, and encrypted data
@@ -172,7 +183,8 @@ class SecureStorage {
       combined.set(key.iv, key.salt.length)
       combined.set(new Uint8Array(encrypted), key.salt.length + key.iv.length)
 
-      return btoa(String.fromCharCode(...combined))
+      // Robust binary-to-base64 conversion (avoiding stack limits and encoding issues)
+      return btoa(Array.from(combined, byte => String.fromCharCode(byte)).join(''))
     } catch (error) {
       logger.error('Failed to encrypt data', error)
       throw new Error('Failed to encrypt data')
@@ -184,9 +196,12 @@ class SecureStorage {
    */
   private async decrypt(encryptedData: string, userId: string): Promise<string> {
     try {
-      const combined = new Uint8Array(
-        atob(encryptedData).split('').map(char => char.charCodeAt(0))
-      )
+      // Robust base64-to-binary conversion
+      const binaryString = atob(encryptedData)
+      const combined = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        combined[i] = binaryString.charCodeAt(i)
+      }
 
       // Extract salt, iv, and encrypted data
       const salt = combined.slice(0, this.SALT_LENGTH)
@@ -194,7 +209,7 @@ class SecureStorage {
       const encrypted = combined.slice(this.SALT_LENGTH + this.IV_LENGTH)
 
       // Derive key
-      const keyMaterial = await this.importKeyMaterial(userId, salt)
+      const keyMaterial = await this.importKeyMaterial(userId)
       const key = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
@@ -249,9 +264,14 @@ class SecureStorage {
    */
   async set(key: string, value: any, userId?: string): Promise<boolean> {
     try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        logger.warn('localStorage is not available')
+        return false
+      }
+
       if (!userId) {
         // Fallback to regular localStorage for non-sensitive data
-        localStorage.setItem(key, JSON.stringify(value))
+        window.localStorage.setItem(key, JSON.stringify(value))
         return true
       }
 
@@ -270,7 +290,7 @@ class SecureStorage {
         data: encrypted
       })
 
-      localStorage.setItem(key, payload)
+      window.localStorage.setItem(key, payload)
       return true
     } catch (error) {
       logger.error('Failed to set encrypted data', error, { key })
@@ -283,7 +303,11 @@ class SecureStorage {
    */
   async get<T>(key: string, userId?: string, fallback?: T): Promise<T> {
     try {
-      const stored = localStorage.getItem(key)
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return fallback as T
+      }
+
+      const stored = window.localStorage.getItem(key)
       if (stored === null) return fallback as T
 
       // Check if data is encrypted
@@ -311,7 +335,10 @@ class SecureStorage {
    */
   remove(key: string): boolean {
     try {
-      localStorage.removeItem(key)
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return false
+      }
+      window.localStorage.removeItem(key)
       return true
     } catch (error) {
       logger.error('Failed to remove data', error, { key })
@@ -324,7 +351,10 @@ class SecureStorage {
    */
   clear(): boolean {
     try {
-      localStorage.clear()
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return false
+      }
+      window.localStorage.clear()
       this.encryptionKeys.clear()
       return true
     } catch (error) {

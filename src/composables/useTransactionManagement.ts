@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { logger } from '@/utils/logger'
+import { useToast } from '@/composables/useToast'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useBankTransactionsStore } from '@/stores/bankTransactions'
@@ -17,9 +18,10 @@ export function useTransactionManagement() {
   const subscriptionsStore = useSubscriptionsStore()
   const bankTransactionsStore = useBankTransactionsStore()
   const authStore = useAuthStore()
+  const toast = useToast()
   
   // Unified loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const patternDetectionError = ref<string | null>(null)
   const patternDetectionLoading = isLoading('patternDetection')
 
@@ -29,9 +31,6 @@ export function useTransactionManagement() {
       patternDetectionError.value = null
     
     try {
-      const authStore = useAuthStore()
-      const subscriptionsStore = useSubscriptionsStore()
-      
       if (!authStore.user) {
         throw new Error('User not authenticated')
       }
@@ -59,7 +58,7 @@ export function useTransactionManagement() {
         await bankTransactionsStore.addPendingPattern(pattern)
       }
 
-      alert(`Pattern detection complete!\n${patterns.length} patterns found for manual review.\nGo to Subscriptions tab to review them.`)
+      toast.success(`Pattern detection complete! ${patterns.length} patterns found for manual review.`)
       
     } catch (e) {
       patternDetectionError.value = e instanceof Error ? e.message : 'Failed to detect patterns'
@@ -82,7 +81,7 @@ export function useTransactionManagement() {
     }
 
     await dataStore.save(newTransaction)
-    logger.success('Transaction created:', newTransaction.id)
+    logger.success('Transaction created:', { id: newTransaction.id })
     return newTransaction
   }
 

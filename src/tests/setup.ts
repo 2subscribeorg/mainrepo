@@ -29,7 +29,40 @@ vi.mock('@/config/bootstrap', () => ({
   resetBootstrap: vi.fn(),
 }))
 
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value.toString()
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+    length: 0,
+    key: vi.fn((index: number) => Object.keys(store)[index] || null),
+  }
+})()
+
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    writable: true
+  })
+}
+
+// Also set it on global for Node environment tests that might need it
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+})
+
 // Reset bootstrap state before each test
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
 })

@@ -98,7 +98,6 @@ import UserProfile from '@/components/settings/UserProfile.vue'
 import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
 import RenewalWarningModal from '@/components/RenewalWarningModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
-import { useAuthStore } from '@/stores/auth'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 
 interface NavLink {
@@ -128,7 +127,6 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 
 // Renewal warnings
@@ -154,7 +152,18 @@ const unreadNotifications = computed(() =>
 )
 
 function isActive(path: string) {
-  return route.path === path || route.path.startsWith(`${path}/`)
+  if (route.path === path) return true
+  
+  // Special case for dashboard (Home)
+  if (path === '/') {
+    // Only active if it's exactly '/' or no other nav link matches
+    return route.path === '/' || !navLinks.value.some(
+      (l) => l.path !== '/' && (route.path === l.path || route.path.startsWith(`${l.path}/`))
+    )
+  }
+  
+  // Active if path matches or if it's a sub-route
+  return route.path.startsWith(`${path}/`) || route.path === path
 }
 
 function handleBack() {
@@ -164,12 +173,6 @@ function handleBack() {
 </script>
 
 <style scoped>
-/* Ensure touch targets meet accessibility guidelines (44px minimum) */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-}
-
 /* Mobile bottom navigation enhancements */
 .mobile-bottom-nav {
   /* Ensure proper spacing for safe areas */

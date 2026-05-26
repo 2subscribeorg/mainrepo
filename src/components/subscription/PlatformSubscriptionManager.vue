@@ -16,7 +16,7 @@
     </div>
 
     <!-- Pro User Badge -->
-    <div v-if="isPro" class="pro-badge-banner">
+    <div v-if="hasActiveSubscription" class="pro-badge-banner">
       <div class="pro-badge">
         <span class="pro-icon">👑</span>
         <span class="pro-text">Pro User</span>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- No subscription (Free plan) -->
-    <div v-if="!isPro" class="no-subscription">
+    <div v-if="!hasActiveSubscription" class="no-subscription">
       <div class="current-plan-card">
         <h3>Current Plan: Free</h3>
         <p class="plan-description">You're currently on the free plan with limited features.</p>
@@ -118,6 +118,13 @@ const successMessage = ref<string | null>(null)
 
 // Reactive pro status from billing service
 const isPro = billingService.isProReactive
+
+// Guard against data inconsistency: isPro may be true while activeSubscriptions is empty.
+// Only show the active-subscription UI (with cancel button) when a real paid subscription exists.
+const hasActiveSubscription = computed(() => {
+  const customerInfo = billingService.customerInfo.value
+  return isPro.value && (customerInfo?.activeSubscriptions.length ?? 0) > 0
+})
 
 // Available plans (excluding free)
 const availablePlans = computed(() => 
@@ -552,7 +559,7 @@ async function cancelSubscription() {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 .modal-content {

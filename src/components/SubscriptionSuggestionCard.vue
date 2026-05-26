@@ -72,8 +72,7 @@
       <button
         @click="handleConfirm"
         :disabled="loading"
-        class="w-full sm:flex-1 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white hover:bg-primary-dark active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-        style="min-height: 48px"
+        class="w-full sm:flex-1 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white hover:bg-primary-dark active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target-comfortable"
       >
         <span v-if="!loading">✓ Yes, it's a subscription</span>
         <span v-else>Processing...</span>
@@ -82,7 +81,6 @@
         @click="handleReject"
         :disabled="loading"
         class="w-full sm:flex-1 rounded-xl border-2 border-border-light px-6 py-3 text-sm font-medium text-text-secondary hover:bg-surface-hover active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-        style="min-height: 44px"
       >
         <span v-if="!loading">✗ Not a subscription</span>
         <span v-else>Processing...</span>

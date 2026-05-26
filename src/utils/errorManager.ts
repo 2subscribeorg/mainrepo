@@ -36,14 +36,14 @@ class ErrorManager {
   /**
    * Report an error to the global error manager
    */
-  reportError(error: Error, component: string = 'Unknown', route: string = window.location.pathname): ErrorReport {
+  reportError(error: Error, component: string = 'Unknown', route: string = typeof window !== 'undefined' ? window.location.pathname : ''): ErrorReport {
     const errorReport: ErrorReport = {
       id: this.generateErrorId(),
       error,
       component,
       route,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       userId: this.getCurrentUserId(),
       resolved: false
     }
@@ -140,7 +140,7 @@ class ErrorManager {
     // Try to get user ID from various sources
     try {
       // Check if there's a global user state
-      if (window.localStorage.getItem('auth_user')) {
+      if (typeof window !== 'undefined' && window.localStorage.getItem('auth_user')) {
         const user = JSON.parse(window.localStorage.getItem('auth_user') || '{}')
         return user.id
       }
@@ -164,7 +164,7 @@ class ErrorManager {
         timestamp: errorReport.timestamp,
         userAgent: errorReport.userAgent,
         userId: errorReport.userId,
-        url: window.location.href,
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
         buildVersion: import.meta.env.VITE_APP_VERSION || 'unknown'
       }
 

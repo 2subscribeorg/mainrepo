@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
+  <div v-if="isOpen" class="fixed inset-0 z-modal overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center p-4">
       <div class="fixed inset-0 bg-surface-backdrop transition-opacity" @click="handleCancel"></div>
       

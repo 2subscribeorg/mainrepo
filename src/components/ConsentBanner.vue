@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="undecided"
-    class="fixed bottom-0 left-0 right-0 z-50 border-t border-border-light bg-surface-overlay backdrop-blur-md"
+    class="fixed bottom-0 left-0 right-0 z-fixed border-t border-border-light bg-surface-overlay backdrop-blur-md"
     style="padding-bottom: env(safe-area-inset-bottom);"
     role="alert"
     aria-live="polite"
@@ -42,9 +42,3 @@ function handleDecline() {
   decline()
 }
 </script>
-
-<style scoped>
-.touch-target {
-  min-height: 44px;
-}
-</style>

@@ -82,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useToast } from '@/composables/useToast'
 import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useTransactions } from '@/composables/useTransactions'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
@@ -126,6 +127,7 @@ const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
 const authStore = useAuthStore()
 const { createCategory } = useCategoryManagement()
+const toast = useToast()
 
 // Load transactions on component mount
 onMounted(() => {
@@ -178,10 +180,10 @@ async function handleCategorySelected(categoryId: string) {
     }
     await transactionsStore.save(updatedTransaction)
     
-    alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
+    toast.success(`Subscription created for ${selectedTransaction.value.merchantName}!`)
     
   } catch (error) {
-    alert('❌ Failed to create subscription')
+    toast.error('Failed to create subscription')
   } finally {
     showCategoryModal.value = false
     selectedTransaction.value = null
@@ -210,7 +212,7 @@ async function handleCategoryChange(transaction: Transaction, categoryId: string
     await transactionsStore.save(updatedTransaction)
     
   } catch (error) {
-    alert('Failed to update category. Please try again.')
+    toast.error('Failed to update category. Please try again.')
   }
 }
 
@@ -276,11 +278,11 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     }
     await transactionsStore.save(updatedTransaction)
     
-    alert(`✅ New category "${categoryName}" created and subscription assigned!`)
+    toast.success(`New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    alert(`❌ Failed to create category and subscription: ${errorMessage}`)
+    toast.error(`Failed to create category and subscription: ${errorMessage}`)
   }
 }
 

@@ -41,13 +41,13 @@
 
           <div class="flex flex-col gap-3">
             <button
-              class="touch-target w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.98]"
+              class="touch-target-comfortable w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.98]"
               @click="handleGrant"
             >
               Accept
             </button>
             <button
-              class="touch-target w-full rounded-xl bg-surface-elevated px-4 py-3 text-sm font-semibold text-text-secondary transition-colors hover:bg-surface-hover active:scale-[0.98]"
+              class="touch-target-comfortable w-full rounded-xl bg-surface-elevated px-4 py-3 text-sm font-semibold text-text-secondary transition-colors hover:bg-surface-hover active:scale-[0.98]"
               @click="handleDecline"
             >
               Decline
@@ -74,10 +74,6 @@ function handleDecline() {
 </script>
 
 <style scoped>
-.touch-target {
-  min-height: 48px;
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

@@ -9,7 +9,7 @@
   >
     <div 
       v-if="show" 
-      class="fixed inset-0 z-[100]"
+      class="fixed inset-0 z-modal"
       @keydown.esc="handleEscape"
     >
       <!-- Backdrop with blur -->
@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
 import { useTransitions } from '@/utils/useAnimations'
@@ -322,17 +322,20 @@ watch(() => props.show, async (show) => {
 })
 
 // Close on Escape key
-onMounted(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && props.show) {
-      handleEscape()
-    }
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.show) {
+    handleEscape()
   }
-  
-  document.addEventListener('keydown', handleKeyDown)
-  
-  // Cleanup
-  return () => {
+}
+
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
     document.removeEventListener('keydown', handleKeyDown)
   }
 })

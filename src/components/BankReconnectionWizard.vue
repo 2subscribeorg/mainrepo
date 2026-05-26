@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+  <div v-if="show" class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 backdrop-blur-sm">
     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
       <!-- Header -->
       <div class="bg-gradient-to-r from-warning/10 to-warning/5 px-6 py-4 border-b border-warning/20">

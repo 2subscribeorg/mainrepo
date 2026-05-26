@@ -1,6 +1,12 @@
 <template>
   <div class="min-h-screen bg-background flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
+    <div class="w-full max-w-md relative">
+      <!-- Loading Overlay -->
+      <div v-if="isChecking" class="absolute inset-0 z-modal bg-white/60 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-primary font-semibold">Verifying your email...</p>
+      </div>
+
       <div class="bg-surface rounded-2xl shadow-xl p-8">
         <div class="text-center mb-6">
           <div class="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -76,6 +82,7 @@ const isResending = ref(false)
 const cooldownSeconds = ref(0)
 
 let cooldownInterval: number | null = null
+let redirectTimeout: ReturnType<typeof setTimeout> | null = null
 
 const messageClass = computed(() => {
   if (messageType.value === 'success') {
@@ -108,7 +115,7 @@ async function checkVerification() {
 
   if (isVerified) {
     showMessage('Email verified successfully!', 'success')
-    setTimeout(() => {
+    redirectTimeout = setTimeout(() => {
       router.push('/dashboard')
     }, 1500)
   } else {
@@ -183,6 +190,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (cooldownInterval) {
     clearInterval(cooldownInterval)
+  }
+  if (redirectTimeout) {
+    clearTimeout(redirectTimeout)
   }
 })
 </script>

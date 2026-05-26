@@ -44,8 +44,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { useToast } from '@/composables/useToast'
 
 const { user, isAuthenticated, signOut, loading } = useAuth()
+const toast = useToast()
 
 const userInitials = computed(() => {
   if (!user.value) return '?'
@@ -62,7 +64,7 @@ const userInitials = computed(() => {
 async function handleLogout() {
   const { success } = await signOut()
   if (!success) {
-    alert('Failed to sign out')
+    toast.error('Failed to sign out')
   }
 }
 </script>

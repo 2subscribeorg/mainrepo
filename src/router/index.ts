@@ -49,6 +49,12 @@ const router = createRouter({
       component: () => import('@/views/PlatformSubscription.vue'),
       beforeEnter: requireAuth,
     },
+    {
+      path: '/subscriptions/:id',
+      name: 'subscription-details',
+      component: () => import('@/views/SubscriptionDetails.vue'),
+      beforeEnter: requireAuth,
+    },
     // Catch-all route - must be last
     {
       path: '/:pathMatch(.*)*',

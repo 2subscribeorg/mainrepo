@@ -117,6 +117,11 @@ export class PatternDetector {
    * Useful for real-time updates
    */
   matchesPattern(transaction: BankTransaction, pattern: RecurringPattern): boolean {
+    // Check if transaction has valid amount
+    if (!transaction.amount || typeof transaction.amount.amount !== 'number') {
+      return false
+    }
+
     // Check merchant
     const normalized = this.merchantNormalizer.normalize(transaction.merchantName)
     if (normalized !== pattern.normalizedMerchant) return false

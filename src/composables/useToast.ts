@@ -12,6 +12,7 @@ export interface Toast {
 }
 
 const toasts = ref<Toast[]>([])
+const toastTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 export function useToast() {
   function show(toast: Omit<Toast, 'id'>): string {
@@ -26,15 +27,21 @@ export function useToast() {
     
     // Auto-dismiss after duration
     if (newToast.duration > 0) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         dismiss(id)
       }, newToast.duration)
+      toastTimers.set(id, timer)
     }
     
     return id
   }
   
   function dismiss(id: string) {
+    const timer = toastTimers.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      toastTimers.delete(id)
+    }
     toasts.value = toasts.value.filter(t => t.id !== id)
   }
   
