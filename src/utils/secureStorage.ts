@@ -113,7 +113,9 @@ class SecureStorage {
         typeof btoa !== 'function'
       ) {
         // Fallback for native mobile or restricted contexts
-        return 'native-fallback-' + Date.now()
+        // Use a stable identifier - the user ID is already part of the key derivation
+        // so we just need a consistent device identifier
+        return 'native-device-stable'
       }
 
       // Use browser characteristics for fingerprinting
@@ -135,9 +137,9 @@ class SecureStorage {
 
       return btoa(fingerprint).slice(0, 32)
     } catch (error) {
-      // Fallback to simple fingerprint
+      // Fallback to simple fingerprint using only stable characteristics
       const ua = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-      return btoa(ua + Date.now()).slice(0, 32)
+      return btoa(ua).slice(0, 32)
     }
   }
 

@@ -35,7 +35,17 @@ export async function requireAuth(
   
   // Wait for initial auth state to be resolved (prevents redirect on page refresh)
   const authStore = useAuthStore()
-  await authStore.waitForInitialAuthCheck()
+  const authCheckCompleted = await authStore.waitForInitialAuthCheck()
+
+  // If auth check timed out, redirect to login for safety
+  if (!authCheckCompleted) {
+    logger.warn('Auth check timed out, redirecting to login for safety')
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    })
+    return
+  }
 
   // Skip auth check in Mock mode for development
   if (import.meta.env.VITE_DATA_BACKEND === 'MOCK') {

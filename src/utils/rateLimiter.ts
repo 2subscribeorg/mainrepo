@@ -1,6 +1,7 @@
 /**
  * Client-side rate limiting
  * Prevents rapid repeated actions (e.g., form submissions, API calls)
+ * Uses localStorage for persistence across page refreshes
  */
 
 interface RateLimitConfig {
@@ -8,8 +9,90 @@ interface RateLimitConfig {
   windowMs: number
 }
 
+interface StoredRateLimitData {
+  attempts: number[]
+  expiresAt: number
+}
+
 class RateLimiter {
   private attempts: Map<string, number[]> = new Map()
+  private readonly STORAGE_PREFIX = 'rate_limit_'
+  private readonly STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+  /**
+   * Get storage key for a rate limit entry
+   */
+  private getStorageKey(key: string): string {
+    return `${this.STORAGE_PREFIX}${key}`
+  }
+
+  /**
+   * Load attempts from localStorage
+   */
+  private loadFromStorage(key: string): number[] {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return []
+      }
+
+      const storageKey = this.getStorageKey(key)
+      const stored = localStorage.getItem(storageKey)
+      
+      if (!stored) return []
+
+      const data: StoredRateLimitData = JSON.parse(stored)
+      
+      // Check if data has expired
+      if (Date.now() > data.expiresAt) {
+        localStorage.removeItem(storageKey)
+        return []
+      }
+
+      return data.attempts
+    } catch {
+      // If localStorage fails, fall back to empty array
+      return []
+    }
+  }
+
+  /**
+   * Save attempts to localStorage
+   */
+  private saveToStorage(key: string, attempts: number[]): void {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return
+      }
+
+      const storageKey = this.getStorageKey(key)
+      const data: StoredRateLimitData = {
+        attempts,
+        expiresAt: Date.now() + this.STORAGE_EXPIRY_MS
+      }
+
+      localStorage.setItem(storageKey, JSON.stringify(data))
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
+  }
+
+  /**
+   * Get attempts for a key (from memory or localStorage)
+   */
+  private getAttempts(key: string): number[] {
+    // Check memory first
+    if (this.attempts.has(key)) {
+      return this.attempts.get(key)!
+    }
+
+    // Load from localStorage
+    const stored = this.loadFromStorage(key)
+    if (stored.length > 0) {
+      this.attempts.set(key, stored)
+    }
+
+    return stored
+  }
 
   /**
    * Check if an action is allowed
@@ -20,7 +103,7 @@ class RateLimiter {
    */
   check(key: string, maxAttempts: number, windowMs: number): boolean {
     const now = Date.now()
-    const attempts = this.attempts.get(key) || []
+    const attempts = this.getAttempts(key)
 
     // Remove attempts outside the time window
     const recentAttempts = attempts.filter((time) => now - time < windowMs)
@@ -32,6 +115,7 @@ class RateLimiter {
     // Record this attempt
     recentAttempts.push(now)
     this.attempts.set(key, recentAttempts)
+    this.saveToStorage(key, recentAttempts)
     return true
   }
 
@@ -40,6 +124,13 @@ class RateLimiter {
    */
   reset(key: string): void {
     this.attempts.delete(key)
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(this.getStorageKey(key))
+      }
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
   }
 
   /**
@@ -47,6 +138,19 @@ class RateLimiter {
    */
   clear(): void {
     this.attempts.clear()
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Clear all rate limit entries from localStorage
+        const keys = Object.keys(localStorage)
+        keys.forEach(key => {
+          if (key.startsWith(this.STORAGE_PREFIX)) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+    } catch {
+      // Silently fail if localStorage is unavailable
+    }
   }
 
   /**
@@ -54,7 +158,7 @@ class RateLimiter {
    */
   getRemaining(key: string, maxAttempts: number, windowMs: number): number {
     const now = Date.now()
-    const attempts = this.attempts.get(key) || []
+    const attempts = this.getAttempts(key)
     const recentAttempts = attempts.filter((time) => now - time < windowMs)
     return Math.max(0, maxAttempts - recentAttempts.length)
   }
@@ -63,12 +167,17 @@ class RateLimiter {
    * Get time until next attempt is allowed (in ms)
    */
   getTimeUntilReset(key: string, windowMs: number): number {
-    const attempts = this.attempts.get(key) || []
+    const attempts = this.getAttempts(key)
     if (attempts.length === 0) return 0
 
-    const oldestAttempt = Math.min(...attempts)
+    const now = Date.now()
+    const recentAttempts = attempts.filter((time) => now - time < windowMs)
+    
+    if (recentAttempts.length === 0) return 0
+
+    const oldestAttempt = Math.min(...recentAttempts)
     const resetTime = oldestAttempt + windowMs
-    return Math.max(0, resetTime - Date.now())
+    return Math.max(0, resetTime - now)
   }
 }
 

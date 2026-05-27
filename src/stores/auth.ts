@@ -117,8 +117,28 @@ export const useAuthStore = defineStore('auth', () => {
   const initialAuthCheckResolver = ref<(() => void) | null>(null)
   
   // Track pending auth state changes with promises
-  // Key is user ID (or 'null' for sign out), value is resolver function
-  const authStateResolvers = ref(new Map<string, (user: User | null) => void>())
+  // Key is user ID (or 'null' for sign out), value is resolver function with timestamp
+  const authStateResolvers = ref(new Map<string, { resolver: (user: User | null) => void, timestamp: number }>())
+  const RESOLVER_TTL_MS = 30000 // 30 seconds TTL for resolvers
+
+  /**
+   * Clean up stale resolvers older than TTL
+   */
+  function cleanupStaleResolvers(): void {
+    const now = Date.now()
+    const keysToDelete: string[] = []
+
+    authStateResolvers.value.forEach((value, key) => {
+      if (now - value.timestamp > RESOLVER_TTL_MS) {
+        keysToDelete.push(key)
+      }
+    })
+
+    keysToDelete.forEach(key => {
+      logger.debug('Cleaning up stale resolver', { key })
+      authStateResolvers.value.delete(key)
+    })
+  }
 
   /**
    * Initialize Firebase auth listener
@@ -140,6 +160,9 @@ export const useAuthStore = defineStore('auth', () => {
       logger.debug('Auth listener already initialized, skipping')
       return
     }
+
+    // Clean up any stale resolvers from previous sessions
+    cleanupStaleResolvers()
 
     // Create promise to track initial auth check
     if (!initialAuthCheckPromise.value) {
@@ -186,6 +209,12 @@ export const useAuthStore = defineStore('auth', () => {
               permissions: customClaims.permissions as string[] || [],
             }
             logger.debug('User object created successfully')
+            
+            // Update window property for error manager
+            if (typeof window !== 'undefined') {
+              // @ts-ignore - Custom property for error reporting
+              window.__authStoreUserId = firebaseUser.uid
+            }
           } catch (err) {
             // If getting custom claims fails, create basic user object
             logger.warn('Failed to get custom claims, using basic auth', { error: err })
@@ -198,19 +227,25 @@ export const useAuthStore = defineStore('auth', () => {
               role: 'user',
               permissions: [],
             }
+            
+            // Update window property for error manager
+            if (typeof window !== 'undefined') {
+              // @ts-ignore - Custom property for error reporting
+              window.__authStoreUserId = firebaseUser.uid
+            }
           }
           
           // Resolve any pending promises waiting for this user
           // This MUST happen even if custom claims failed
           logger.debug('Looking for resolver for user', { uid: firebaseUser.uid })
-          const resolver = authStateResolvers.value.get(firebaseUser.uid)
-          if (resolver && user.value) {
+          const resolverEntry = authStateResolvers.value.get(firebaseUser.uid)
+          if (resolverEntry && user.value) {
             logger.debug('Resolver found, calling it with user data')
-            resolver(user.value)
+            resolverEntry.resolver(user.value)
             authStateResolvers.value.delete(firebaseUser.uid)
             logger.success('Resolver completed successfully')
           } else {
-            if (!resolver) {
+            if (!resolverEntry) {
               logger.debug('No resolver found for this user - likely already authenticated or page refresh')
             }
           }
@@ -222,10 +257,16 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
           user.value = null
           
+          // Clear window property for error manager
+          if (typeof window !== 'undefined') {
+            // @ts-ignore - Custom property for error reporting
+            delete window.__authStoreUserId
+          }
+          
           // Resolve any pending promises waiting for sign out
-          const resolver = authStateResolvers.value.get('null')
-          if (resolver) {
-            resolver(null)
+          const resolverEntry = authStateResolvers.value.get('null')
+          if (resolverEntry) {
+            resolverEntry.resolver(null)
             authStateResolvers.value.delete('null')
           }
         }
@@ -239,16 +280,19 @@ export const useAuthStore = defineStore('auth', () => {
             initialAuthCheckResolver.value = null
           }
         }
+
+        // Periodically clean up stale resolvers
+        cleanupStaleResolvers()
       } catch (error) {
         logger.error('Critical error in auth state listener', { error })
         // Even on error, try to resolve pending promises to avoid hanging
         if (firebaseUser) {
-          const resolver = authStateResolvers.value.get(firebaseUser.uid)
-          if (resolver) {
+          const resolverEntry = authStateResolvers.value.get(firebaseUser.uid)
+          if (resolverEntry) {
             logger.warn('Rejecting pending resolver due to auth listener error')
             authStateResolvers.value.delete(firebaseUser.uid)
             // Call resolver with null so the waiting promise rejects cleanly
-            resolver(null)
+            resolverEntry.resolver(null)
           }
         }
         
@@ -307,14 +351,17 @@ export const useAuthStore = defineStore('auth', () => {
         logger.debug('Firebase sign in successful, waiting for auth state update...')
         
         return new Promise<User>((resolve, reject) => {
-          authStateResolvers.value.set(userCredential.user.uid, (updatedUser) => {
-            if (updatedUser) {
-              authRateLimiter.recordLoginAttempt(email, true)
-              logger.success('Sign in complete with user data')
-              resolve(updatedUser)
-            } else {
-              reject(new Error('Failed to get user data after sign in'))
-            }
+          authStateResolvers.value.set(userCredential.user.uid, {
+            resolver: (updatedUser) => {
+              if (updatedUser) {
+                authRateLimiter.recordLoginAttempt(email, true)
+                logger.success('Sign in complete with user data')
+                resolve(updatedUser)
+              } else {
+                reject(new Error('Failed to get user data after sign in'))
+              }
+            },
+            timestamp: Date.now()
           })
           
           setTimeout(() => {
@@ -392,12 +439,15 @@ export const useAuthStore = defineStore('auth', () => {
         }
 
         return new Promise((resolve, reject) => {
-          authStateResolvers.value.set(userCredential.user.uid, (updatedUser) => {
-            if (updatedUser) {
-              resolve({ success: true, needsVerification: false, user: updatedUser })
-            } else {
-              reject(new Error('Failed to get user data after sign up'))
-            }
+          authStateResolvers.value.set(userCredential.user.uid, {
+            resolver: (updatedUser) => {
+              if (updatedUser) {
+                resolve({ success: true, needsVerification: false, user: updatedUser })
+              } else {
+                reject(new Error('Failed to get user data after sign up'))
+              }
+            },
+            timestamp: Date.now()
           })
           
           setTimeout(() => {
@@ -648,10 +698,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Wait for initial auth state check to complete
+   * @returns true if auth check completed, false if it timed out
    */
-  async function waitForInitialAuthCheck(): Promise<void> {
+  async function waitForInitialAuthCheck(): Promise<boolean> {
     if (initialAuthCheckComplete.value) {
-      return Promise.resolve()
+      return true
     }
     
     if (!initialAuthCheckPromise.value) {
@@ -660,10 +711,19 @@ export const useAuthStore = defineStore('auth', () => {
       })
     }
     
-    return Promise.race([
-      initialAuthCheckPromise.value,
-      new Promise<void>((resolve) => setTimeout(resolve, 8000))
-    ])
+    try {
+      await Promise.race([
+        initialAuthCheckPromise.value,
+        new Promise<void>((_, reject) => 
+          setTimeout(() => reject(new Error('Auth check timeout')), 8000)
+        )
+      ])
+      return true
+    } catch {
+      // Timeout occurred
+      logger.warn('Auth check timed out after 8 seconds')
+      return false
+    }
   }
 
   return {

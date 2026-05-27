@@ -26,6 +26,10 @@ const MIGRATION_KEYS = [
   'theme_settings'
 ]
 
+// Track migration state to prevent concurrent migrations
+let isMigrating = false
+let migrationPromise: Promise<MigrationResult | null> | null = null
+
 interface MigrationResult {
   success: boolean
   migrated: string[]
@@ -185,6 +189,18 @@ async function performMigration(userId: string): Promise<MigrationResult> {
  * Initialize migration for authenticated users
  */
 export async function initializeStorageMigration(): Promise<MigrationResult | null> {
+  // If migration is already in progress, wait for it
+  if (isMigrating && migrationPromise) {
+    logger.debug('Migration already in progress, waiting for completion')
+    return migrationPromise
+  }
+
+  // If already completed, skip
+  if (!needsMigration()) {
+    logger.debug('Storage migration already completed')
+    return null
+  }
+
   try {
     const { user } = useAuth()
     
@@ -193,27 +209,38 @@ export async function initializeStorageMigration(): Promise<MigrationResult | nu
       return null
     }
 
-    if (!needsMigration()) {
-      logger.debug('Storage migration already completed')
-      return null
-    }
-
-    // Perform migration
-    const result = await performMigration(user.id)
+    // Mark migration as in progress
+    isMigrating = true
     
-    // Log summary
-    if (result.success) {
-      logger.success('Storage migration completed', {
-        migratedCount: result.migrated.length,
-        failedCount: result.failed.length
-      })
-    } else {
-      logger.warn('Storage migration completed with issues', result)
-    }
+    // Start migration process
+    migrationPromise = (async () => {
+      try {
+        // Perform migration
+        const result = await performMigration(user.id)
+        
+        // Log summary
+        if (result.success) {
+          logger.success('Storage migration completed', {
+            migratedCount: result.migrated.length,
+            failedCount: result.failed.length
+          })
+        } else {
+          logger.warn('Storage migration completed with issues', result)
+        }
 
-    return result
+        return result
+      } finally {
+        // Reset migration state
+        isMigrating = false
+        migrationPromise = null
+      }
+    })()
+
+    return await migrationPromise
   } catch (error) {
     logger.error('Failed to initialize storage migration', error)
+    isMigrating = false
+    migrationPromise = null
     return null
   }
 }
