@@ -116,6 +116,13 @@ class RevenueCatService {
     return this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.isActive ?? false
   }
 
+  async restorePurchases(): Promise<CustomerInfo> {
+    const { customerInfo } = await Purchases.restorePurchases()
+    this._customerInfo.value = mapCustomerInfo(customerInfo)
+    this.saveToStorage()
+    return this._customerInfo.value!
+  }
+
   async fetchTransactionHistory(): Promise<PurchaseTransaction[]> {
     try {
       const [{ customerInfo }, offerings] = await Promise.all([

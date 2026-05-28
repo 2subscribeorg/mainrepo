@@ -135,6 +135,15 @@ class BillingService {
     }
   }
 
+  async restorePurchases(): Promise<{ hadPurchases: boolean }> {
+    const customerInfo = await revenueCat.restorePurchases()
+    const isActive = !!customerInfo.entitlements.active[ENTITLEMENT_ID]
+    if (isActive) {
+      await this.syncActivePlanFromRC()
+    }
+    return { hadPurchases: isActive }
+  }
+
   async cancelSubscription(): Promise<void> {
     const hasManagementUrl = !!revenueCat.customerInfo.value?.managementURL
     await revenueCat.revokeProAccess()
