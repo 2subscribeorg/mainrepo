@@ -145,24 +145,7 @@ class BillingService {
   }
 
   async cancelSubscription(): Promise<void> {
-    const hasManagementUrl = !!revenueCat.customerInfo.value?.managementURL
     await revenueCat.revokeProAccess()
-
-    if (!hasManagementUrl) {
-      this._activePlanId.value = null
-      localStorage.removeItem(ACTIVE_PLAN_KEY)
-      await this.recordCancellation()
-    }
-  }
-
-  private async recordCancellation(): Promise<void> {
-    const token = await getFirebaseAuth().currentUser?.getIdToken()
-    if (!token) throw new Error('Not authenticated')
-
-    await fetch(`${baseUrl}/purchases/cancel`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
   }
 
   private async recordPurchase(productId: string, customerInfo: CustomerInfo): Promise<void> {

@@ -3,6 +3,7 @@ import type { CustomerInfo } from '@/types/billing'
 import { Purchases } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
 
 const STORAGE_KEY = 'revenuecat_customer'
 const ENTITLEMENT_ID = '2Subscribe Pro'
@@ -84,32 +85,18 @@ class RevenueCatService {
 
   async revokeProAccess(): Promise<void> {
     const managementURL = this._customerInfo.value?.managementURL
+
     if (managementURL) {
       await Browser.open({ url: managementURL })
       return
     }
 
-    const info = this._customerInfo.value
-    if (!info) return
+    const platform = Capacitor.getPlatform()
+    const fallbackURL = platform === 'ios'
+      ? 'https://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions'
 
-    const entitlement = info.entitlements.active?.[ENTITLEMENT_ID]
-    this._customerInfo.value = {
-      ...info,
-      entitlements: {
-        ...info.entitlements,
-        active: {
-          ...info.entitlements.active,
-          [ENTITLEMENT_ID]: {
-            ...entitlement,
-            willRenew: false,
-            isActive: false,
-            unsubscribeDetectedAt: new Date().toISOString(),
-            unsubscribeDetectedAtMillis: Date.now(),
-          },
-        },
-      },
-    }
-    this.saveToStorage()
+    await Browser.open({ url: fallbackURL })
   }
 
   hasProAccess(): boolean {
