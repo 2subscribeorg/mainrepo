@@ -59,6 +59,7 @@ import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
 import { App } from '@capacitor/app'
 import { revenueCat } from '@/services/revenueCat'
+import { notificationScheduler } from '@/services/NotificationScheduler'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
@@ -112,6 +113,8 @@ onMounted(async () => {
       reportError(error as Error, 'AppBootstrap', '/')
     }
   }
+
+  await notificationScheduler.requestPermission()
 
   appStateListener = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
     if (isActive) revenueCat.refreshSubscriptionStatus()
