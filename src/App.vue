@@ -60,6 +60,7 @@ import { useErrorManager } from '@/utils/errorManager'
 import { App } from '@capacitor/app'
 import { revenueCat } from '@/services/revenueCat'
 import { notificationScheduler } from '@/services/NotificationScheduler'
+import { initFCM } from '@/services/FCMService'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
@@ -116,8 +117,16 @@ onMounted(async () => {
 
   await notificationScheduler.requestPermission()
 
+  try {
+    await initFCM()
+  } catch (e) {
+    console.error('Notification init error:', e)
+  }
+
   appStateListener = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
-    if (isActive) revenueCat.refreshSubscriptionStatus()
+    if (isActive) {
+      revenueCat.refreshSubscriptionStatus()
+    }
   })
 })
 

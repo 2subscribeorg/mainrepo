@@ -141,7 +141,7 @@ export function useBankConnectionHealth() {
   const healthSummary = computed(() => healthData.value.healthSummary)
 
   // API Base URL
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL
 
   // Helper function for authenticated API calls
   async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
