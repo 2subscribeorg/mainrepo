@@ -265,7 +265,7 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    return { success: true }
+  }
 
   /**
    * Send password reset email to user by email address
@@ -278,8 +278,7 @@ export class MockAdminService {
     if (!user) {
       throw new Error('User not found')
     }
-
-    return { success: true }
+  }
 
   /**
    * Get current admin user info

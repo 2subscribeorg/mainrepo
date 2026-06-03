@@ -4,6 +4,7 @@ import type { Subscription, ID } from '@/domain/models'
 import type { SubscriptionFilter } from '@/data/repo/interfaces/ISubscriptionsRepo'
 import { repoFactory } from '@/data/repo/RepoFactory'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import { notificationScheduler } from '@/services/NotificationScheduler'
 
 export const useSubscriptionsStore = defineStore('subscriptions', () => {
   const subscriptions = ref<Subscription[]>([])
@@ -16,6 +17,7 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
   // Track active subscription
   let unsubscribe: (() => void) | null = null
   let currentFilter: SubscriptionFilter | undefined = undefined
+  let initialLoadDone = false
 
   const repo = repoFactory.getSubscriptionsRepo()
 
@@ -50,10 +52,10 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       error.value = null
       try {
         await repo.upsert(subscription)
-        // If not using real-time subscription, manually refetch
         if (!unsubscribe) {
           await fetchAll(currentFilter)
         }
+        notificationScheduler.scheduleRenewalReminder(subscription)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to save subscription'
         throw e
@@ -66,10 +68,10 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       error.value = null
       try {
         const result = await repo.cancel(id)
-        // If not using real-time subscription, manually refetch
         if (!unsubscribe) {
           await fetchAll(currentFilter)
         }
+        notificationScheduler.cancelRenewalReminder(id)
         return result
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to cancel subscription'
@@ -83,10 +85,10 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       error.value = null
       try {
         await repo.delete(id)
-        // If not using real-time subscription, manually update
         if (!unsubscribe) {
           subscriptions.value = subscriptions.value.filter((s) => s.id !== id)
         }
+        notificationScheduler.cancelRenewalReminder(id)
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to delete subscription'
         throw e
@@ -109,13 +111,17 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
     }
 
     currentFilter = filter
+    initialLoadDone = false
     setLoading('subscriptions', true)
     error.value = null
 
-    // Subscribe to changes
     unsubscribe = repo.subscribe((data) => {
       subscriptions.value = data
       setLoading('subscriptions', false)
+      if (!initialLoadDone) {
+        initialLoadDone = true
+        notificationScheduler.rescheduleAll(data, [])
+      }
     }, filter)
   }
 
@@ -128,6 +134,7 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       unsubscribe = null
     }
     currentFilter = undefined
+    initialLoadDone = false
   }
 
   /**
@@ -141,13 +148,11 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
     subscriptions,
     loading,
     error,
-    // Old API (still works, backward compatible)
     fetchAll,
     getById,
     save,
     cancel,
     remove,
-    // New API (Phase 2 ready)
     startListening,
     stopListening,
     isRealtime,

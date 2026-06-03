@@ -50,13 +50,17 @@
 
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
+import { App } from '@capacitor/app'
+import { revenueCat } from '@/services/revenueCat'
+import { notificationScheduler } from '@/services/NotificationScheduler'
+import { initFCM } from '@/services/FCMService'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
@@ -98,6 +102,8 @@ function clearGlobalError() {
   globalError.value = null
 }
 
+let appStateListener: { remove: () => void } | null = null
+
 onMounted(async () => {
   // In Firebase mode, auth listener is initialized in bootstrap
   // In Mock mode, seed database on first launch
@@ -108,6 +114,24 @@ onMounted(async () => {
       reportError(error as Error, 'AppBootstrap', '/')
     }
   }
+
+  await notificationScheduler.requestPermission()
+
+  try {
+    await initFCM()
+  } catch (e) {
+    console.error('Notification init error:', e)
+  }
+
+  appStateListener = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+    if (isActive) {
+      revenueCat.refreshSubscriptionStatus()
+    }
+  })
+})
+
+onUnmounted(() => {
+  appStateListener?.remove()
 })
 </script>
 

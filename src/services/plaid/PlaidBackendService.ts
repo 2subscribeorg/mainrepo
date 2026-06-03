@@ -20,7 +20,7 @@ import {
 } from './validation'
 import { rateLimiter, RATE_LIMITS } from '@/utils/rateLimiter'
 
-const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+const API_URL = import.meta.env.VITE_BACKEND_API_URL
 
 export class PlaidBackendService {
   /**
