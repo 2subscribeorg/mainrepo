@@ -109,7 +109,7 @@ async function checkVerification() {
   if (isVerified) {
     showMessage('Email verified successfully!', 'success')
     setTimeout(() => {
-      router.push('/dashboard')
+      router.push('/')
     }, 1500)
   } else {
     showMessage('Email not verified yet. Please check your inbox.', 'error')
@@ -176,7 +176,7 @@ onMounted(() => {
   userEmail.value = user.email || ''
 
   if (user.emailVerified) {
-    router.push('/dashboard')
+    router.push('/')
   }
 })
 

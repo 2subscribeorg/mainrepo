@@ -7,7 +7,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  sendPasswordResetEmail,
   updateEmail as firebaseUpdateEmail,
   updatePassword as firebaseUpdatePassword,
   onAuthStateChanged,
@@ -25,6 +24,7 @@ import {
 import { getFirebaseAuth, getFirebaseDb } from '@/config/firebase'
 import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncService'
 import { emailVerificationService } from '@/services/EmailVerificationService'
+import { passwordResetService } from '@/services/PasswordResetService'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { logger } from '@/utils/logger'
 import { revenueCat } from '@/services/revenueCat'
@@ -431,9 +431,13 @@ export const useAuthStore = defineStore('auth', () => {
         
         // Send verification email if requested
         if (sendVerification) {
-          await emailVerificationService.sendVerificationEmail(userCredential.user)
-          // Sign out user until they verify
-          await signOut(auth)
+          const verificationResult = await emailVerificationService.sendVerificationEmail(userCredential.user)
+          if (!verificationResult.success) {
+            throw new Error(verificationResult.error || 'Failed to send verification email')
+          }
+
+          // Keep the session active so the verification screen can reload/resend.
+          // Route guards prevent access to the app until emailVerified becomes true.
           return { success: true, needsVerification: true }
         }
         
@@ -518,14 +522,15 @@ export const useAuthStore = defineStore('auth', () => {
     return await withLoading('auth', async () => {
       error.value = null
       try {
-        const auth = getFirebaseAuth()
-        await sendPasswordResetEmail(auth, email)
-        return { success: true, message: 'Password reset email sent' }
+        const result = await passwordResetService.sendPasswordResetEmail(email)
+        if (!result.success) {
+          error.value = result.message
+        }
+        return result
       } catch (e) {
-        // SECURITY: Never expose Firebase error messages that reveal user existence
-        const secureMessage = getSecureAuthMessage(e)
-        error.value = secureMessage
-        return { success: false, message: secureMessage }
+        const message = e instanceof Error ? e.message : 'Failed to send password reset email'
+        error.value = message
+        return { success: false, message }
       }
     })
   }
