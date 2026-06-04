@@ -111,6 +111,7 @@ import { useRouter } from 'vue-router'
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
 import { validatePassword as validatePasswordStrength, isPasswordValid } from '@/utils/passwordValidation'
 import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
+import { isEmailVerificationRequired } from '@/config/authFlow'
 
 // Emits
 defineEmits<{
@@ -182,7 +183,7 @@ async function handleSubmit() {
   }
 
   // Check if email verification is required
-  const requireVerification = import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION === 'true'
+  const requireVerification = isEmailVerificationRequired()
   
   const result = await signUp(email.value, password.value, requireVerification)
 

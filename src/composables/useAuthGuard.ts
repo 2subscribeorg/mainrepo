@@ -4,6 +4,7 @@ import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
 import { isAppBootstrapped, bootstrapApp } from '@/config/bootstrap'
+import { isEmailVerificationRequired } from '@/config/authFlow'
 
 /**
  * Authentication guard for routes
@@ -66,7 +67,7 @@ export async function requireAuth(
   }
 
   // Optional: Enforce email verification if enabled
-  const requireEmailVerification = import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION === 'true'
+  const requireEmailVerification = isEmailVerificationRequired()
   
   if (requireEmailVerification) {
     const auth = getFirebaseAuth()
@@ -95,14 +96,33 @@ export async function requireAuth(
  * }
  * ```
  */
-export function redirectIfAuthenticated(
-  _to: RouteLocationNormalized,
+export async function redirectIfAuthenticated(
+  to: RouteLocationNormalized,
   _from: RouteLocationNormalized,
   next: NavigationGuardNext
 ) {
+  if (!isAppBootstrapped()) {
+    await bootstrapApp()
+  }
+
+  const authStore = useAuthStore()
+  await authStore.waitForInitialAuthCheck()
+
   const { isAuthenticated } = useAuth()
 
   if (isAuthenticated.value) {
+    if (isEmailVerificationRequired()) {
+      try {
+        const auth = getFirebaseAuth()
+        if (auth.currentUser && !auth.currentUser.emailVerified && to.path !== '/verify-email') {
+          next('/verify-email')
+          return
+        }
+      } catch {
+        // Firebase not ready, fall back to the store auth state below.
+      }
+    }
+
     next('/')
   } else {
     next()

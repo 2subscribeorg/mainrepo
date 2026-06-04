@@ -158,35 +158,25 @@
         <p class="text-sm text-text-secondary mb-4">
           Once you delete your account, there is no going back. Please be certain.
         </p>
-        <button
-          type="button"
-          class="w-full bg-error text-white py-2 px-4 rounded-md hover:bg-error/90 font-medium transition-colors"
-          @click="showDeleteModal = true"
+        <router-link
+          to="/delete-account-request"
+          class="block w-full text-center bg-error text-white py-2 px-4 rounded-md hover:bg-error/90 font-medium transition-colors"
         >
           Delete Account
-        </button>
+        </router-link>
       </div>
     </div>
 
-    <!-- Delete Account Modal -->
-    <DeleteAccountModal
-      :is-open="showDeleteModal"
-      :is-deleting="isDeleting"
-      :error-message="deleteErrorMessage"
-      @confirm="(password) => handleDeleteAccount(password)"
-      @cancel="handleCancelDelete"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import DeleteAccountModal from './DeleteAccountModal.vue'
 import TwoFactorSettings from './TwoFactorSettings.vue'
 import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'
 
-const { userEmail, updateEmail, updatePassword, deleteAccount, loading } = useAuth()
+const { userEmail, updateEmail, updatePassword, loading } = useAuth()
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 
@@ -198,11 +188,6 @@ const emailCurrentPassword = ref('')
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmNewPassword = ref('')
-
-// Delete Account
-const showDeleteModal = ref(false)
-const isDeleting = ref(false)
-const deleteErrorMessage = ref('')
 
 // Messages
 const successMessage = ref<string | null>(null)
@@ -262,26 +247,7 @@ async function handleChangePassword() {
   }
 }
 
-async function handleDeleteAccount(password: string) {
-  deleteErrorMessage.value = ''
-  isDeleting.value = true
 
-  const { success, message } = await deleteAccount(password)
-
-  if (success) {
-    // Account deleted, user will be redirected to login by useAuth
-    showDeleteModal.value = false
-  } else {
-    deleteErrorMessage.value = message || 'Failed to delete account'
-  }
-  
-  isDeleting.value = false
-}
-
-function handleCancelDelete() {
-  showDeleteModal.value = false
-  deleteErrorMessage.value = ''
-}
 </script>
 
 <style scoped>

@@ -1,4 +1,4 @@
-import { sendEmailVerification, type User } from 'firebase/auth'
+import type { User } from 'firebase/auth'
 
 export interface EmailVerificationConfig {
   continueUrl?: string
@@ -11,31 +11,31 @@ export interface EmailVerificationResult {
 }
 
 export class EmailVerificationService {
-  private getDefaultContinueUrl(): string {
-    // Guard against SSR/test environments where window is undefined
-    if (typeof window !== 'undefined' && window.location) {
-      return `${window.location.origin}/login`
-    }
-    // Fallback for SSR/test environments
-    return 'http://localhost:5173/login'
-  }
-
-  private readonly defaultConfig: EmailVerificationConfig = {
-    continueUrl: undefined, // Will be set lazily via getDefaultContinueUrl()
-    handleCodeInApp: false,
-  }
+  private readonly baseUrl = import.meta.env.VITE_BACKEND_API_URL
 
   async sendVerificationEmail(
     user: User,
     config?: EmailVerificationConfig
   ): Promise<EmailVerificationResult> {
     try {
-      const actionCodeSettings = {
-        url: config?.continueUrl || this.getDefaultContinueUrl(),
-        handleCodeInApp: config?.handleCodeInApp ?? this.defaultConfig.handleCodeInApp!,
-      }
+      const token = await user.getIdToken()
 
-      await sendEmailVerification(user, actionCodeSettings)
+      const response = await fetch(`${this.baseUrl}/auth/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          continueUrl: config?.continueUrl,
+          handleCodeInApp: config?.handleCodeInApp,
+        }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error?.message || 'Failed to send verification email')
+      }
 
       return { success: true }
     } catch (error: any) {
