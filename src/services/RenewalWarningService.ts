@@ -2,7 +2,7 @@ import type { ID } from '@/domain/models'
 import type { RenewalWarning, WarningCalculationResult } from '@/types/renewalWarning'
 import { getFirebaseAuthToken } from '@/utils/authHelpers'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3002/api'
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL
 
 class RenewalWarningService {
   private async getAuthToken(): Promise<string> {

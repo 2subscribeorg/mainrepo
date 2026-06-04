@@ -14,7 +14,6 @@
       </div>
     </ErrorBoundary>
 
-    <!-- Platform Subscription -->
     <ErrorBoundary component="PlatformSubscription">
       <div class="rounded-3xl bg-white/95 p-5 shadow-[0_20px_40px_rgba(15,23,42,0.08)] border border-slate-100">
         <div class="flex items-start gap-4">
@@ -41,11 +40,18 @@
         </div>
       </div>
     </ErrorBoundary>
+
+    <ErrorBoundary component="RestorePurchases">
+      <div class="rounded-3xl bg-white/95 p-5 shadow-[0_20px_40px_rgba(15,23,42,0.08)] border border-slate-100">
+        <RestorePurchasesSettings />
+      </div>
+    </ErrorBoundary>
   </div>
 </template>
 
 <script setup lang="ts">
 import AccountSettings from '@/components/settings/AccountSettings.vue'
 import BankAccountsSettings from '@/components/settings/BankAccountsSettings.vue'
+import RestorePurchasesSettings from '@/components/settings/RestorePurchasesSettings.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 </script>
