@@ -152,6 +152,54 @@
 
       <TwoFactorSettings />
 
+      <!-- Export Data Section (GDPR) -->
+      <div class="border border-border-light rounded-lg p-4">
+        <h4 class="font-medium text-text-primary mb-2">Export My Data</h4>
+        <p class="text-sm text-text-secondary mb-4">
+          Download a copy of all your personal data — subscriptions, transactions, categories, and bank connections — as a CSV file. This is your right under GDPR.
+        </p>
+        <div
+          v-if="exportError"
+          class="mb-3 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
+        >
+          {{ exportError }}
+        </div>
+
+        <!-- Saved confirmation -->
+        <div
+          v-if="exportStatus === 'saved'"
+          class="mb-3 p-3 bg-success-bg border border-success-border text-success-text rounded-lg text-sm"
+        >
+          <p class="font-medium">File saved successfully.</p>
+          <p class="mt-1 text-xs opacity-80">Check the location you selected in the save dialog.</p>
+        </div>
+
+        <!-- Prepare button -->
+        <button
+          v-if="exportStatus !== 'ready' && exportStatus !== 'saved'"
+          type="button"
+          :disabled="exportStatus === 'loading'"
+          @click="prepareExport"
+          class="w-full bg-surface-elevated border border-border-light text-text-primary py-2 px-4 rounded-md hover:bg-surface-elevated/80 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+        >
+          <span v-if="exportStatus === 'loading'">Preparing your data...</span>
+          <span v-else>Export My Data (CSV)</span>
+        </button>
+
+        <!-- Save button -->
+        <button
+          v-if="exportStatus === 'ready'"
+          type="button"
+          @click="triggerDownload"
+          class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 font-medium transition-colors"
+        >
+          Save File
+        </button>
+        <p v-if="exportStatus === 'ready'" class="mt-2 text-xs text-text-muted text-center">
+          Your data is ready — tap Save File.
+        </p>
+      </div>
+
       <!-- Delete Account Section -->
       <div class="border border-error-border rounded-lg p-4 bg-error-bg/30">
         <h4 class="font-medium text-error-text mb-2">Danger Zone</h4>
@@ -175,8 +223,10 @@ import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import TwoFactorSettings from './TwoFactorSettings.vue'
 import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'
+import { useDataExport } from '@/composables/useDataExport'
 
 const { userEmail, updateEmail, updatePassword, loading } = useAuth()
+const { prepareExport, triggerDownload, status: exportStatus, error: exportError, savedPath } = useDataExport()
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 

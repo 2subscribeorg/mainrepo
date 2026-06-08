@@ -6,6 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https'
+  },
+  android: {
+    allowMixedContent: true  // allows HTTP API calls during local development
   }
 };
 
