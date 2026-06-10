@@ -29,6 +29,11 @@ const router = createRouter({
           name: 'UserEdit',
           component: () => import('@/views/UserEdit.vue'),
         },
+        {
+          path: 'subscriptions',
+          name: 'Subscriptions',
+          component: () => import('@/views/Subscriptions.vue'),
+        },
       ],
     },
   ],

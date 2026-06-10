@@ -52,6 +52,7 @@ import { h } from 'vue'
 import {
   Dashboard as DashboardIcon,
   Users as UsersIcon,
+  CreditCard as SubscriptionsIcon,
   Logout as LogoutIcon,
 } from '@vicons/tabler'
 import { useAuthStore } from '@/stores/auth'
@@ -69,6 +70,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     Dashboard: 'Dashboard',
     Users: 'User Management',
+    Subscriptions: 'Subscriptions',
   }
   return titles[route.name as string] || 'Admin'
 })
@@ -87,6 +89,11 @@ const menuOptions = [
     label: 'Users',
     key: 'Users',
     icon: renderIcon(UsersIcon),
+  },
+  {
+    label: 'Subscriptions',
+    key: 'Subscriptions',
+    icon: renderIcon(SubscriptionsIcon),
   },
 ]
 

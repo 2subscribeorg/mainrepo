@@ -78,6 +78,9 @@
               <n-button :loading="resetting" @click="handlePasswordReset">
                 Send Password Reset
               </n-button>
+              <n-button :loading="sendingWelcome" @click="handleSendWelcomeEmail">
+                Resend Welcome Email
+              </n-button>
               <n-button
                 v-if="!user.isBanned"
                 type="warning"
@@ -167,6 +170,7 @@ const resetting = ref(false)
 const showDelete = ref(false)
 const showBan = ref(false)
 const banning = ref(false)
+const sendingWelcome = ref(false)
 
 const form = ref({ displayName: '', status: 'active' as 'active' | 'inactive' })
 
@@ -214,6 +218,19 @@ async function save() {
     message.error('Failed to update user')
   } finally {
     saving.value = false
+  }
+}
+
+async function handleSendWelcomeEmail() {
+  if (!user.value) return
+  sendingWelcome.value = true
+  try {
+    await usersApi.sendWelcomeEmail(user.value.id)
+    message.success(`Welcome email sent to ${user.value.email}`)
+  } catch (err: any) {
+    message.error(err?.response?.data?.error?.message || 'Failed to send welcome email')
+  } finally {
+    sendingWelcome.value = false
   }
 }
 

@@ -48,6 +48,10 @@ export const usersApi = {
     await apiClient.patch(`/users/${userId}`, updates)
   },
 
+  async sendWelcomeEmail(userId: string): Promise<void> {
+    await apiClient.post(`/users/${userId}/welcome-email`)
+  },
+
   async banUser(userId: string, reason?: string): Promise<void> {
     await apiClient.post(`/users/${userId}/ban`, { reason })
   },
