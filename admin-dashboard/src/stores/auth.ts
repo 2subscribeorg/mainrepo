@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { auth } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 
@@ -34,6 +34,21 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  function waitForAuth(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!loading.value) {
+        resolve()
+        return
+      }
+      const unwatch = watch(loading, (val) => {
+        if (!val) {
+          unwatch()
+          resolve()
+        }
+      })
+    })
+  }
+
   async function login(email: string, password: string): Promise<void> {
     await signInWithEmailAndPassword(auth, email, password)
   }
@@ -48,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isSuperAdmin,
     initAuthListener,
+    waitForAuth,
     login,
     logout,
   }

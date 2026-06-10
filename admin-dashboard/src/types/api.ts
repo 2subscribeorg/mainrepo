@@ -9,6 +9,11 @@ export interface User {
   subscriptionCount: number
   bankConnectionCount: number
   subscriptionCategories?: string[]
+  appPlan: 'free' | 'monthly' | 'annual' | 'lifetime'
+  appPlanExpiresAt?: string | null
+  isBanned: boolean
+  bannedAt?: string | null
+  bannedReason?: string | null
 }
 
 export interface Activity {
@@ -59,7 +64,7 @@ export interface UserListResponse {
 }
 
 export interface UserDetailsResponse {
-  user: User
+  user: User & { lastLogin?: string }
   stats: {
     subscriptionCount: number
     totalSpend: number

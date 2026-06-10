@@ -61,6 +61,10 @@ class ApiClient {
     return this.client.post<T>(url, data)
   }
 
+  patch<T>(url: string, data?: any) {
+    return this.client.patch<T>(url, data)
+  }
+
   delete<T>(url: string) {
     return this.client.delete<T>(url)
   }

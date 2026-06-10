@@ -11,15 +11,33 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'Users',
-      component: () => import('@/views/Users.vue'),
+      component: () => import('@/components/AppLayout.vue'),
       meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'Dashboard',
+          component: () => import('@/views/Dashboard.vue'),
+        },
+        {
+          path: 'users',
+          name: 'Users',
+          component: () => import('@/views/Users.vue'),
+        },
+        {
+          path: 'users/:userId',
+          name: 'UserEdit',
+          component: () => import('@/views/UserEdit.vue'),
+        },
+      ],
     },
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+
+  await authStore.waitForAuth()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
