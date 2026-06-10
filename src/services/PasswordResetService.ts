@@ -21,18 +21,18 @@ export class PasswordResetService {
       if (!response.ok) {
         return {
           success: false,
-          message: result?.error?.message || 'Failed to send password reset email',
+          message: 'If an account exists for this email, a password reset link has been sent.',
         }
       }
 
       return {
         success: true,
-        message: result?.data?.message || 'If an account exists for this email, a password reset email has been sent.',
+        message: result?.data?.message || 'If an account exists for this email, a password reset link has been sent.',
       }
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send password reset email',
+        message: 'If an account exists for this email, a password reset link has been sent.',
       }
     }
   }
