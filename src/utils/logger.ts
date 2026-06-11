@@ -16,18 +16,16 @@ interface LogContext {
 
 class Logger {
   private isDevelopment: boolean
-  private isProduction: boolean
 
   constructor() {
     this.isDevelopment = import.meta.env.DEV
-    this.isProduction = import.meta.env.PROD
   }
 
   /**
    * Debug logs - only in development
    * Use for detailed debugging information
    */
-  debug(message: string, context?: LogContext): void {
+  debug(message: string, context?: LogContext | unknown): void {
     if (this.isDevelopment) {
       console.log(`[DEBUG] ${message}`, context || '')
     }
@@ -37,7 +35,7 @@ class Logger {
    * Info logs - development only by default
    * Use for general informational messages
    */
-  info(message: string, context?: LogContext): void {
+  info(message: string, context?: LogContext | unknown): void {
     if (this.isDevelopment) {
       console.log(`[INFO] ${message}`, context || '')
     }
@@ -47,7 +45,7 @@ class Logger {
    * Warning logs - shown in both dev and production
    * Use for recoverable errors or important warnings
    */
-  warn(message: string, context?: LogContext): void {
+  warn(message: string, context?: LogContext | unknown): void {
     if (this.isDevelopment) {
       console.warn(`[WARN] ${message}`, context || '')
     } else {
@@ -77,7 +75,7 @@ class Logger {
    * Success logs - development only
    * Use for successful operations (e.g., "✅ Data saved")
    */
-  success(message: string, context?: LogContext): void {
+  success(message: string, context?: LogContext | unknown): void {
     if (this.isDevelopment) {
       console.log(`✅ ${message}`, context || '')
     }

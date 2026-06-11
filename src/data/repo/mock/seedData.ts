@@ -6,13 +6,13 @@ const CURRENCY: Currency = 'GBP'
 
 // Default categories with colors
 const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
-  { name: 'Streaming', colour: '#E91E63', monthlyLimit: { amount: 50, currency: CURRENCY } },
-  { name: 'Utilities', colour: '#2196F3', monthlyLimit: { amount: 200, currency: CURRENCY } },
-  { name: 'SaaS', colour: '#9C27B0', monthlyLimit: { amount: 100, currency: CURRENCY } },
-  { name: 'Insurance', colour: '#4CAF50', monthlyLimit: { amount: 150, currency: CURRENCY } },
-  { name: 'Fitness', colour: '#FF9800', monthlyLimit: { amount: 80, currency: CURRENCY } },
-  { name: 'Cloud Storage', colour: '#00BCD4', monthlyLimit: { amount: 30, currency: CURRENCY } },
-  { name: 'News & Media', colour: '#795548', monthlyLimit: { amount: 40, currency: CURRENCY } },
+  { name: 'Streaming', colour: '#E91E63' },
+  { name: 'Utilities', colour: '#2196F3' },
+  { name: 'SaaS', colour: '#9C27B0' },
+  { name: 'Insurance', colour: '#4CAF50' },
+  { name: 'Fitness', colour: '#FF9800' },
+  { name: 'Cloud Storage', colour: '#00BCD4' },
+  { name: 'News & Media', colour: '#795548' },
   { name: 'Uncategorised', colour: '#9E9E9E' },
 ]
 

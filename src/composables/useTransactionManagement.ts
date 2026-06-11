@@ -17,9 +17,9 @@ export function useTransactionManagement() {
   const subscriptionsStore = useSubscriptionsStore()
   const bankTransactionsStore = useBankTransactionsStore()
   const authStore = useAuthStore()
-  
+
   // Unified loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const patternDetectionError = ref<string | null>(null)
   const patternDetectionLoading = isLoading('patternDetection')
 
@@ -29,9 +29,6 @@ export function useTransactionManagement() {
       patternDetectionError.value = null
     
     try {
-      const authStore = useAuthStore()
-      const subscriptionsStore = useSubscriptionsStore()
-      
       if (!authStore.user) {
         throw new Error('User not authenticated')
       }
@@ -82,7 +79,7 @@ export function useTransactionManagement() {
     }
 
     await dataStore.save(newTransaction)
-    logger.success('Transaction created:', newTransaction.id)
+    logger.success(`Transaction created: ${newTransaction.id}`)
     return newTransaction
   }
 

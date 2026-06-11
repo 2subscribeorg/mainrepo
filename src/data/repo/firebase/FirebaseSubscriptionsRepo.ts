@@ -187,7 +187,7 @@ export class FirebaseSubscriptionsRepo implements ISubscriptionsRepo {
 
         callback(results)
       },
-      (error) => {
+      () => {
         callback([]) // Return empty on error
       }
     )

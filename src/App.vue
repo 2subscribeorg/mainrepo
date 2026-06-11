@@ -26,7 +26,7 @@
         </MobileLayout>
       </RouteErrorBoundary>
       
-      <!-- Global toast notifications -->
+      <OfflineBanner />
       <ToastContainer />
       
       <!-- Global error notification (for development) -->
@@ -54,9 +54,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
+import OfflineBanner from '@/components/ui/OfflineBanner.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
+import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { App } from '@capacitor/app'
 import { revenueCat } from '@/services/revenueCat'
 import { notificationScheduler } from '@/services/NotificationScheduler'

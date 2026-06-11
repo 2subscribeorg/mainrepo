@@ -121,11 +121,6 @@ export function useTransactions() {
     totalItems: filteredTransactions.value.length
   }))
 
-  const legacyFilters = computed<TransactionFilters>(() => ({
-    selectedAccount: selectedAccount.value,
-    subscriptionFilter: subscriptionFilter.value
-  }))
-
   // Actions
   async function refreshTransactions() {
     loading.value = true
