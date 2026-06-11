@@ -5,9 +5,10 @@ import { ref, computed, type Ref } from 'vue'
  * Consolidates all loading states across the application for better coordination
  */
 
-export type LoadingStateKey = 
+export type LoadingStateKey =
   | 'dashboard'
-  | 'transactions' 
+  | 'transactions'
+  | 'transactionsData'
   | 'suggestions'
   | 'bankAccounts'
   | 'categories'
@@ -30,6 +31,7 @@ type LoadingStates = {
 const globalLoadingStates = ref<LoadingStates>({
   dashboard: false,
   transactions: false,
+  transactionsData: false,
   suggestions: false,
   bankAccounts: false,
   categories: false,

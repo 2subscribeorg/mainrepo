@@ -2,8 +2,6 @@ import { ref } from 'vue'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { getFirebaseDb, getFirebaseAuth } from '@/config/firebase'
 import { Capacitor, registerPlugin } from '@capacitor/core'
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
-import { Share } from '@capacitor/share'
 
 const FileSaver = registerPlugin<{
   saveFile(options: { filename: string; content: string }): Promise<void>

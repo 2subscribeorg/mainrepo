@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
-import { Permission, getPermissionsForRole, roleHasPermission } from '@/types/permissions'
+import { Permission, roleHasPermission } from '@/types/permissions'
 
 /**
  * Authentication composable

@@ -82,7 +82,7 @@ class SecureStorage {
   /**
    * Import key material from user ID
    */
-  private async importKeyMaterial(userId: string, salt: Uint8Array): Promise<CryptoKey> {
+  private async importKeyMaterial(userId: string, _salt: Uint8Array): Promise<CryptoKey> {
     try {
       // Combine user ID with device fingerprint for uniqueness
       const deviceFingerprint = this.getDeviceFingerprint()
@@ -158,8 +158,8 @@ class SecureStorage {
       const encrypted = await crypto.subtle.encrypt(
         {
           name: this.ALGORITHM,
-          iv: key.iv
-        },
+          iv: key.iv,
+        } as AesGcmParams,
         key.key,
         encoded
       )
