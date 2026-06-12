@@ -9,7 +9,7 @@
             @clear="handleClearSearch"
             style="width: 300px"
           />
-          <n-button type="primary" @click="showAddUser = true">
+          <n-button v-if="canWrite" type="primary" @click="showAddUser = true">
             <template #icon><n-icon><UserPlus /></n-icon></template>
             Add User
           </n-button>
@@ -45,20 +45,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { ref, h, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NTag, NButton, NSpace, NEllipsis, NIcon, NTooltip } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { Edit, Key, TrashX, UserPlus } from '@vicons/tabler'
+import { Edit, Eye, Key, TrashX, UserPlus } from '@vicons/tabler'
 import type { User } from '@/types/api'
 import { useUserActions } from '@/composables/useUserActions'
 import { useUserManagement } from '@/composables/useUserManagement'
+import { useAuthStore } from '@/stores/auth'
 import DeleteUserModal from '@/components/DeleteUserModal.vue'
 import AddUserModal from '@/components/AddUserModal.vue'
 import UserSearch from '@/components/UserSearch.vue'
 import { format } from 'date-fns'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const canWrite = computed(() => authStore.permissions.includes('users_write'))
 
 const resettingUserId = ref<string | null>(null)
 const deletingUserId = ref<string | null>(null)
@@ -94,7 +97,7 @@ const planTagTypes: Record<AppPlan, 'default' | 'info' | 'success' | 'warning'> 
   lifetime: 'warning',
 }
 
-const columns: DataTableColumns<User> = [
+const columns = computed<DataTableColumns<User>>(() => [
   {
     title: 'Name',
     key: 'displayName',
@@ -123,11 +126,8 @@ const columns: DataTableColumns<User> = [
     filterMultiple: true,
     filter: (value, row) => row.appPlan === value,
     render: (row) =>
-      h(
-        NTag,
-        { size: 'small', type: planTagTypes[row.appPlan], bordered: row.appPlan !== 'free' },
-        { default: () => planLabels[row.appPlan] }
-      ),
+      h(NTag, { size: 'small', type: planTagTypes[row.appPlan as AppPlan], bordered: row.appPlan !== 'free' },
+        { default: () => planLabels[row.appPlan as AppPlan] }),
   },
   {
     title: 'Status',
@@ -135,13 +135,9 @@ const columns: DataTableColumns<User> = [
     width: 110,
     sorter: (a, b) => a.status.localeCompare(b.status),
     render: (row) =>
-      h(NSpace, { size: 4 }, {
-        default: () => [
-          row.isBanned
-            ? h(NTag, { size: 'small', type: 'error' }, { default: () => 'Banned' })
-            : h(NTag, { size: 'small', type: row.status === 'active' ? 'success' : 'default' }, { default: () => row.status }),
-        ],
-      }),
+      row.isBanned
+        ? h(NTag, { size: 'small', type: 'error' }, { default: () => 'Banned' })
+        : h(NTag, { size: 'small', type: row.status === 'active' ? 'success' : 'default' }, { default: () => row.status }),
   },
   {
     title: 'Subs',
@@ -159,6 +155,7 @@ const columns: DataTableColumns<User> = [
     title: 'Joined',
     key: 'createdAt',
     width: 110,
+    defaultSortOrder: 'descend',
     sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     render: (row) => {
       try { return format(new Date(row.createdAt), 'dd MMM yyyy') } catch { return '—' }
@@ -167,56 +164,40 @@ const columns: DataTableColumns<User> = [
   {
     title: 'Actions',
     key: 'actions',
-    width: 110,
-    render: (row) =>
-      h(NSpace, { size: 4 }, {
+    width: canWrite.value ? 110 : 60,
+    render: (row) => {
+      const viewBtn = h(NTooltip, null, {
+        trigger: () => h(NButton, { size: 'small', quaternary: true, onClick: () => router.push(`/users/${row.id}`) },
+          { icon: () => h(NIcon, null, { default: () => h(canWrite.value ? Edit : Eye) }) }),
+        default: () => canWrite.value ? 'Edit' : 'View',
+      })
+
+      if (!canWrite.value) return viewBtn
+
+      return h(NSpace, { size: 4 }, {
         default: () => [
+          viewBtn,
           h(NTooltip, null, {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  size: 'small',
-                  quaternary: true,
-                  onClick: () => router.push(`/users/${row.id}`),
-                },
-                { icon: () => h(NIcon, null, { default: () => h(Edit) }) }
-              ),
-            default: () => 'Edit',
-          }),
-          h(NTooltip, null, {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  size: 'small',
-                  quaternary: true,
-                  loading: isResetting.value && resettingUserId.value === row.id,
-                  onClick: () => handlePasswordReset(row.id, row.email),
-                },
-                { icon: () => h(NIcon, null, { default: () => h(Key) }) }
-              ),
+            trigger: () => h(NButton, {
+              size: 'small', quaternary: true,
+              loading: isResetting.value && resettingUserId.value === row.id,
+              onClick: () => handlePasswordReset(row.id, row.email),
+            }, { icon: () => h(NIcon, null, { default: () => h(Key) }) }),
             default: () => 'Reset Password',
           }),
           h(NTooltip, null, {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  size: 'small',
-                  quaternary: true,
-                  type: 'error',
-                  loading: isDeleting.value && deletingUserId.value === row.id,
-                  onClick: () => showDeleteModal(row.id, row.email),
-                },
-                { icon: () => h(NIcon, null, { default: () => h(TrashX) }) }
-              ),
+            trigger: () => h(NButton, {
+              size: 'small', quaternary: true, type: 'error',
+              loading: isDeleting.value && deletingUserId.value === row.id,
+              onClick: () => showDeleteModal(row.id, row.email),
+            }, { icon: () => h(NIcon, null, { default: () => h(TrashX) }) }),
             default: () => 'Delete',
           }),
         ],
-      }),
+      })
+    },
   },
-]
+])
 
 async function handlePasswordReset(userId: string, email: string): Promise<void> {
   resettingUserId.value = userId
@@ -264,8 +245,5 @@ function exportCSV(): void {
   URL.revokeObjectURL(url)
 }
 
-onMounted(async () => {
-  await new Promise(resolve => setTimeout(resolve, 500))
-  fetchUsers()
-})
+onMounted(fetchUsers)
 </script>

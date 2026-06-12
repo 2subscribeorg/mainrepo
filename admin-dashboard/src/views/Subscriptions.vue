@@ -9,7 +9,18 @@
             @clear="handleClearSearch"
             style="width: 300px"
           />
-          <n-button :disabled="subscribedUsers.length === 0" @click="exportCSV">
+          <n-button-group>
+            <n-dropdown :options="filterOptions" @select="handleFilterSelect" trigger="click">
+              <n-button>
+                <template #icon><n-icon><FilterIcon /></n-icon></template>
+                {{ activeFilter ? planLabels[activeFilter] : 'Filter' }}
+              </n-button>
+            </n-dropdown>
+            <n-button v-if="activeFilter" @click="activeFilter = null">
+              <template #icon><n-icon><CloseIcon /></n-icon></template>
+            </n-button>
+          </n-button-group>
+          <n-button :disabled="filteredUsers.length === 0" @click="exportCSV">
             Export CSV
           </n-button>
         </n-space>
@@ -17,7 +28,7 @@
 
       <n-data-table
         :columns="columns"
-        :data="subscribedUsers"
+        :data="filteredUsers"
         :loading="loading"
         :pagination="{ pageSize: 20 }"
         :row-key="rowKey"
@@ -25,42 +36,22 @@
         striped
       />
     </n-card>
-
-    <DeleteUserModal
-      :show="showDeleteConfirm"
-      :user="userToDelete"
-      @cancel="handleDeleteCancel"
-      @confirm="handleDeleteConfirm"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, h, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { NTag, NButton, NSpace, NEllipsis, NIcon, NTooltip } from 'naive-ui'
+import { NTag, NButton, NButtonGroup, NSpace, NEllipsis, NIcon, NTooltip } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { Edit, Key, TrashX } from '@vicons/tabler'
+import { Eye, Filter as FilterIcon, X as CloseIcon } from '@vicons/tabler'
 import type { User } from '@/types/api'
-import { useUserActions } from '@/composables/useUserActions'
 import { useUserManagement } from '@/composables/useUserManagement'
-import DeleteUserModal from '@/components/DeleteUserModal.vue'
 import UserSearch from '@/components/UserSearch.vue'
 import { format } from 'date-fns'
 
 const router = useRouter()
-
-const resettingUserId = ref<string | null>(null)
-const deletingUserId = ref<string | null>(null)
-const showDeleteConfirm = ref(false)
-const userToDelete = ref<{ id: string; email: string } | null>(null)
-
-const { isDeleting, isResetting, deleteUser, sendPasswordReset } = useUserActions()
 const { users, loading, searchQuery, fetchUsers, handleSearch, handleClearSearch } = useUserManagement()
-
-const subscribedUsers = computed(() => users.value.filter(u => u.appPlan !== 'free'))
-
-const rowKey = (row: User) => row.id
 
 type AppPlan = 'free' | 'monthly' | 'annual' | 'lifetime'
 
@@ -71,19 +62,31 @@ const planLabels: Record<AppPlan, string> = {
   lifetime: 'Lifetime',
 }
 
-const planOrder: Record<AppPlan, number> = {
-  free: 0,
-  monthly: 1,
-  annual: 2,
-  lifetime: 3,
-}
-
 const planTagTypes: Record<AppPlan, 'default' | 'info' | 'success' | 'warning'> = {
   free: 'default',
   monthly: 'info',
   annual: 'success',
   lifetime: 'warning',
 }
+
+const activeFilter = ref<AppPlan | null>(null)
+
+const filterOptions = [
+  { label: 'Pro Monthly', key: 'monthly' },
+  { label: 'Pro Annual', key: 'annual' },
+  { label: 'Lifetime', key: 'lifetime' },
+]
+
+function handleFilterSelect(key: string) {
+  activeFilter.value = key as AppPlan
+}
+
+const subscribedUsers = computed(() => users.value.filter(u => u.appPlan !== 'free'))
+const filteredUsers = computed(() =>
+  activeFilter.value ? subscribedUsers.value.filter(u => u.appPlan === activeFilter.value) : subscribedUsers.value
+)
+
+const rowKey = (row: User) => row.id
 
 const columns: DataTableColumns<User> = [
   {
@@ -104,34 +107,18 @@ const columns: DataTableColumns<User> = [
     title: 'Plan',
     key: 'appPlan',
     width: 130,
-    sorter: (a, b) => planOrder[a.appPlan] - planOrder[b.appPlan],
-    filterOptions: [
-      { label: 'Pro Monthly', value: 'monthly' },
-      { label: 'Pro Annual', value: 'annual' },
-      { label: 'Lifetime', value: 'lifetime' },
-    ],
-    filterMultiple: true,
-    filter: (value, row) => row.appPlan === value,
+    sorter: (a, b) => (a.appPlan || '').localeCompare(b.appPlan || ''),
     render: (row) =>
-      h(
-        NTag,
-        { size: 'small', type: planTagTypes[row.appPlan], bordered: true },
-        { default: () => planLabels[row.appPlan] }
-      ),
+      h(NTag, { size: 'small', type: planTagTypes[row.appPlan], bordered: true }, { default: () => planLabels[row.appPlan] }),
   },
   {
     title: 'Status',
     key: 'status',
     width: 110,
-    sorter: (a, b) => a.status.localeCompare(b.status),
     render: (row) =>
-      h(NSpace, { size: 4 }, {
-        default: () => [
-          row.isBanned
-            ? h(NTag, { size: 'small', type: 'error' }, { default: () => 'Banned' })
-            : h(NTag, { size: 'small', type: row.status === 'active' ? 'success' : 'default' }, { default: () => row.status }),
-        ],
-      }),
+      row.isBanned
+        ? h(NTag, { size: 'small', type: 'error' }, { default: () => 'Banned' })
+        : h(NTag, { size: 'small', type: row.status === 'active' ? 'success' : 'default' }, { default: () => row.status }),
   },
   {
     title: 'Subs',
@@ -140,15 +127,10 @@ const columns: DataTableColumns<User> = [
     sorter: (a, b) => a.subscriptionCount - b.subscriptionCount,
   },
   {
-    title: 'Bank',
-    key: 'bankConnectionCount',
-    width: 70,
-    sorter: (a, b) => a.bankConnectionCount - b.bankConnectionCount,
-  },
-  {
     title: 'Expires',
     key: 'appPlanExpiresAt',
-    width: 115,
+    width: 120,
+    defaultSortOrder: 'descend',
     sorter: (a, b) => {
       const ta = a.appPlanExpiresAt ? new Date(a.appPlanExpiresAt).getTime() : 0
       const tb = b.appPlanExpiresAt ? new Date(b.appPlanExpiresAt).getTime() : 0
@@ -162,72 +144,24 @@ const columns: DataTableColumns<User> = [
   {
     title: 'Actions',
     key: 'actions',
-    width: 110,
+    width: 70,
     render: (row) =>
-      h(NSpace, { size: 4 }, {
-        default: () => [
-          h(NTooltip, null, {
-            trigger: () =>
-              h(NButton, { size: 'small', quaternary: true, onClick: () => router.push(`/users/${row.id}`) },
-                { icon: () => h(NIcon, null, { default: () => h(Edit) }) }),
-            default: () => 'Edit',
-          }),
-          h(NTooltip, null, {
-            trigger: () =>
-              h(NButton, {
-                size: 'small', quaternary: true,
-                loading: isResetting.value && resettingUserId.value === row.id,
-                onClick: () => handlePasswordReset(row.id, row.email),
-              }, { icon: () => h(NIcon, null, { default: () => h(Key) }) }),
-            default: () => 'Reset Password',
-          }),
-          h(NTooltip, null, {
-            trigger: () =>
-              h(NButton, {
-                size: 'small', quaternary: true, type: 'error',
-                loading: isDeleting.value && deletingUserId.value === row.id,
-                onClick: () => showDeleteModal(row.id, row.email),
-              }, { icon: () => h(NIcon, null, { default: () => h(TrashX) }) }),
-            default: () => 'Delete',
-          }),
-        ],
+      h(NTooltip, null, {
+        trigger: () =>
+          h(NButton, { size: 'small', quaternary: true, onClick: () => router.push(`/subscriptions/${row.id}`) },
+            { icon: () => h(NIcon, null, { default: () => h(Eye) }) }),
+        default: () => 'View',
       }),
   },
 ]
-
-async function handlePasswordReset(userId: string, email: string): Promise<void> {
-  resettingUserId.value = userId
-  await sendPasswordReset(userId, email)
-  resettingUserId.value = null
-}
-
-function showDeleteModal(userId: string, email: string): void {
-  userToDelete.value = { id: userId, email }
-  showDeleteConfirm.value = true
-}
-
-async function handleDeleteConfirm(): Promise<void> {
-  if (!userToDelete.value) return
-  deletingUserId.value = userToDelete.value.id
-  const success = await deleteUser(userToDelete.value.id, userToDelete.value.email)
-  if (success) await fetchUsers()
-  deletingUserId.value = null
-  showDeleteConfirm.value = false
-  userToDelete.value = null
-}
-
-function handleDeleteCancel(): void {
-  showDeleteConfirm.value = false
-  userToDelete.value = null
-}
 
 function exportCSV(): void {
   const escape = (v: unknown) => {
     const s = v == null ? '' : String(v)
     return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const headers: (keyof User)[] = ['id', 'displayName', 'email', 'status', 'appPlan', 'appPlanExpiresAt', 'subscriptionCount', 'bankConnectionCount', 'createdAt']
-  const rows = subscribedUsers.value.map((u) => headers.map(k => escape(u[k])).join(','))
+  const headers: (keyof User)[] = ['id', 'displayName', 'email', 'status', 'appPlan', 'appPlanExpiresAt', 'subscriptionCount', 'createdAt']
+  const rows = filteredUsers.value.map((u) => headers.map(k => escape(u[k])).join(','))
   const csv = [headers.join(','), ...rows].join('\n')
   const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -239,8 +173,5 @@ function exportCSV(): void {
   URL.revokeObjectURL(url)
 }
 
-onMounted(async () => {
-  await new Promise(resolve => setTimeout(resolve, 500))
-  fetchUsers()
-})
+onMounted(fetchUsers)
 </script>

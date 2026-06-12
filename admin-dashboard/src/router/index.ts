@@ -34,6 +34,26 @@ const router = createRouter({
           name: 'Subscriptions',
           component: () => import('@/views/Subscriptions.vue'),
         },
+        {
+          path: 'subscriptions/:userId',
+          name: 'SubscriptionDetail',
+          component: () => import('@/views/SubscriptionDetail.vue'),
+        },
+        {
+          path: 'admin-users',
+          name: 'AdminUsers',
+          component: () => import('@/views/AdminUsers.vue'),
+        },
+        {
+          path: 'admin-users/:adminId',
+          name: 'AdminDetail',
+          component: () => import('@/views/AdminDetail.vue'),
+        },
+        {
+          path: 'settings',
+          name: 'Settings',
+          component: () => import('@/views/Settings.vue'),
+        },
       ],
     },
   ],
@@ -44,7 +64,7 @@ router.beforeEach(async (to, _from, next) => {
 
   await authStore.waitForAuth()
 
-  if (to.meta.requiresAuth && (!authStore.isAuthenticated || !authStore.isSuperAdmin)) {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if (to.path === '/login' && authStore.isAuthenticated) {
     next('/')

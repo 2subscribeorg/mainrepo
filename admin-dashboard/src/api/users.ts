@@ -44,7 +44,7 @@ export const usersApi = {
     return res.data!
   },
 
-  async updateUser(userId: string, updates: { displayName?: string; status?: 'active' | 'inactive' }): Promise<void> {
+  async updateUser(userId: string, updates: { displayName?: string; status?: 'active' | 'inactive'; email?: string }): Promise<void> {
     await apiClient.patch(`/users/${userId}`, updates)
   },
 
@@ -81,4 +81,35 @@ export const usersApi = {
     )
     return data.data!
   },
+
+  async getUserSubscription(userId: string): Promise<SubscriptionDetails> {
+    const { data } = await apiClient.get<ApiResponse<SubscriptionDetails>>(`/users/${userId}/subscription`)
+    return data.data!
+  },
+
+  async cancelSubscription(userId: string): Promise<void> {
+    await apiClient.post(`/users/${userId}/cancel-subscription`)
+  },
+}
+
+export interface SubscriptionInvoice {
+  id: string
+  productId: string | null
+  amount: number
+  currency: string
+  type: string
+  status: string
+  autoRenews: boolean
+  purchasedAt: string | null
+  revenueCatUserId: string | null
+  transactionId: string
+}
+
+export interface SubscriptionDetails {
+  subscriptionStatus: string
+  subscriptionProductId: string | null
+  subscriptionExpiresAt: string | null
+  revenueCatUserId: string | null
+  pendingCancellation: boolean
+  invoices: SubscriptionInvoice[]
 }
