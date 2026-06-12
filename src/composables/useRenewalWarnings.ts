@@ -8,7 +8,7 @@ import type { ID } from '@/domain/models'
 import { bootstrapApp } from '@/config/bootstrap'
 
 export function useRenewalWarnings() {
-  const { user, userId } = useAuth()
+  const { userId } = useAuth()
   
   const warnings: Ref<RenewalWarning[]> = ref([])
   const loading = ref(false)

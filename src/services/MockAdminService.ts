@@ -249,7 +249,6 @@ export class MockAdminService {
       throw new Error('User not found')
     }
 
-    const user = this.users[userIndex]
     this.users.splice(userIndex, 1)
   }
 

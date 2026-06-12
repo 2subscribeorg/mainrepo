@@ -24,7 +24,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     }
   }
   
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(_publicToken: string): Promise<BankConnection> {
     // Simulate exchanging public token for connection
     await new Promise(resolve => setTimeout(resolve, 800))
     
@@ -88,12 +88,13 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
       accounts: mockAccounts,
       status: 'connected',
       lastSynced: new Date().toISOString(),
+      userId: 'mock-user',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
     this.connections.push(connection)
-    logger.debug('🏦 Mock bank connected:', randomBank.name, publicToken)
+    logger.debug(`🏦 Mock bank connected: ${randomBank.name}`)
     
     return connection
   }
@@ -104,7 +105,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     const index = this.connections.findIndex(c => c.id === connectionId)
     if (index !== -1) {
       const connection = this.connections[index]
-      logger.debug('🔌 Mock bank disconnected:', connection.institutionName)
+      logger.debug(`🔌 Mock bank disconnected: ${connection.institutionName}`)
       this.connections.splice(index, 1)
     }
   }
@@ -118,7 +119,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
       connection.accounts.forEach(account => {
         account.lastSynced = new Date().toISOString()
       })
-      logger.debug('🔄 Mock transactions synced for:', connection.institutionName)
+      logger.debug(`🔄 Mock transactions synced for: ${connection.institutionName}`)
     }
   }
   

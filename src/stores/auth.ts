@@ -108,7 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
   
   // Consolidated loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const loading = isLoading('auth')
 
   const isAuthenticated = computed(() => user.value !== null)
@@ -164,7 +164,7 @@ export const useAuthStore = defineStore('auth', () => {
     const auth = getFirebaseAuth()
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       try {
-        logger.debug('Auth state changed, firebaseUser:', firebaseUser ? firebaseUser.uid : 'null')
+        logger.debug(`Auth state changed, firebaseUser: ${firebaseUser ? firebaseUser.uid : 'null'}`)
         
         if (firebaseUser) {
           try {
@@ -216,7 +216,7 @@ export const useAuthStore = defineStore('auth', () => {
           
           // Resolve any pending promises waiting for this user
           // This MUST happen even if custom claims failed
-          logger.debug('Looking for resolver for user:', firebaseUser.uid)
+          logger.debug(`Looking for resolver for user: ${firebaseUser.uid}`)
           const resolver = authStateResolvers.get(firebaseUser.uid)
           if (resolver && user.value) {
             logger.debug('Resolver found, calling it with user data')

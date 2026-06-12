@@ -20,8 +20,6 @@ export const useTransactionsDataStore = defineStore('transactionsData', () => {
   
   // Real-time subscription
   let unsubscribe: (() => void) | null = null
-  let currentFilter: TransactionFilter | undefined = undefined
-  
   // Concurrency control for manual updates
   const pendingUpdates = new Map<string, Promise<void>>()
   const lastUpdateTimestamps = new Map<string, number>()
@@ -165,7 +163,6 @@ export const useTransactionsDataStore = defineStore('transactionsData', () => {
   function startListening(filter?: TransactionFilter) {
     if (unsubscribe) unsubscribe()
     
-    currentFilter = filter
     setLoading('transactionsData', true)
     error.value = null
     
@@ -180,7 +177,6 @@ export const useTransactionsDataStore = defineStore('transactionsData', () => {
       unsubscribe()
       unsubscribe = null
     }
-    currentFilter = undefined
   }
 
   function isRealtime(): boolean {

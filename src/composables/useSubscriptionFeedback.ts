@@ -3,12 +3,11 @@ import { logger } from '@/utils/logger'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsDataStore } from '@/stores/transactionsData'
-import { useCategoriesStore } from '@/stores/categories'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import { FirebaseSubscriptionFeedbackRepo } from '@/data/repo/firebase/FirebaseSubscriptionFeedbackRepo'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { secureStorage } from '@/utils/secureStorage'
-import type { Subscription, Category, SubscriptionFeedback } from '@/domain/models'
+import type { Subscription, SubscriptionFeedback } from '@/domain/models'
 
 interface RecordFeedbackParams {
   transactionId: string
@@ -43,7 +42,6 @@ export function useSubscriptionFeedback() {
   const { user } = useAuth()
   const subscriptionsStore = useSubscriptionsStore()
   const transactionsStore = useTransactionsDataStore()
-  const categoriesStore = useCategoriesStore()
   const { createCategory } = useCategoryManagement()
   const feedbackRepo = new FirebaseSubscriptionFeedbackRepo()
   
