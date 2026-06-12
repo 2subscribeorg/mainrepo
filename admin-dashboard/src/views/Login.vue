@@ -50,7 +50,7 @@ async function handleLogin(): Promise<void> {
 
     if (!success) {
       await authStore.logout()
-      message.error('Invalid credentials')
+      message.error('Access denied — not an admin account')
       return
     }
 
