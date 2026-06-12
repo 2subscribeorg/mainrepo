@@ -46,11 +46,9 @@ const rules = {
 async function handleLogin(): Promise<void> {
   loading.value = true
   try {
-    await authStore.login(formValue.value.email, formValue.value.password)
+    const success = await authStore.login(formValue.value.email, formValue.value.password)
 
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    if (!authStore.isSuperAdmin) {
+    if (!success) {
       await authStore.logout()
       message.error('Invalid credentials')
       return
@@ -59,7 +57,14 @@ async function handleLogin(): Promise<void> {
     message.success('Login successful')
     router.push('/')
   } catch (error: any) {
-    message.error('Invalid credentials')
+    const code = error?.code || ''
+    if (code === 'auth/too-many-requests') {
+      message.error('Account temporarily locked — too many failed attempts. Wait a few minutes or reset your password.')
+    } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      message.error('Email or password is incorrect')
+    } else {
+      message.error(error?.message || 'Login failed')
+    }
   } finally {
     loading.value = false
   }

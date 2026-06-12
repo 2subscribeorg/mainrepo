@@ -103,7 +103,7 @@ const usersError = ref('')
 const stats = ref<DashboardStats>({ totalUsers: 0, activeUsers: 0, usersWithSubscriptions: 0, usersWithBank: 0 })
 const recentUsers = ref<any[]>([])
 
-const userName = computed(() => authStore.user?.email?.split('@')[0] || 'Admin')
+const userName = computed(() => authStore.user?.displayName || authStore.user?.email?.split('@')[0] || 'Admin')
 
 const planLabels: Record<string, string> = {
   free: 'Free',
