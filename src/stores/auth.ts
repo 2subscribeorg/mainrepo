@@ -425,21 +425,22 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const auth = getFirebaseAuth()
         const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        
-        // Create user profile in Firestore
-        await createUserProfile(userCredential.user)
-        
-        // Send verification email if requested
+
         if (sendVerification) {
+          // Fire profile creation without awaiting — the Firestore write can be slow
+          // (up to 15s in some environments). The user profile will be created in the
+          // background; onAuthStateChanged will pick it up when the user next loads.
+          createUserProfile(userCredential.user).catch(() => { /* best-effort */ })
+
           const verificationResult = await emailVerificationService.sendVerificationEmail(userCredential.user)
           if (!verificationResult.success) {
             throw new Error(verificationResult.error || 'Failed to send verification email')
           }
-
-          // Keep the session active so the verification screen can reload/resend.
-          // Route guards prevent access to the app until emailVerified becomes true.
           return { success: true, needsVerification: true }
         }
+
+        // Create user profile in Firestore (non-verification path)
+        await createUserProfile(userCredential.user)
         
         // onAuthStateChanged fires immediately after createUserWithEmailAndPassword,
         // which means it may have already run BEFORE we get here (after awaiting
