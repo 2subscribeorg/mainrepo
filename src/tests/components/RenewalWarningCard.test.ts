@@ -23,7 +23,10 @@ describe('RenewalWarningCard', () => {
     recurrence: 'monthly',
     dueDate: '2024-03-15',
     daysUntilDue: 3,
+    warningThreshold: 5,
+    notificationSent: false,
     status: 'active',
+    expiresAt: '2024-03-16T00:00:00Z',
     createdAt: '2024-03-12T10:00:00Z',
     updatedAt: '2024-03-12T10:00:00Z',
   }
@@ -354,7 +357,7 @@ describe('RenewalWarningCard', () => {
       const pastDueWarning = { ...mockWarning, daysUntilDue: -2 }
 
       // Act
-      const wrapper = mount(RenewalWarningCard, {
+      mount(RenewalWarningCard, {
         props: { warning: pastDueWarning },
       })
 

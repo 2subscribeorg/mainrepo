@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
-import type { Category } from '@/domain/models'
+import type { Category as _Category } from '@/domain/models'
 
 // Mock stores to isolate the composable under test
 vi.mock('@/stores/categories')
@@ -423,7 +423,7 @@ describe('useCategoryManagement', () => {
       
       try {
         await createCategory(invalidData)
-      } catch (e) {
+      } catch {
         // Expected to throw
       }
       
@@ -443,7 +443,7 @@ describe('useCategoryManagement', () => {
       
       try {
         await createCategory(categoryData)
-      } catch (e) {
+      } catch {
         // Expected to throw
       }
       
@@ -508,7 +508,7 @@ describe('useCategoryManagement', () => {
       
       try {
         await createCategory(categoryData)
-      } catch (e) {
+      } catch {
         // Expected to fail
       }
       
@@ -525,7 +525,7 @@ describe('useCategoryManagement', () => {
       
       try {
         await createCategory(invalidData)
-      } catch (e) {
+      } catch {
         // Expected to fail
       }
       

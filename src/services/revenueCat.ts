@@ -126,7 +126,7 @@ class RevenueCatService {
     )
 
     if (shouldSendUpgradeInfo) {
-      options.storeProductChangeInfo = { oldProductIdentifier: activeCurrentProductId }
+      options.storeProductChangeInfo = { oldProductIdentifier: activeCurrentProductId as string }
     }
 
     const response = await Purchases.purchasePackage(options)
@@ -154,15 +154,28 @@ class RevenueCatService {
     const info = this._customerInfo.value
     if (!info) return
 
-  hasProAccess(): boolean {
-    return this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.isActive ?? false
+    const entitlement = info.entitlements.active?.[ENTITLEMENT_ID]
+    this._customerInfo.value = {
+      ...info,
+      entitlements: {
+        ...info.entitlements,
+        active: {
+          ...info.entitlements.active,
+          [ENTITLEMENT_ID]: {
+            ...entitlement,
+            willRenew: false,
+            isActive: false,
+            unsubscribeDetectedAt: new Date().toISOString(),
+            unsubscribeDetectedAtMillis: Date.now(),
+          },
+        },
+      },
+    }
+    this.saveToStorage()
   }
 
-  async restorePurchases(): Promise<CustomerInfo> {
-    const { customerInfo } = await Purchases.restorePurchases()
-    this._customerInfo.value = mapCustomerInfo(customerInfo)
-    this.saveToStorage()
-    return this._customerInfo.value!
+  hasProAccess(): boolean {
+    return this._customerInfo.value?.entitlements.active[ENTITLEMENT_ID]?.isActive ?? false
   }
 
   async fetchTransactionHistory(): Promise<PurchaseTransaction[]> {
@@ -220,7 +233,7 @@ class RevenueCatService {
 
       return transactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     } catch {
-    return []
+      return []
     }
   }
 

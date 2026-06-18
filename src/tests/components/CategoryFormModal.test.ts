@@ -1,5 +1,4 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
 import { mountModal } from '@/tests/helpers/modalTestUtils'
 import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'
 
@@ -26,11 +25,6 @@ describe('CategoryFormModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
-
-  // Helper to mount modal with props
-  const createWrapper = (props: any) => {
-    return mountModal(CategoryFormModal, props)
-  }
 
   describe('Rendering', () => {
     test('shows modal when show prop is true', () => {
@@ -559,7 +553,7 @@ describe('CategoryFormModal', () => {
 
       // Assert
       const nameInput = wrapper.find('#category-name')
-      expect(nameInput.element.value).toBe('')
+      expect((nameInput.element as HTMLInputElement).value).toBe('')
     })
 
     test('handles form data with all fields populated', () => {
@@ -583,7 +577,7 @@ describe('CategoryFormModal', () => {
 
       // Assert
       const nameInput = wrapper.find('#category-name')
-      expect(nameInput.element.value).toBe('Entertainment')
+      expect((nameInput.element as HTMLInputElement).value).toBe('Entertainment')
     })
 
     test('handles multiple validation errors', () => {

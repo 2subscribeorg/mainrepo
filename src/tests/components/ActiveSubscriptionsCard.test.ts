@@ -153,7 +153,8 @@ describe('ActiveSubscriptionsCard.vue', () => {
 
       validProps.forEach(props => {
         expect(() => {
-          mount(ActiveSubscriptionsCard, { props })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          mount(ActiveSubscriptionsCard, { props: props as any })
         }).not.toThrow()
       })
     })

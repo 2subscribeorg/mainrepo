@@ -8,7 +8,8 @@ vi.mock('@/services/PatternDetector')
 
 describe('SubscriptionDetectionService', () => {
   let service: SubscriptionDetectionService
-  let mockPatternDetector: vi.Mocked<typeof PatternDetector>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockPatternDetector: any
 
   beforeEach(() => {
     vi.clearAllMocks()
