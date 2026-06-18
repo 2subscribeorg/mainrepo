@@ -1,7 +1,13 @@
 <template>
   <div class="min-h-screen bg-background flex items-center justify-center p-4">
     <div class="w-full max-w-md">
-      <div class="bg-surface rounded-2xl shadow-xl p-8">
+      <!-- Loading state while Firebase auth restores -->
+      <div v-if="isLoading" class="flex flex-col items-center gap-4">
+        <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p class="text-text-secondary text-sm">Loading...</p>
+      </div>
+
+      <div v-else class="bg-surface rounded-2xl shadow-xl p-8">
         <div class="text-center mb-6">
           <div class="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,13 +62,14 @@
       </div>
     </div>
   </div>
+
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
-import { signOut as firebaseSignOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
 import { emailVerificationService } from '@/services/EmailVerificationService'
 
 const router = useRouter()
@@ -73,9 +80,11 @@ const message = ref('')
 const messageType = ref<'success' | 'error' | ''>('')
 const isChecking = ref(false)
 const isResending = ref(false)
+const isLoading = ref(true)
 const cooldownSeconds = ref(0)
 
 let cooldownInterval: number | null = null
+let unsubscribeAuth: (() => void) | null = null
 
 const messageClass = computed(() => {
   if (messageType.value === 'success') {
@@ -167,22 +176,29 @@ function startCooldown() {
 }
 
 onMounted(() => {
-  const user = auth.currentUser
-  if (!user) {
-    router.push('/login')
-    return
-  }
+  // Use onAuthStateChanged so this works on hard refresh too
+  unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    isLoading.value = false
 
-  userEmail.value = user.email || ''
+    if (!user) {
+      router.push('/login')
+      return
+    }
 
-  if (user.emailVerified) {
-    router.push('/')
-  }
+    userEmail.value = user.email || ''
+
+    if (user.emailVerified) {
+      router.push('/')
+    }
+  })
 })
 
 onUnmounted(() => {
   if (cooldownInterval) {
     clearInterval(cooldownInterval)
+  }
+  if (unsubscribeAuth) {
+    unsubscribeAuth()
   }
 })
 </script>
