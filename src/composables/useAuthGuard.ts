@@ -146,7 +146,7 @@ export async function requireVerifyEmailRoute(
 }
 
 export async function redirectIfAuthenticated(
-  to: RouteLocationNormalized,
+  _to: RouteLocationNormalized,
   _from: RouteLocationNormalized,
   next: NavigationGuardNext
 ) {
@@ -161,14 +161,17 @@ export async function redirectIfAuthenticated(
 
   if (isAuthenticated.value) {
     if (isEmailVerificationRequired()) {
-      try {
-        const auth = getFirebaseAuth()
-        if (auth.currentUser && !auth.currentUser.emailVerified && to.path !== '/verify-email') {
-          next('/verify-email')
-          return
-        }
-      } catch {
-        // Firebase not ready, fall back to the store auth state below.
+      // Use store's emailVerified (set by onAuthStateChanged — always available
+      // after waitForInitialAuthCheck resolves). Fall back to firebaseAuth.currentUser
+      // if the store object doesn't have it for some reason.
+      const storeUser = authStore.user
+      const isVerified = storeUser?.emailVerified ?? (() => {
+        try { return getFirebaseAuth().currentUser?.emailVerified ?? false } catch { return false }
+      })()
+
+      if (!isVerified) {
+        next('/verify-email')
+        return
       }
     }
 
