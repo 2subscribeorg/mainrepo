@@ -29,6 +29,9 @@
 
       <div class="pricing-section">
         <h3>Upgrade to Premium</h3>
+        <div v-if="availablePlans.length === 0" class="empty-plans">
+          No RevenueCat packages are available. Check the public SDK key and current offering in RevenueCat.
+        </div>
         <div class="pricing-cards">
           <div
             v-for="plan in availablePlans"
@@ -53,6 +56,9 @@
             </button>
           </div>
         </div>
+        <button @click="restorePurchases" :disabled="actionInProgress" class="btn-secondary-action">
+          {{ actionInProgress ? 'Refreshing...' : 'Restore / Renew Purchases' }}
+        </button>
       </div>
     </div>
 
@@ -64,7 +70,13 @@
             <span class="status-badge status-active">Active</span>
           </div>
           <div class="subscription-actions">
-            <button :disabled="actionInProgress" class="btn-cancel" @click="cancelSubscription">
+            <button @click="restorePurchases" :disabled="actionInProgress" class="btn-secondary-action">
+              {{ actionInProgress ? 'Refreshing...' : 'Restore / Renew' }}
+            </button>
+            <button @click="manageSubscription" :disabled="actionInProgress" class="btn-secondary-action">
+              Manage / Pause
+            </button>
+            <button @click="cancelSubscription" :disabled="actionInProgress" class="btn-cancel">
               {{ actionInProgress ? 'Processing...' : 'Cancel Subscription' }}
             </button>
           </div>
@@ -81,14 +93,21 @@
           </div>
         </div>
 
-        <div v-if="alternatePlan" class="upgrade-section">
+        <div v-if="switchablePlans.length > 0" class="upgrade-section">
           <p class="upgrade-text">
-            Upgrade to <strong>{{ alternatePlan.name }}</strong> —
-            {{ formatCurrency(alternatePlan.price) }}{{ alternatePlan.interval === 'lifetime' ? ' one-time' : `/${alternatePlan.interval}` }}
+            Change your billing cycle or switch to another available RevenueCat package.
           </p>
-          <button :disabled="purchasing" class="btn-upgrade" @click="purchase(alternatePlan.id)">
-            {{ purchasing ? 'Processing...' : `Upgrade to ${alternatePlan.name}` }}
-          </button>
+          <div class="plan-switch-actions">
+            <button
+              v-for="plan in switchablePlans"
+              :key="plan.id"
+              @click="purchase(plan.id)"
+              :disabled="purchasing"
+              class="btn-upgrade"
+            >
+              {{ purchasing ? 'Processing...' : `${planSwitchLabel(plan)} ${plan.name}` }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -176,13 +195,11 @@ const showHistory = ref(false)
 const isPro = billingService.isProReactive
 const currentPlan = billingService.activePlan
 
-const alternatePlan = computed(() => {
+const switchablePlans = computed(() => {
   const active = currentPlan.value
-  if (!active) return null
+  if (!active) return []
   const paidPlans = billingService.getPricingPlans().filter(p => p.id !== 'free')
-  const currentIndex = paidPlans.findIndex(p => p.id === active.id)
-  if (currentIndex === -1 || currentIndex === paidPlans.length - 1) return null
-  return paidPlans[currentIndex + 1]
+  return paidPlans.filter(p => p.id !== active.id)
 })
 
 const availablePlans = computed(() =>
@@ -217,6 +234,14 @@ function formatProductName(productId: string): string {
   return billingService.getPricingPlans().find(p => p.id === productId)?.name ?? productId
 }
 
+function planSwitchLabel(plan: { price: number }): string {
+  const active = currentPlan.value
+  if (!active) return 'Switch to'
+  if (plan.price > active.price) return 'Upgrade to'
+  if (plan.price < active.price) return 'Downgrade to'
+  return 'Switch to'
+}
+
 onMounted(initialize)
 
 async function initialize(): Promise<void> {
@@ -245,6 +270,7 @@ async function purchase(planId: string): Promise<void> {
     const result = await billingService.purchase(planId)
     if (result.success) {
       successMessage.value = 'Subscription updated successfully!'
+      await reloadBillingState()
       setTimeout(() => { successMessage.value = null }, 5000)
     } else {
       error.value = result.error ?? 'Purchase failed'
@@ -261,14 +287,58 @@ async function cancelSubscription(): Promise<void> {
   try {
     actionInProgress.value = true
     error.value = null
-    await billingService.cancelSubscription()
-    successMessage.value = 'Subscription cancelled successfully'
+    const result = await billingService.cancelSubscription()
+    successMessage.value = result.openedManagement
+      ? 'Opened store subscription management. Return to the app after cancelling or pausing.'
+      : 'Subscription cancelled successfully'
     setTimeout(() => { successMessage.value = null }, 5000)
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to cancel subscription'
   } finally {
     actionInProgress.value = false
   }
+}
+
+async function manageSubscription(): Promise<void> {
+  if (actionInProgress.value) return
+  try {
+    actionInProgress.value = true
+    error.value = null
+    const opened = await billingService.openSubscriptionManagement()
+    successMessage.value = opened
+      ? 'Opened store subscription management.'
+      : 'No store management link is available for this subscription.'
+    setTimeout(() => { successMessage.value = null }, 5000)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to open subscription management'
+  } finally {
+    actionInProgress.value = false
+  }
+}
+
+async function restorePurchases(): Promise<void> {
+  if (actionInProgress.value) return
+  try {
+    actionInProgress.value = true
+    error.value = null
+    const result = await billingService.restorePurchases()
+    if (result.success) {
+      successMessage.value = 'Purchases refreshed successfully.'
+      await reloadBillingState()
+      setTimeout(() => { successMessage.value = null }, 5000)
+    } else {
+      error.value = result.error ?? 'No active purchase was found.'
+    }
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to restore purchases'
+  } finally {
+    actionInProgress.value = false
+  }
+}
+
+async function reloadBillingState(): Promise<void> {
+  await billingService.refreshSubscriptionStatus()
+  transactions.value = await revenueCat.fetchTransactionHistory()
 }
 </script>
 
@@ -535,7 +605,27 @@ async function cancelSubscription(): Promise<void> {
 .subscription-actions {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
+
+.btn-secondary-action {
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(31, 41, 55, 0.16);
+}
+
+.btn-secondary-action:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-secondary-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-cancel {
   flex: 1;
@@ -564,6 +654,22 @@ async function cancelSubscription(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.plan-switch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.empty-plans {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  padding: 1rem;
 }
 
 .upgrade-text {

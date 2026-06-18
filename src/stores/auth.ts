@@ -494,6 +494,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const auth = getFirebaseAuth()
         await signOut(auth)
+        await revenueCat.logOut()
         user.value = null
       } catch (e) {
         // SECURITY: Never expose Firebase error messages
@@ -711,6 +712,7 @@ export const useAuthStore = defineStore('auth', () => {
       await deleteUser(currentUser)
       
       // Clear local state
+      await revenueCat.logOut()
       user.value = null
       
         return { success: true, message: 'Account deleted successfully' }
