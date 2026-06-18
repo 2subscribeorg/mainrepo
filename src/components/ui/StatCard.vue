@@ -14,7 +14,7 @@ interface Props {
   value: string
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 // Use animation utilities
 const { animateEntrance } = useAnimations()

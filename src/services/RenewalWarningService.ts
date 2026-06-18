@@ -6,11 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL
 
 class RenewalWarningService {
   private async getAuthToken(): Promise<string> {
-    try {
-      return await getFirebaseAuthToken()
-    } catch (error) {
-      throw error
-    }
+    return await getFirebaseAuthToken()
   }
 
   private async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {

@@ -10,7 +10,7 @@
 
     <div v-else-if="error" class="error-banner">
       <p>{{ error }}</p>
-      <button @click="initialize" class="btn-retry">Retry</button>
+      <button class="btn-retry" @click="initialize">Retry</button>
     </div>
 
     <div v-if="isPro" class="pro-badge-banner">
@@ -48,7 +48,7 @@
                 <span class="checkmark">✓</span> {{ feature }}
               </li>
             </ul>
-            <button @click="purchase(plan.id)" :disabled="purchasing" class="btn-subscribe">
+            <button :disabled="purchasing" class="btn-subscribe" @click="purchase(plan.id)">
               {{ purchasing ? 'Processing...' : 'Subscribe' }}
             </button>
           </div>
@@ -64,7 +64,7 @@
             <span class="status-badge status-active">Active</span>
           </div>
           <div class="subscription-actions">
-            <button @click="cancelSubscription" :disabled="actionInProgress" class="btn-cancel">
+            <button :disabled="actionInProgress" class="btn-cancel" @click="cancelSubscription">
               {{ actionInProgress ? 'Processing...' : 'Cancel Subscription' }}
             </button>
           </div>
@@ -86,7 +86,7 @@
             Upgrade to <strong>{{ alternatePlan.name }}</strong> —
             {{ formatCurrency(alternatePlan.price) }}{{ alternatePlan.interval === 'lifetime' ? ' one-time' : `/${alternatePlan.interval}` }}
           </p>
-          <button @click="purchase(alternatePlan.id)" :disabled="purchasing" class="btn-upgrade">
+          <button :disabled="purchasing" class="btn-upgrade" @click="purchase(alternatePlan.id)">
             {{ purchasing ? 'Processing...' : `Upgrade to ${alternatePlan.name}` }}
           </button>
         </div>

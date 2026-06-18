@@ -29,7 +29,7 @@ export class PasswordResetService {
         success: true,
         message: result?.data?.message || 'If an account exists for this email, a password reset link has been sent.',
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         message: 'If an account exists for this email, a password reset link has been sent.',

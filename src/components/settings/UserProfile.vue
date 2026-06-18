@@ -19,10 +19,10 @@
 
       <!-- Logout Button -->
       <button
-        @click="handleLogout"
         :disabled="loading"
         class="sign-out-button"
         title="Sign out"
+        @click="handleLogout"
       >
         <span v-if="loading">...</span>
         <span v-else>Sign Out</span>

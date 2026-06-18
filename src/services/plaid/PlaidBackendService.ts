@@ -36,7 +36,7 @@ export class PlaidBackendService {
     
     try {
       return await user.getIdToken()
-    } catch (error) {
+    } catch {
       throw new Error('Failed to get authentication token')
     }
   }

@@ -12,7 +12,7 @@
           {{ errorMessage }}
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label for="email" class="block text-sm font-medium text-text-secondary mb-1">Email</label>
             <input
@@ -52,14 +52,14 @@
         </form>
 
         <div class="mt-4 text-center text-sm text-text-secondary">
-          <button @click="$emit('forgot-password')" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="$emit('forgot-password')">
             Forgot password?
           </button>
         </div>
 
         <div class="mt-2 text-center text-sm text-text-secondary">
           Don't have an account?
-          <button @click="$emit('switch-to-signup')" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="$emit('switch-to-signup')">
             Sign up
           </button>
         </div>
@@ -79,7 +79,7 @@
           {{ errorMessage }}
         </div>
 
-        <form @submit.prevent="handleMfaSubmit" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleMfaSubmit">
           <div>
             <label for="otp" class="block text-sm font-medium text-text-secondary mb-1">Verification code</label>
             <input
@@ -107,7 +107,7 @@
         </form>
 
         <div class="mt-4 text-center text-sm text-text-secondary">
-          <button @click="resetToCredentials" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="resetToCredentials">
             Back to sign in
           </button>
         </div>

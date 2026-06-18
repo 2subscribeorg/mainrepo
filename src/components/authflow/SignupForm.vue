@@ -22,7 +22,7 @@
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="handleSubmit">
       <!-- Email Input -->
       <div>
         <label for="signup-email" class="block text-sm font-medium text-text-secondary mb-1">
@@ -93,9 +93,9 @@
     <div class="mt-4 text-center text-sm text-text-secondary">
       Already have an account?
       <button
-        @click="$emit('switch-to-login')"
         class="text-primary hover:text-primary/90 font-medium"
         type="button"
+        @click="$emit('switch-to-login')"
       >
         Sign in
       </button>

@@ -3,5 +3,5 @@ export function isEmailVerificationRequired(): boolean {
     return false
   }
 
-  return import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION !== 'false'
+  return import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION === 'true'
 }

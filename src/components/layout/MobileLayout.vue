@@ -98,7 +98,6 @@ import UserProfile from '@/components/settings/UserProfile.vue'
 import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
 import RenewalWarningModal from '@/components/RenewalWarningModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
-import { useAuthStore } from '@/stores/auth'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 
 interface NavLink {
@@ -107,7 +106,7 @@ interface NavLink {
   badge?: string
 }
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     title?: string
     subtitle?: string
@@ -128,7 +127,6 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 
 // Renewal warnings

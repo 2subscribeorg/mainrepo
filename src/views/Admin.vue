@@ -219,7 +219,7 @@ onMounted(async () => {
       adminStore.fetchRules(),
       categoriesStore.fetchAll(),
     ])
-  } catch (error) {
+  } catch {
     // Handle error gracefully - individual store operations may have their own error handling
   }
 })

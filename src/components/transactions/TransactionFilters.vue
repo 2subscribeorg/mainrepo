@@ -2,8 +2,8 @@
   <div ref="containerRef" class="flex flex-wrap items-center gap-3 fade-in">
     <select 
       :value="selectedAccount" 
-      @change="handleAccountChange"
       class="filter-select input-animated"
+      @change="handleAccountChange"
     >
       <option value="">All Accounts</option>
       <option v-for="account in accounts" :key="account.id" :value="account.id">
@@ -13,17 +13,17 @@
 
     <select 
       :value="subscriptionFilter" 
-      @change="handleSubscriptionFilterChange"
       class="filter-select input-animated"
+      @change="handleSubscriptionFilterChange"
     >
       <option value="all">All Transactions</option>
       <option value="subscriptions">Subscription Transactions</option>
     </select>
     
     <button 
-      @click="handleButtonClick($event, () => $emit('refresh'))"
       :disabled="loading"
       class="action-button btn-animated gpu-accelerated"
+      @click="handleButtonClick($event, () => $emit('refresh'))"
     >
       {{ loading ? 'Loading...' : 'Refresh' }}
     </button>

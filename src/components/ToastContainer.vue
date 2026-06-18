@@ -18,16 +18,16 @@
           <div class="flex items-center gap-2">
             <button
               v-if="toast.action"
-              @click="handleAction(toast)"
               class="px-3 py-1 text-sm font-semibold rounded-lg transition-colors duration-150"
               :class="actionButtonClasses(toast.type)"
+              @click="handleAction(toast)"
             >
               {{ toast.action.label }}
             </button>
             
             <button
-              @click="dismiss(toast.id)"
               class="p-1 rounded-lg hover:bg-gray-100 transition-colors duration-150"
+              @click="dismiss(toast.id)"
             >
               <X :size="16" class="text-gray-500" />
             </button>

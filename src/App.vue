@@ -1,13 +1,13 @@
 <template>
   <ErrorBoundaryWithRecovery 
-    @error="handleGlobalError"
-    @retry="handleRetry"
-    @recovered="handleRecovery"
     :enable-auto-retry="true"
     :max-retries="3"
     :retry-strategy="'exponential'"
     :enable-partial-recovery="true"
     component="Application"
+    @error="handleGlobalError"
+    @retry="handleRetry"
+    @recovered="handleRecovery"
   >
     <div>
       <!-- Skip to main content link for keyboard users -->
@@ -33,7 +33,7 @@
       <div v-if="globalError && isDevelopment" class="global-error-toast">
         <div class="error-content">
           <span>⚠️ {{ globalError.message }}</span>
-          <button @click="clearGlobalError" class="close-button">×</button>
+          <button class="close-button" @click="clearGlobalError">×</button>
         </div>
       </div>
       
@@ -41,7 +41,7 @@
       <div v-if="showRecoveryNotification" class="recovery-notification">
         <div class="recovery-content">
           <span>✅ Application recovered successfully!</span>
-          <button @click="showRecoveryNotification = false" class="close-button">×</button>
+          <button class="close-button" @click="showRecoveryNotification = false">×</button>
         </div>
       </div>
     </div>
@@ -58,7 +58,6 @@ import OfflineBanner from '@/components/ui/OfflineBanner.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
-import { useNetworkStatus } from '@/composables/useNetworkStatus'
 import { App } from '@capacitor/app'
 import { revenueCat } from '@/services/revenueCat'
 import { notificationScheduler } from '@/services/NotificationScheduler'
@@ -82,7 +81,7 @@ onError((errorReport) => {
   }
 })
 
-function handleGlobalError(error: Error, errorInfo: any) {
+function handleGlobalError(error: Error) {
   reportError(error, 'Global', window.location.pathname)
 }
 

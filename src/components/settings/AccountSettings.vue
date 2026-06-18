@@ -54,7 +54,7 @@
       <!-- Change Email Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Email</h4>
-        <form @submit.prevent="handleChangeEmail" class="space-y-3" novalidate>
+        <form class="space-y-3" novalidate @submit.prevent="handleChangeEmail">
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               New Email
@@ -95,7 +95,7 @@
       <!-- Change Password Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Password</h4>
-        <form @submit.prevent="handleChangePassword" class="space-y-3" novalidate>
+        <form class="space-y-3" novalidate @submit.prevent="handleChangePassword">
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Current Password
@@ -179,8 +179,8 @@
           v-if="exportStatus !== 'ready' && exportStatus !== 'saved'"
           type="button"
           :disabled="exportStatus === 'loading'"
-          @click="prepareExport"
           class="w-full bg-surface-elevated border border-border-light text-text-primary py-2 px-4 rounded-md hover:bg-surface-elevated/80 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+          @click="prepareExport"
         >
           <span v-if="exportStatus === 'loading'">Preparing your data...</span>
           <span v-else>Export My Data (CSV)</span>
@@ -190,8 +190,8 @@
         <button
           v-if="exportStatus === 'ready'"
           type="button"
-          @click="triggerDownload"
           class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 font-medium transition-colors"
+          @click="triggerDownload"
         >
           Save File
         </button>
@@ -226,7 +226,7 @@ import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/f
 import { useDataExport } from '@/composables/useDataExport'
 
 const { userEmail, updateEmail, updatePassword, loading } = useAuth()
-const { prepareExport, triggerDownload, status: exportStatus, error: exportError, savedPath } = useDataExport()
+const { prepareExport, triggerDownload, status: exportStatus, error: exportError } = useDataExport()
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 

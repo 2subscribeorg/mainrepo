@@ -14,7 +14,7 @@
           </p>
         </div>
 
-        <form v-if="!submitted" @submit.prevent="handleSubmit" class="space-y-4">
+        <form v-if="!submitted" class="space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label class="block text-sm font-medium text-text-primary mb-1">Email address</label>
             <input

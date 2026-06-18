@@ -20,7 +20,7 @@
       </div>
 
       <!-- Form -->
-      <form v-if="!successMessage" @submit.prevent="handleSubmit" class="space-y-4">
+      <form v-if="!successMessage" class="space-y-4" @submit.prevent="handleSubmit">
       <!-- Email Input -->
       <div>
         <label for="reset-email" class="block text-sm font-medium text-text-secondary mb-1">
@@ -55,9 +55,9 @@
     <!-- Back to Login -->
     <div class="mt-4 text-center text-sm text-text-secondary">
       <button
-        @click="$emit('back-to-login')"
         class="text-primary hover:text-primary/90 font-medium"
         type="button"
+        @click="$emit('back-to-login')"
       >
         ← Back to Sign In
       </button>

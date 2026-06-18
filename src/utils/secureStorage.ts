@@ -124,7 +124,7 @@ class SecureStorage {
       ].join('|')
       
       return btoa(fingerprint).slice(0, 32)
-    } catch (error) {
+    } catch {
       // Fallback to simple fingerprint
       return btoa(navigator.userAgent + Date.now()).slice(0, 32)
     }

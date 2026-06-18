@@ -48,7 +48,7 @@
       </div>
 
       <template v-if="enrollStep === 'phone'">
-        <form @submit.prevent="handleSendCode" class="space-y-3">
+        <form class="space-y-3" @submit.prevent="handleSendCode">
           <div>
             <label for="phone" class="block text-sm font-medium text-text-secondary mb-1">
               Phone number
@@ -79,7 +79,7 @@
         <p class="text-sm text-text-secondary mb-3">
           Enter the 6-digit code sent to <span class="font-medium text-text-primary">{{ phoneNumber }}</span>.
         </p>
-        <form @submit.prevent="handleVerifyCode" class="space-y-3">
+        <form class="space-y-3" @submit.prevent="handleVerifyCode">
           <div>
             <label for="enroll-otp" class="block text-sm font-medium text-text-secondary mb-1">
               Verification code

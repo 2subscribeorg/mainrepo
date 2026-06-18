@@ -44,10 +44,10 @@
       </div>
 
       <div class="modal-actions">
-        <button @click="$emit('cancel')" class="btn-secondary">
+        <button class="btn-secondary" @click="$emit('cancel')">
           Keep Subscription
         </button>
-        <button @click="confirmCancel" class="btn-danger">
+        <button class="btn-danger" @click="confirmCancel">
           {{ immediate ? 'Cancel Now' : 'Cancel at Period End' }}
         </button>
       </div>
@@ -63,7 +63,7 @@ interface Props {
   subscription: Subscription | null
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<{
   cancel: []
   confirm: [immediate: boolean]

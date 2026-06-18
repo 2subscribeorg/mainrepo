@@ -20,7 +20,7 @@ const subscriptionAmountSchema = z.number()
 const merchantNameSchema = z.string()
   .min(1, "Merchant name is required")
   .max(100, "Merchant name too long (max: 100 characters)")
-  .regex(/^[a-zA-Z0-9\s\-_.,&()[\]'"\/]+$/, "Invalid characters in merchant name")
+  .regex(/^[a-zA-Z0-9\s\-_.,&()[\]'"/]+$/, "Invalid characters in merchant name")
 
 const subscriptionStatusSchema = z.enum(['active', 'cancelled', 'paused', 'expired'])
 const subscriptionFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'one-time'])
@@ -76,7 +76,7 @@ const categorySchema = z.object({
 
 const transactionSchema = z.object({
   amount: z.number().finite().max(999999999),
-  merchantName: z.string().min(1).max(200).regex(/^[a-zA-Z0-9\s\-_.,&()[\]'"\/]+$/),
+  merchantName: z.string().min(1).max(200).regex(/^[a-zA-Z0-9\s\-_.,&()[\]'"/]+$/),
   date: transactionDateSchema,
   categoryId: z.string().max(128).optional(),
   userId: z.string().min(1).max(128),

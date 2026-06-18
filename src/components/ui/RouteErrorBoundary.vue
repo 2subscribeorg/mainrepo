@@ -7,13 +7,13 @@
         <p>{{ errorMessage }}</p>
         
         <div class="route-actions">
-          <button @click="goBack" class="action-button back-button">
+          <button class="action-button back-button" @click="goBack">
             ← Go Back
           </button>
-          <button @click="goHome" class="action-button home-button">
+          <button class="action-button home-button" @click="goHome">
             🏠 Home
           </button>
-          <button @click="retry" class="action-button retry-button">
+          <button class="action-button retry-button" @click="retry">
             🔄 Retry
           </button>
         </div>

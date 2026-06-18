@@ -122,7 +122,7 @@ export class PatternBuilder {
       case 'biweekly':
         date.setDate(date.getDate() + 14)
         break
-      case 'monthly':
+      case 'monthly': {
         // Handle month-end dates properly
         const currentDay = date.getDate()
         date.setMonth(date.getMonth() + 1)
@@ -131,6 +131,7 @@ export class PatternBuilder {
           date.setDate(0)  // Go to last day of previous month
         }
         break
+      }
       case 'quarterly':
         date.setMonth(date.getMonth() + 3)
         break

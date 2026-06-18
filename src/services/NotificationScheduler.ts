@@ -35,7 +35,7 @@ class NotificationSchedulerService {
     if (!this.isAvailable) return
     try {
       await LocalNotifications.requestPermissions()
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
   }
 
   async scheduleRenewalReminder(sub: Subscription): Promise<void> {
@@ -59,14 +59,14 @@ class NotificationSchedulerService {
           schedule: { at },
         }],
       })
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
   }
 
   async cancelRenewalReminder(subscriptionId: string): Promise<void> {
     if (!this.isAvailable) return
     try {
       await LocalNotifications.cancel({ notifications: [{ id: hashId('sub', subscriptionId) }] })
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
   }
 
   async scheduleBankExpiryWarning(connection: BankConnection): Promise<void> {
@@ -84,14 +84,14 @@ class NotificationSchedulerService {
           schedule: { at },
         }],
       })
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
   }
 
   async cancelBankExpiryWarning(connectionId: string): Promise<void> {
     if (!this.isAvailable) return
     try {
       await LocalNotifications.cancel({ notifications: [{ id: hashId('bank', connectionId) }] })
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
   }
 
   async rescheduleAll(subscriptions: Subscription[], connections: BankConnection[]): Promise<void> {
@@ -101,7 +101,7 @@ class NotificationSchedulerService {
       if (pending.length > 0) {
         await LocalNotifications.cancel({ notifications: pending })
       }
-    } catch {}
+    } catch { /* best-effort: notifications are non-critical */ }
 
     await Promise.all([
       ...subscriptions

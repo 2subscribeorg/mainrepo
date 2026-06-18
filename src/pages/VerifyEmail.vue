@@ -25,24 +25,24 @@
           </p>
 
           <button
-            @click="checkVerification"
             :disabled="isChecking"
             class="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            @click="checkVerification"
           >
             {{ isChecking ? 'Checking...' : "I've Verified My Email" }}
           </button>
 
           <button
-            @click="resendEmail"
             :disabled="isResending || cooldownSeconds > 0"
             class="w-full bg-surface-elevated text-text-primary py-3 rounded-xl font-semibold hover:bg-surface-elevated/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            @click="resendEmail"
           >
             {{ resendButtonText }}
           </button>
 
           <button
-            @click="signOut"
             class="w-full text-text-secondary py-2 text-sm hover:text-text-primary transition-colors"
+            @click="signOut"
           >
             Sign Out
           </button>
@@ -145,7 +145,7 @@ async function signOut() {
   try {
     await firebaseSignOut(auth)
     router.push('/login')
-  } catch (error) {
+  } catch {
     // Sign out error
   }
 }

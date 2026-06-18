@@ -1,4 +1,8 @@
-import type { User } from 'firebase/auth'
+import {
+  sendEmailVerification,
+  type ActionCodeSettings,
+  type User,
+} from 'firebase/auth'
 
 export interface EmailVerificationConfig {
   continueUrl?: string
@@ -11,37 +15,19 @@ export interface EmailVerificationResult {
 }
 
 export class EmailVerificationService {
-  private readonly baseUrl = import.meta.env.VITE_BACKEND_API_URL
-
   async sendVerificationEmail(
     user: User,
     config?: EmailVerificationConfig
   ): Promise<EmailVerificationResult> {
     try {
-      const token = await user.getIdToken()
-
-      const response = await fetch(`${this.baseUrl}/auth/email-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          continueUrl: config?.continueUrl,
-          handleCodeInApp: config?.handleCodeInApp,
-        }),
-      })
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => null)
-        throw new Error(result?.error?.message || 'Failed to send verification email')
-      }
+      const actionCodeSettings = this.getActionCodeSettings(config)
+      await sendEmailVerification(user, actionCodeSettings)
 
       return { success: true }
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to send verification email',
+        error: this.getErrorMessage(error),
       }
     }
   }
@@ -54,9 +40,44 @@ export class EmailVerificationService {
     try {
       await user.reload()
       return user.emailVerified
-    } catch (error) {
+    } catch {
       return false
     }
+  }
+
+  private getActionCodeSettings(config?: EmailVerificationConfig): ActionCodeSettings | undefined {
+    if (!config?.continueUrl) {
+      return undefined
+    }
+
+    return {
+      url: config.continueUrl,
+      handleCodeInApp: config.handleCodeInApp,
+    }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    const code = typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code)
+      : ''
+
+    if (code === 'auth/too-many-requests') {
+      return 'Too many verification emails were requested. Please try again later.'
+    }
+
+    if (code === 'auth/network-request-failed') {
+      return 'Network error. Please check your connection and try again.'
+    }
+
+    if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
+      return 'Verification link configuration is invalid. Please contact support.'
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message
+    }
+
+    return 'Failed to send verification email'
   }
 }
 
