@@ -63,7 +63,7 @@ async function handleLogin(): Promise<void> {
     } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
       message.error('Email or password is incorrect')
     } else {
-      message.error(error?.message || 'Login failed')
+      message.error('Login failed. Please check your credentials and try again.')
     }
   } finally {
     loading.value = false

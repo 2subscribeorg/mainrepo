@@ -19,7 +19,7 @@ export function useUserActions() {
       if (msg.includes('active subscriptions')) {
         message.error('Cannot delete user: they have active subscriptions that must be cancelled first')
       } else {
-        message.error(msg)
+        message.error('Failed to delete user')
       }
       return false
     } finally {
@@ -36,7 +36,7 @@ export function useUserActions() {
       return true
     } catch (err: any) {
       console.error('❌ Password reset error:', err)
-      message.error(err.response?.data?.error?.message || err.message || 'Failed to send password reset')
+      message.error('Failed to send password reset')
       return false
     } finally {
       isResetting.value = false

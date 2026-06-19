@@ -167,7 +167,7 @@ async function saveProfile() {
     originalDisplayName.value = profileForm.value.displayName.trim()
     message.success('Profile updated')
   } catch (err: any) {
-    message.error(err?.response?.data?.error?.message || 'Failed to update profile')
+    message.error('Failed to update profile')
   } finally {
     profileSaving.value = false
   }
@@ -208,7 +208,7 @@ async function changePassword() {
     } else if (code === 'auth/too-many-requests') {
       passwordError.value = 'Too many attempts. Please try again later'
     } else {
-      passwordError.value = err?.message || 'Failed to change password'
+      passwordError.value = 'Failed to change password'
     }
   } finally {
     passwordSaving.value = false
@@ -341,7 +341,7 @@ async function changeEmail() {
     } else if (code === 'auth/too-many-requests') {
       emailError.value = 'Too many attempts. Please try again later'
     } else {
-      emailError.value = err?.message || 'Failed to change email'
+      emailError.value = 'Failed to change email'
     }
   } finally {
     emailSaving.value = false

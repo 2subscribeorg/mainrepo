@@ -228,9 +228,10 @@ function handleDeleteCancel(): void {
 function exportCSV(): void {
   const escape = (v: unknown) => {
     const s = v == null ? '' : String(v)
-    return s.includes(',') || s.includes('"') || s.includes('\n')
-      ? `"${s.replace(/"/g, '""')}"`
-      : s
+    const sanitized = /^[=+\-@\t]|[\r\n]/.test(s) ? `'${s}` : s
+    return sanitized.includes(',') || sanitized.includes('"') || sanitized.includes('\n')
+      ? `"${sanitized.replace(/"/g, '""')}"`
+      : sanitized
   }
   const headers: (keyof User)[] = ['id', 'displayName', 'email', 'status', 'appPlan', 'subscriptionCount', 'bankConnectionCount', 'createdAt', 'lastLogin']
   const rows = users.value.map((u) => headers.map(h => escape(u[h])).join(','))

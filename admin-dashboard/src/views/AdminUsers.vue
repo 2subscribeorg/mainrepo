@@ -268,7 +268,7 @@ async function load() {
   try {
     admins.value = await superAdminsApi.list()
   } catch (err: any) {
-    message.error(err?.response?.data?.error?.message || 'Failed to load admin users')
+    message.error('Failed to load admin users')
   } finally {
     loading.value = false
   }
@@ -303,7 +303,7 @@ async function submitForm() {
     message.success(`Admin ${form.value.email} created`)
     showModal.value = false
   } catch (err: any) {
-    modalError.value = err?.response?.data?.error?.message || err?.message || 'Operation failed'
+    modalError.value = 'Operation failed'
   } finally {
     submitting.value = false
   }
@@ -319,7 +319,7 @@ async function confirmDelete() {
     showDeleteConfirm.value = false
     deleteTarget.value = null
   } catch (err: any) {
-    message.error(err?.response?.data?.error?.message || 'Failed to delete admin')
+    message.error('Failed to delete admin')
   } finally {
     deleting.value = false
   }

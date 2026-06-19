@@ -206,7 +206,7 @@ async function save() {
     }
     message.success('Admin updated')
   } catch (err: any) {
-    saveError.value = err?.response?.data?.error?.message || err?.message || 'Failed to save changes'
+    saveError.value = 'Failed to save changes'
   } finally {
     saving.value = false
   }

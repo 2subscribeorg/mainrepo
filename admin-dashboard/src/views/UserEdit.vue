@@ -227,7 +227,7 @@ async function save() {
     }
     message.success('User updated')
   } catch (err: any) {
-    message.error(err?.response?.data?.error?.message || 'Failed to update user')
+    message.error('Failed to update user')
   } finally {
     saving.value = false
   }
@@ -284,7 +284,7 @@ async function handleDelete() {
     message.success('User deleted')
     router.push('/users')
   } catch (err: any) {
-    message.error(err?.response?.data?.error?.message || 'Failed to delete user')
+    message.error('Failed to delete user')
   } finally {
     deleting.value = false
     showDeleteModal.value = false
