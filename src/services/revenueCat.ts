@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { CustomerInfo } from '@/types/billing'
-import { PACKAGE_TYPE, Purchases } from '@revenuecat/purchases-capacitor'
+import { LOG_LEVEL, PACKAGE_TYPE, Purchases } from '@revenuecat/purchases-capacitor'
 import type { PurchasePackageOptions } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { Browser } from '@capacitor/browser'
@@ -72,6 +72,10 @@ class RevenueCatService {
         }
       } else {
         await Purchases.configure({ apiKey, appUserID: userId })
+        // Enable verbose logs in dev builds so offerings/purchase errors show in Logcat
+        if (import.meta.env.DEV) {
+          await Purchases.setLogLevel({ level: LOG_LEVEL.VERBOSE }).catch(() => {})
+        }
         ;({ customerInfo } = await Purchases.getCustomerInfo())
       }
 
