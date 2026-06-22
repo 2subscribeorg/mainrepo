@@ -45,6 +45,12 @@ function isActiveSubscriptionProduct(info: CustomerInfo | null, productId?: stri
 class RevenueCatService {
   private _customerInfo = ref<CustomerInfo | null>(null)
   private configuredUserId: string | null = null
+  private _onConfiguredCallbacks: Array<() => void> = []
+
+  /** Register a callback that fires once after RevenueCat is configured. */
+  onConfigured(cb: () => void) {
+    this._onConfiguredCallbacks.push(cb)
+  }
 
   constructor() {
     this.loadFromStorage()
@@ -82,6 +88,9 @@ class RevenueCatService {
       this.configuredUserId = userId
       this._customerInfo.value = mapCustomerInfo(customerInfo)
       this.saveToStorage()
+      // Notify listeners (e.g. billingService) that RC is now ready to serve offerings.
+      const cbs = this._onConfiguredCallbacks.splice(0)
+      cbs.forEach(cb => cb())
     } catch (error: unknown) {
       console.error('RevenueCat configuration error:', error)
     }

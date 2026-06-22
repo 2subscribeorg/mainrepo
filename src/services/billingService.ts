@@ -72,6 +72,15 @@ class BillingService {
   private _activePlanId = ref<string | null>(localStorage.getItem(ACTIVE_PLAN_KEY))
   private _plans = ref<PricingPlan[]>([FREE_PLAN])
 
+  constructor() {
+    // When RevenueCat finishes configuring (after user login), reload offerings
+    // so the subscription screen shows plans without needing a manual retry.
+    revenueCat.onConfigured(() => {
+      this.initialized = false
+      this.initialize().catch(() => {})
+    })
+  }
+
   get activePlanId() {
     return this._activePlanId
   }
@@ -101,7 +110,9 @@ class BillingService {
   }
 
   async initialize(): Promise<void> {
-    if (this.initialized) return
+    // Re-run if not yet initialized OR if we still only have the free plan
+    // (means offerings failed on first call, e.g. RC not yet configured).
+    if (this.initialized && this._plans.value.length > 1) return
     await Promise.all([this.loadOfferings(), this.syncActivePlanFromRC()])
     this.initialized = true
   }
@@ -206,17 +217,24 @@ class BillingService {
 
   private async loadOfferings(): Promise<void> {
     try {
+      const { isConfigured } = await Purchases.isConfigured().catch(() => ({ isConfigured: false }))
+      if (!isConfigured) {
+        console.warn('[BillingService] RevenueCat not yet configured — skipping getOfferings. Will retry when subscription screen opens.')
+        return
+      }
       const offerings = await Purchases.getOfferings()
       const packages = offerings?.current?.availablePackages ?? []
-      if (!packages.length) return
-
+      if (!packages.length) {
+        console.warn('[BillingService] RevenueCat returned 0 packages. Check that a "Current" offering with packages is set in the RevenueCat dashboard.')
+        return
+      }
       const rcPlans = packages
         .map(packageToPlan)
         .sort((a, b) => a.price - b.price)
-
       this._plans.value = [FREE_PLAN, ...rcPlans]
-    } catch {
-      // RC unavailable (web/emulator) — plans stay as [FREE_PLAN]
+      console.log('[BillingService] Loaded', rcPlans.length, 'plan(s) from RevenueCat:', rcPlans.map(p => p.id).join(', '))
+    } catch (err) {
+      console.warn('[BillingService] getOfferings failed:', err)
     }
   }
 
