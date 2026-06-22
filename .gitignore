@@ -68,3 +68,7 @@ coverage/
 
 # Backend (deployed separately on Railway)
 backend/
+
+# Android signing keystore — never commit this
+*.jks
+*.keystore
