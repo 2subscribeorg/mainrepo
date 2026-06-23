@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  updateEmail as firebaseUpdateEmail,
+  verifyBeforeUpdateEmail,
   updatePassword as firebaseUpdatePassword,
   onAuthStateChanged,
   reauthenticateWithCredential,
@@ -586,15 +586,11 @@ export const useAuthStore = defineStore('auth', () => {
         const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
         await reauthenticateWithCredential(currentUser, credential)
         
-        // Update email
-        await firebaseUpdateEmail(currentUser, newEmail)
-        
-        // Update user state
-        if (user.value) {
-          user.value.email = newEmail
-        }
-        
-        return { success: true, message: 'Email updated successfully' }
+        // Send verification to new email — the change only takes effect after the user
+        // clicks the link in that email (Firebase verifyBeforeUpdateEmail).
+        await verifyBeforeUpdateEmail(currentUser, newEmail)
+
+        return { success: true, message: 'Verification email sent to your new address. Your email will be updated once you click the link.' }
       } catch (e) {
         // SECURITY: Never expose Firebase error messages
         const secureMessage = getSecureAuthMessage(e)

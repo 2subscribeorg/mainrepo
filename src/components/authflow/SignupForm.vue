@@ -72,10 +72,15 @@
           required
           autocomplete="new-password"
           placeholder="••••••••"
-          class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+          :class="confirmPasswordError ? 'border-error-border' : 'border-border-light'"
           :disabled="loading"
-          @input="validateConfirmPassword"
+          @input="onConfirmPasswordInput"
+          @blur="onConfirmPasswordInput"
         />
+        <p v-if="confirmPasswordError" class="mt-1 text-xs text-error-text">
+          {{ confirmPasswordError }}
+        </p>
       </div>
 
       <!-- Submit Button -->
@@ -128,6 +133,7 @@ const password = ref('')
 const confirmPassword = ref('')
 const errorMessage = ref<string | null>(null)
 const validationErrors = ref<string[]>([])
+const confirmPasswordError = ref<string | null>(null)
 
 // Validation
 function validateEmail() {
@@ -147,6 +153,10 @@ function validateConfirmPassword() {
     return 'Passwords do not match'
   }
   return null
+}
+
+function onConfirmPasswordInput() {
+  confirmPasswordError.value = validateConfirmPassword()
 }
 
 function validateForm(): boolean {

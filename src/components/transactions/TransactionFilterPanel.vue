@@ -73,18 +73,20 @@
           <input
             :value="filters.dateRange?.start || ''"
             type="date"
-            :max="todayDate"
+            :max="filters.dateRange?.end || todayDate"
             class="filter-input flex-1 input-animated"
             @input="updateDateRange('start', ($event.target as HTMLInputElement).value)"
           />
           <input
             :value="filters.dateRange?.end || ''"
             type="date"
+            :min="filters.dateRange?.start || ''"
             :max="todayDate"
             class="filter-input flex-1 input-animated"
             @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
           />
         </div>
+        <p v-if="dateRangeError" class="mt-1 text-xs text-red-600">{{ dateRangeError }}</p>
       </div>
 
       <!-- Amount Range -->
@@ -313,6 +315,8 @@ onMounted(() => {
 // Get today's date in YYYY-MM-DD format for max date validation
 const todayDate = new Date().toISOString().split('T')[0]
 
+const dateRangeError = ref<string | null>(null)
+
 const selectedCategories = computed(() => new Set(props.filters.categories || []))
 
 // Category filtering - KISS: show top 8, rest in modal
@@ -340,6 +344,13 @@ const containerClasses = computed(() => {
 function updateDateRange(type: 'start' | 'end', value: string) {
   const current = props.filters.dateRange || { start: '', end: '' }
   const updated = { ...current, [type]: value }
+
+  const { start, end } = updated
+  if (start && end && end < start) {
+    dateRangeError.value = 'End date must be on or after the start date'
+    return
+  }
+  dateRangeError.value = null
   emit('update:dateRange', updated)
 }
 

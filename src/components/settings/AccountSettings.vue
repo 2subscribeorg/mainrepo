@@ -135,9 +135,15 @@
               type="password"
               required
               placeholder="••••••••"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+              class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+              :class="passwordMismatchError ? 'border-error-border' : 'border-border-light'"
               :disabled="loading"
+              @input="onConfirmNewPasswordInput"
+              @blur="onConfirmNewPasswordInput"
             />
+            <p v-if="passwordMismatchError" class="mt-1 text-xs text-error-text">
+              New Password and Confirm New Password must be the same
+            </p>
           </div>
           <button
             type="submit"
@@ -238,10 +244,15 @@ const emailCurrentPassword = ref('')
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmNewPassword = ref('')
+const passwordMismatchError = ref(false)
 
 // Messages
 const successMessage = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
+
+function onConfirmNewPasswordInput() {
+  passwordMismatchError.value = !!(newPassword.value && confirmNewPassword.value && newPassword.value !== confirmNewPassword.value)
+}
 
 async function handleChangeEmail() {
   successMessage.value = null
