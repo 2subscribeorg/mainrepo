@@ -28,15 +28,30 @@
       <div v-if="errorMessage" class="mb-3 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm">
         {{ errorMessage }}
       </div>
-      <button
-        type="button"
-        :disabled="loading"
-        class="w-full border border-error-border text-error-text py-2 px-4 rounded-md hover:bg-error-bg/50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-        @click="handleDisable"
-      >
-        <span v-if="loading">Disabling...</span>
-        <span v-else>Disable 2FA</span>
-      </button>
+      <form class="space-y-3" @submit.prevent="handleDisable">
+        <div>
+          <label for="disable-password" class="block text-sm font-medium text-text-secondary mb-1">
+            Current password
+          </label>
+          <input
+            id="disable-password"
+            v-model="disablePassword"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Confirm your password"
+            class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+            :disabled="loading"
+          />
+        </div>
+        <button
+          type="submit"
+          :disabled="loading || !disablePassword"
+          class="w-full border border-error-border text-error-text py-2 px-4 rounded-md hover:bg-error-bg/50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+        >
+          <span v-if="loading">Disabling...</span>
+          <span v-else>Disable 2FA</span>
+        </button>
+      </form>
     </template>
 
     <template v-else>
@@ -50,6 +65,20 @@
       <template v-if="enrollStep === 'phone'">
         <form class="space-y-3" @submit.prevent="handleSendCode">
           <div>
+            <label for="enroll-password" class="block text-sm font-medium text-text-secondary mb-1">
+              Current password
+            </label>
+            <input
+              id="enroll-password"
+              v-model="currentPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Confirm your password"
+              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+              :disabled="loading"
+            />
+          </div>
+          <div>
             <label for="phone" class="block text-sm font-medium text-text-secondary mb-1">
               Phone number
             </label>
@@ -57,16 +86,16 @@
               id="phone"
               v-model="phoneNumber"
               type="tel"
-              placeholder="+447700900000"
+              placeholder="+919985520424"
               autocomplete="tel"
               class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
               :disabled="loading"
             />
-            <p class="mt-1 text-xs text-text-muted">Include country code, e.g. +44 for UK.</p>
+            <p class="mt-1 text-xs text-text-muted">Include country code, e.g. +91 for India.</p>
           </div>
           <button
             type="submit"
-            :disabled="loading || !phoneNumber.trim()"
+            :disabled="loading || !canSendCode"
             class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <span v-if="loading">Sending code...</span>
@@ -77,7 +106,7 @@
 
       <template v-else-if="enrollStep === 'otp'">
         <p class="text-sm text-text-secondary mb-3">
-          Enter the 6-digit code sent to <span class="font-medium text-text-primary">{{ phoneNumber }}</span>.
+          Enter the 6-digit code sent to <span class="font-medium text-text-primary">{{ normalizedPhoneNumber }}</span>.
         </p>
         <form class="space-y-3" @submit.prevent="handleVerifyCode">
           <div>
@@ -99,7 +128,7 @@
           </div>
           <button
             type="submit"
-            :disabled="loading || otp.length < 6"
+            :disabled="loading || otp.trim().length < 6"
             class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <span v-if="loading">Verifying...</span>
@@ -108,7 +137,8 @@
           <button
             type="button"
             class="w-full text-sm text-text-secondary hover:text-text-primary transition-colors"
-            @click="resetEnrollment"
+            :disabled="loading"
+            @click="resetEnrollment()"
           >
             Use a different number
           </button>
@@ -126,9 +156,17 @@ import { useAuth } from '@/composables/useAuth'
 import { createRecaptchaVerifier } from '@/config/firebase'
 import type { RecaptchaVerifier } from 'firebase/auth'
 
-const { sendMfaEnrollmentCode, completeMfaEnrollment, unenrollMfa, getMfaEnrolledFactors } = useAuth()
+const {
+  reauthenticate,
+  sendMfaEnrollmentCode,
+  completeMfaEnrollment,
+  unenrollMfa,
+  getMfaEnrolledFactors,
+} = useAuth()
 
 const enrollStep = ref<'phone' | 'otp'>('phone')
+const currentPassword = ref('')
+const disablePassword = ref('')
 const phoneNumber = ref('')
 const otp = ref('')
 const loading = ref(false)
@@ -138,46 +176,77 @@ const recaptchaContainer = ref<HTMLElement | null>(null)
 let recaptchaVerifier: RecaptchaVerifier | null = null
 
 const enrolledFactors = ref(getMfaEnrolledFactors())
-
 const isEnrolled = computed(() => enrolledFactors.value.length > 0)
+const normalizedPhoneNumber = computed(() => phoneNumber.value.trim().replace(/\s+/g, ''))
+const canSendCode = computed(() => currentPassword.value.length > 0 && isValidPhoneNumber(normalizedPhoneNumber.value))
 
 const maskedPhoneNumber = computed(() => {
   const hint = enrolledFactors.value[0]
   const phone = (hint as any)?.phoneNumber as string | undefined
   if (!phone) return 'your phone'
-  return phone.replace(/(\+\d{1,3})\d+(\d{4})$/, '$1•••••$2')
+  return phone.replace(/(\+\d{1,3})\d+(\d{4})$/, '$1*****$2')
 })
+
+function isValidPhoneNumber(value: string) {
+  return /^\+[1-9]\d{7,14}$/.test(value)
+}
 
 function refreshEnrolledFactors() {
   enrolledFactors.value = getMfaEnrolledFactors()
 }
 
+function clearRecaptcha() {
+  recaptchaVerifier?.clear()
+  recaptchaVerifier = null
+}
+
+async function confirmRecentLogin(password: string) {
+  const result = await reauthenticate(password)
+  if (!result.success) {
+    errorMessage.value = result.message || 'Please confirm your password before changing two-factor authentication.'
+    return false
+  }
+  return true
+}
+
 onMounted(refreshEnrolledFactors)
 
-onUnmounted(() => {
-  recaptchaVerifier?.clear()
-})
+onUnmounted(clearRecaptcha)
 
 async function handleSendCode() {
   errorMessage.value = null
-  if (!phoneNumber.value.trim()) return
+  successMessage.value = null
+
+  if (!currentPassword.value) {
+    errorMessage.value = 'Enter your current password before enabling 2FA.'
+    return
+  }
+
+  if (!isValidPhoneNumber(normalizedPhoneNumber.value)) {
+    errorMessage.value = 'Enter a valid phone number with country code, e.g. +919985520424.'
+    return
+  }
+
   loading.value = true
   try {
+    const isFreshLogin = await confirmRecentLogin(currentPassword.value)
+    if (!isFreshLogin) return
+
     if (!recaptchaContainer.value) throw new Error('reCAPTCHA container not ready')
-    recaptchaVerifier?.clear()
+    clearRecaptcha()
     recaptchaVerifier = createRecaptchaVerifier(recaptchaContainer.value)
-    const { success, error } = await sendMfaEnrollmentCode(phoneNumber.value.trim(), recaptchaVerifier)
+
+    const { success, error } = await sendMfaEnrollmentCode(normalizedPhoneNumber.value, recaptchaVerifier)
     if (success) {
       enrollStep.value = 'otp'
+      successMessage.value = 'Verification code sent.'
     } else {
       errorMessage.value = error
-      recaptchaVerifier?.clear()
-      recaptchaVerifier = null
+      clearRecaptcha()
     }
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to send code'
-    recaptchaVerifier?.clear()
-    recaptchaVerifier = null
+    clearRecaptcha()
   } finally {
     loading.value = false
   }
@@ -185,17 +254,29 @@ async function handleSendCode() {
 
 async function handleVerifyCode() {
   errorMessage.value = null
+  successMessage.value = null
+
+  const code = otp.value.trim()
+  if (code.length < 6) {
+    errorMessage.value = 'Enter the 6-digit verification code.'
+    return
+  }
+
   loading.value = true
   try {
-    const { success, error } = await completeMfaEnrollment(otp.value)
+    const { success, error } = await completeMfaEnrollment(code)
     if (success) {
       successMessage.value = 'Two-factor authentication enabled.'
+      currentPassword.value = ''
       refreshEnrolledFactors()
-      resetEnrollment()
+      resetEnrollment({ clearMessages: false })
     } else {
       errorMessage.value = error
       otp.value = ''
     }
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Invalid verification code'
+    otp.value = ''
   } finally {
     loading.value = false
   }
@@ -204,11 +285,21 @@ async function handleVerifyCode() {
 async function handleDisable() {
   errorMessage.value = null
   successMessage.value = null
+
+  if (!disablePassword.value) {
+    errorMessage.value = 'Enter your current password before disabling 2FA.'
+    return
+  }
+
   loading.value = true
   try {
+    const isFreshLogin = await confirmRecentLogin(disablePassword.value)
+    if (!isFreshLogin) return
+
     const { success, error } = await unenrollMfa()
     if (success) {
       successMessage.value = 'Two-factor authentication disabled.'
+      disablePassword.value = ''
       refreshEnrolledFactors()
     } else {
       errorMessage.value = error
@@ -218,11 +309,14 @@ async function handleDisable() {
   }
 }
 
-function resetEnrollment() {
+function resetEnrollment(options: { clearMessages?: boolean } = {}) {
   enrollStep.value = 'phone'
+  phoneNumber.value = ''
   otp.value = ''
-  errorMessage.value = null
-  recaptchaVerifier?.clear()
-  recaptchaVerifier = null
+  if (options.clearMessages !== false) {
+    errorMessage.value = null
+    successMessage.value = null
+  }
+  clearRecaptcha()
 }
 </script>

@@ -757,6 +757,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function sendMfaChallengeCode(appVerifier: ApplicationVerifier): Promise<void> {
     if (!pendingMfaResolver.value) throw new Error('No pending MFA challenge')
+    pendingMfaVerificationId.value = null
     const auth = getFirebaseAuth()
     const phoneAuthProvider = new PhoneAuthProvider(auth)
     const verificationId = await phoneAuthProvider.verifyPhoneNumber(
@@ -799,6 +800,7 @@ export const useAuthStore = defineStore('auth', () => {
     const auth = getFirebaseAuth()
     const currentUser = auth.currentUser
     if (!currentUser) throw new Error('No authenticated user')
+    pendingEnrollVerificationId.value = null
 
     const multiFactorUser = multiFactor(currentUser)
     const session = await multiFactorUser.getSession()
@@ -853,6 +855,7 @@ export const useAuthStore = defineStore('auth', () => {
     signIn,
     signUp,
     logout,
+    reauthenticate,
     sendPasswordReset,
     changeEmail,
     changePassword,

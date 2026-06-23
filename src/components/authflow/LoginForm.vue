@@ -35,7 +35,7 @@
               type="password"
               required
               autocomplete="current-password"
-              placeholder="••••••••"
+              placeholder="Password"
               class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
               :disabled="loading"
             />
@@ -69,7 +69,8 @@
         <h2 class="text-2xl font-bold mb-2 text-text-primary">Verify your identity</h2>
         <p class="text-sm text-text-secondary mb-6">
           <span v-if="mfaSending">Sending code to your phone...</span>
-          <span v-else>Enter the verification code sent to your phone.</span>
+          <span v-else-if="mfaCodeSent">Enter the verification code sent to your phone.</span>
+          <span v-else>Send a verification code to continue.</span>
         </p>
 
         <div
@@ -92,13 +93,13 @@
               autocomplete="one-time-code"
               placeholder="123456"
               class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary tracking-widest text-center text-lg"
-              :disabled="loading || mfaSending"
+              :disabled="loading || mfaSending || !mfaCodeSent"
             />
           </div>
 
           <button
             type="submit"
-            :disabled="loading || mfaSending || otp.length < 6"
+            :disabled="loading || mfaSending || !mfaCodeSent || otp.length < 6"
             class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             <span v-if="loading">Verifying...</span>
@@ -106,7 +107,15 @@
           </button>
         </form>
 
-        <div class="mt-4 text-center text-sm text-text-secondary">
+        <div class="mt-4 text-center text-sm text-text-secondary space-y-2">
+          <button
+            class="text-primary hover:text-primary/90 font-medium transition-colors block w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            :disabled="loading || mfaSending"
+            @click="sendSmsChallenge"
+          >
+            {{ mfaCodeSent ? 'Resend code' : 'Send verification code' }}
+          </button>
           <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="resetToCredentials">
             Back to sign in
           </button>
@@ -141,6 +150,7 @@ const password = ref('')
 const otp = ref('')
 const errorMessage = ref<string | null>(null)
 const mfaSending = ref(false)
+const mfaCodeSent = ref(false)
 const recaptchaContainer = ref<HTMLElement | null>(null)
 let recaptchaVerifier: RecaptchaVerifier | null = null
 
@@ -152,22 +162,36 @@ async function handleSubmit() {
     router.push('/')
   } else if (result.mfaRequired) {
     step.value = 'mfa'
+    mfaCodeSent.value = false
     await sendSmsChallenge()
   } else {
     errorMessage.value = result.error || 'Failed to sign in'
   }
 }
 
+function clearRecaptcha() {
+  recaptchaVerifier?.clear()
+  recaptchaVerifier = null
+}
+
 async function sendSmsChallenge() {
   mfaSending.value = true
   errorMessage.value = null
+  mfaCodeSent.value = false
   try {
     if (!recaptchaContainer.value) throw new Error('reCAPTCHA container not ready')
+    clearRecaptcha()
     recaptchaVerifier = createRecaptchaVerifier(recaptchaContainer.value)
     const { success, error } = await sendMfaChallengeCode(recaptchaVerifier)
-    if (!success) errorMessage.value = error
+    if (success) {
+      mfaCodeSent.value = true
+    } else {
+      errorMessage.value = error
+      clearRecaptcha()
+    }
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to send verification code'
+    clearRecaptcha()
   } finally {
     mfaSending.value = false
   }
@@ -188,13 +212,11 @@ function resetToCredentials() {
   step.value = 'credentials'
   otp.value = ''
   errorMessage.value = null
-  recaptchaVerifier?.clear()
-  recaptchaVerifier = null
+  mfaCodeSent.value = false
+  clearRecaptcha()
 }
 
-onUnmounted(() => {
-  recaptchaVerifier?.clear()
-})
+onUnmounted(clearRecaptcha)
 </script>
 
 <style scoped>
