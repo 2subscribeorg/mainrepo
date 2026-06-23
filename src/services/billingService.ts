@@ -128,6 +128,11 @@ class BillingService {
       return { success: false, error: plan ? 'Cannot purchase free plan' : 'Invalid plan ID' }
     }
 
+    // Prevent duplicate purchase of already active plan
+    if (this._activePlanId.value === planId && revenueCat.hasProAccess()) {
+      return { success: false, error: 'You are already subscribed to this plan.' }
+    }
+
     try {
       await revenueCat.refreshSubscriptionStatus()
 
@@ -163,16 +168,25 @@ class BillingService {
   }
 
   async cancelSubscription(): Promise<{ openedManagement: boolean }> {
-    const hasManagementUrl = !!revenueCat.customerInfo.value?.managementURL
-    await revenueCat.revokeProAccess()
+    const managementOpened = await revenueCat.openSubscriptionManagement()
 
-    if (!hasManagementUrl) {
-      this._activePlanId.value = null
-      localStorage.removeItem(ACTIVE_PLAN_KEY)
-      await this.recordCancellation()
+    if (managementOpened) {
+      // User is redirected to the store's subscription management page.
+      // Do NOT flip local state — the subscription is still active until they cancel there.
+      return { openedManagement: true }
     }
 
-    return { openedManagement: hasManagementUrl }
+    // No management URL (sandbox / sideloaded APK): record the cancellation request
+    // on the backend but do NOT optimistically revoke — let RC confirm on next refresh.
+    try {
+      await this.recordCancellation()
+    } catch {
+      // Best-effort — proceed even if backend is unavailable
+    }
+    // Refresh RC state so the UI reflects whatever RC currently says
+    await revenueCat.refreshSubscriptionStatus()
+    await this.syncActivePlanFromRC()
+    return { openedManagement: false }
   }
 
   async openSubscriptionManagement(): Promise<boolean> {
