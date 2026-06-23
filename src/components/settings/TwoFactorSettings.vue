@@ -91,7 +91,7 @@
               class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
               :disabled="loading"
             />
-            <p class="mt-1 text-xs text-text-muted">Include country code, e.g. +91 for India.</p>
+            <p class="mt-1 text-xs text-text-muted">Include country code, e.g. +91 for India. SMS delivery requires the Firebase billing plan to be enabled.</p>
           </div>
           <button
             type="submit"
@@ -213,6 +213,27 @@ onMounted(refreshEnrolledFactors)
 
 onUnmounted(clearRecaptcha)
 
+function mapMfaError(e: unknown): string {
+  const code = (e as any)?.code as string | undefined
+  switch (code) {
+    case 'auth/requires-recent-login':
+      return 'Your session has expired. Please sign out and sign back in, then try again.'
+    case 'auth/invalid-phone-number':
+      return 'Invalid phone number. Make sure to include the country code, e.g. +919985520424.'
+    case 'auth/quota-exceeded':
+      return 'SMS quota exceeded. Please try again later or use a test number.'
+    case 'auth/captcha-check-failed':
+    case 'auth/recaptcha-not-enabled':
+      return 'reCAPTCHA verification failed. On a physical device, make sure the SHA-1 fingerprint is registered in Firebase Console.'
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a few minutes before trying again.'
+    case 'auth/network-request-failed':
+      return 'Network error. Check your internet connection and try again.'
+    default:
+      return e instanceof Error ? e.message : 'Failed to send code. Please try again.'
+  }
+}
+
 async function handleSendCode() {
   errorMessage.value = null
   successMessage.value = null
@@ -239,13 +260,13 @@ async function handleSendCode() {
     const { success, error } = await sendMfaEnrollmentCode(normalizedPhoneNumber.value, recaptchaVerifier)
     if (success) {
       enrollStep.value = 'otp'
-      successMessage.value = 'Verification code sent.'
+      successMessage.value = `Verification code sent to ${normalizedPhoneNumber.value}.`
     } else {
-      errorMessage.value = error
+      errorMessage.value = error || 'Failed to send code.'
       clearRecaptcha()
     }
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to send code'
+    errorMessage.value = mapMfaError(e)
     clearRecaptcha()
   } finally {
     loading.value = false
@@ -275,7 +296,14 @@ async function handleVerifyCode() {
       otp.value = ''
     }
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Invalid verification code'
+    const code = (e as any)?.code as string | undefined
+    if (code === 'auth/invalid-verification-code') {
+      errorMessage.value = 'Incorrect code. Please check the SMS and try again.'
+    } else if (code === 'auth/code-expired') {
+      errorMessage.value = 'Code has expired. Go back and request a new one.'
+    } else {
+      errorMessage.value = e instanceof Error ? e.message : 'Invalid verification code.'
+    }
     otp.value = ''
   } finally {
     loading.value = false
