@@ -93,14 +93,26 @@
         </n-form-item>
 
         <n-form-item label="Password" path="password">
-          <n-input v-model:value="form.password" type="password" placeholder="Initial password (min 8 chars)" show-password-on="click" />
+          <n-input v-model:value="form.password" type="password" placeholder="Min. 12 characters" show-password-on="click" />
         </n-form-item>
+
+        <!-- Live password strength checklist -->
+        <div v-if="form.password.length > 0" style="margin-top: -8px; margin-bottom: 4px; display: flex; flex-direction: column; gap: 4px;">
+          <div
+            v-for="rule in passwordChecks"
+            :key="rule.label"
+            :style="{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: rule.met ? '#18a058' : '#999' }"
+          >
+            <span>{{ rule.met ? '✓' : '○' }}</span>
+            <span>{{ rule.label }}</span>
+          </div>
+        </div>
       </n-form>
 
       <template #footer>
         <n-space justify="end">
           <n-button :disabled="submitting" @click="showModal = false">Cancel</n-button>
-          <n-button type="primary" :loading="submitting" @click="submitForm">Create Admin</n-button>
+          <n-button type="primary" :loading="submitting" :disabled="!isPasswordValid" @click="submitForm">Create Admin</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -122,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { ref, h, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, NTag, NButton, NSpace, NIcon, NTooltip, NEllipsis, type FormInst, type FormRules } from 'naive-ui'
 import { Eye, TrashX, UserPlus } from '@vicons/tabler'
@@ -149,6 +161,21 @@ const deleting = ref(false)
 
 const form = ref({ email: '', displayName: '', password: '', permissions: [] as string[] })
 
+const passwordChecks = computed(() => [
+  { label: 'At least 12 characters',  met: form.value.password.length >= 12 },
+  { label: 'One capital letter (A–Z)', met: /[A-Z]/.test(form.value.password) },
+  { label: 'One number (0–9)',         met: /[0-9]/.test(form.value.password) },
+  { label: 'One special character',   met: /[^A-Za-z0-9]/.test(form.value.password) },
+])
+
+const isPasswordValid = computed(() => passwordChecks.value.every(r => r.met))
+
+function validatePasswordStrength(_rule: unknown, _value: string): Promise<void> {
+  const failed = passwordChecks.value.filter(r => !r.met).map(r => r.label)
+  if (failed.length) return Promise.reject(new Error('Password must include: ' + failed.join(', ')))
+  return Promise.resolve()
+}
+
 const formRules: FormRules = {
   email: [
     { required: true, message: 'Email is required', trigger: 'blur' },
@@ -156,7 +183,7 @@ const formRules: FormRules = {
   ],
   password: [
     { required: true, message: 'Password is required', trigger: 'blur' },
-    { min: 8, message: 'Minimum 8 characters', trigger: 'blur' },
+    { validator: validatePasswordStrength, trigger: 'blur' },
   ],
 }
 
@@ -303,7 +330,15 @@ async function submitForm() {
     message.success(`Admin ${form.value.email} created`)
     showModal.value = false
   } catch (err: any) {
-    modalError.value = 'Operation failed'
+    const details = err?.response?.data?.error?.details
+    if (Array.isArray(details) && details.length) {
+      modalError.value = details.map((d: string) => d.replace(/^password:\s*/i, '')).join(' · ')
+    } else {
+      modalError.value =
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to create admin'
+    }
   } finally {
     submitting.value = false
   }

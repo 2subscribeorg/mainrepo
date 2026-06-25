@@ -41,16 +41,28 @@
           v-model:value="form.password"
           type="password"
           show-password-on="click"
-          placeholder="Min. 6 characters"
+          placeholder="Min. 12 characters"
           @keydown.enter="submit"
         />
       </n-form-item>
+
+      <!-- Live password strength checklist -->
+      <div v-if="form.password.length > 0" style="margin-top: -8px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <div
+          v-for="rule in passwordChecks"
+          :key="rule.label"
+          :style="{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: rule.met ? '#18a058' : '#999' }"
+        >
+          <span>{{ rule.met ? '✓' : '○' }}</span>
+          <span>{{ rule.label }}</span>
+        </div>
+      </div>
     </n-form>
 
     <template #footer>
       <n-space justify="end">
         <n-button :disabled="submitting" @click="isVisible = false">Cancel</n-button>
-        <n-button type="primary" :loading="submitting" @click="submit">Create User</n-button>
+        <n-button type="primary" :loading="submitting" :disabled="!isPasswordValid" @click="submit">Create User</n-button>
       </n-space>
     </template>
   </n-modal>
@@ -80,6 +92,21 @@ const submitError = ref('')
 
 const form = ref({ email: '', displayName: '', password: '' })
 
+const passwordChecks = computed(() => [
+  { label: 'At least 12 characters',  met: form.value.password.length >= 12 },
+  { label: 'One capital letter (A–Z)', met: /[A-Z]/.test(form.value.password) },
+  { label: 'One number (0–9)',         met: /[0-9]/.test(form.value.password) },
+  { label: 'One special character',   met: /[^A-Za-z0-9]/.test(form.value.password) },
+])
+
+const isPasswordValid = computed(() => passwordChecks.value.every(r => r.met))
+
+function validatePasswordStrength(_rule: unknown, _value: string): Promise<void> {
+  const failed = passwordChecks.value.filter(r => !r.met).map(r => r.label)
+  if (failed.length) return Promise.reject(new Error('Password must include: ' + failed.join(', ')))
+  return Promise.resolve()
+}
+
 const rules: FormRules = {
   email: [
     { required: true, message: 'Email is required', trigger: 'blur' },
@@ -90,7 +117,7 @@ const rules: FormRules = {
   ],
   password: [
     { required: true, message: 'Password is required', trigger: 'blur' },
-    { min: 6, message: 'At least 6 characters', trigger: 'blur' },
+    { validator: validatePasswordStrength, trigger: 'blur' },
   ],
 }
 
@@ -123,10 +150,15 @@ async function submit() {
     isVisible.value = false
     emit('created')
   } catch (err: any) {
-    submitError.value =
-      err?.response?.data?.error?.message ||
-      err?.message ||
-      'Failed to create user'
+    const details = err?.response?.data?.error?.details
+    if (Array.isArray(details) && details.length) {
+      submitError.value = details.map((d: string) => d.replace(/^password:\s*/i, '')).join(' · ')
+    } else {
+      submitError.value =
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to create user'
+    }
   } finally {
     submitting.value = false
   }
