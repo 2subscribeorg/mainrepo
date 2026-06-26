@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { buildBackendApiUrl } from '@/config/backendApi'
 import { rateLimiter, RATE_LIMITS, getRateLimitMessage } from '@/utils/rateLimiter'
 import { authRateLimiter } from '@/utils/authRateLimiter'
 import {
@@ -34,51 +35,39 @@ import { revenueCat } from '@/services/revenueCat'
  * Prevents information disclosure about user existence
  */
 function getSecureAuthMessage(error: unknown): string {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase()
-    
-    // Firebase auth error codes that reveal user existence
-    const userExistenceErrors = [
-      'auth/user-not-found',
-      'auth/wrong-password', 
-      'auth/email-already-in-use',
-      'auth/user-disabled',
-      'auth/invalid-credential'
-    ]
-    
-    // Check if error reveals user existence
-    const revealsUserExistence = userExistenceErrors.some(errCode => 
-      message.includes(errCode.toLowerCase())
-    )
-    
-    if (revealsUserExistence) {
-      // Return generic message that doesn't reveal if user exists
-      return 'Invalid email or password. Please try again.'
-    }
-    
-    // Handle other Firebase auth errors generically
-    if (message.includes('auth/invalid-email')) {
-      return 'Invalid email address. Please check and try again.'
-    }
-    
-    if (message.includes('auth/weak-password')) {
-      return 'Password does not meet security requirements.'
-    }
-    
-    if (message.includes('auth/too-many-requests')) {
-      return 'Too many attempts. Please try again later.'
-    }
-    
-    if (message.includes('auth/network-request-failed')) {
-      return 'Network error. Please check your connection and try again.'
-    }
-    
-    if (message.includes('timeout')) {
-      return 'Request timed out. Please try again.'
-    }
+  const code = ((error as any)?.code as string | undefined) ?? ''
+  const message = (error instanceof Error ? error.message : String((error as any)?.message ?? '')).toLowerCase()
+
+  if (code === 'auth/user-disabled' || message.includes('auth/user-disabled') || message.includes('user_disabled')) {
+    return 'Your account has been deactivated. Please contact support.'
   }
-  
-  // Fallback for any other errors
+
+  const userExistenceErrors = [
+    'auth/user-not-found',
+    'auth/wrong-password',
+    'auth/email-already-in-use',
+    'auth/invalid-credential',
+  ]
+  if (userExistenceErrors.includes(code) || userExistenceErrors.some(c => message.includes(c))) {
+    return 'Invalid email or password. Please try again.'
+  }
+
+  if (code === 'auth/invalid-email' || message.includes('auth/invalid-email')) {
+    return 'Invalid email address. Please check and try again.'
+  }
+  if (code === 'auth/weak-password' || message.includes('auth/weak-password')) {
+    return 'Password does not meet security requirements.'
+  }
+  if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
+    return 'Too many attempts. Please try again later.'
+  }
+  if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
+    return 'Network error. Please check your connection and try again.'
+  }
+  if (message.includes('timeout')) {
+    return 'Request timed out. Please try again.'
+  }
+
   return 'Authentication failed. Please try again.'
 }
 
@@ -237,9 +226,12 @@ export const useAuthStore = defineStore('auth', () => {
           syncUserToFirestore(firebaseUser).catch((err) => {
             logger.error('Failed to sync user to Firestore:', err)
           })
+
+          startAccountStatusPolling()
         } else {
           user.value = null
-          
+          stopAccountStatusPolling()
+
           // Resolve any pending promises waiting for sign out
           const resolver = authStateResolvers.get('null')
           if (resolver) {
@@ -329,7 +321,23 @@ export const useAuthStore = defineStore('auth', () => {
         logger.debug('Attempting sign in with Firebase...')
         const userCredential = await signInWithEmailAndPassword(auth, email, password)
         logger.debug('Firebase sign in successful, waiting for auth state update...')
-        
+
+        // Check isActive before the auth state listener fires (and before syncUserToFirestore runs).
+        // The admin sets isActive=false in Firestore; Firebase Auth itself doesn't know about it.
+        try {
+          const { doc: fsDoc, getDoc } = await import('firebase/firestore')
+          const snap = await getDoc(fsDoc(getFirebaseDb(), 'users', userCredential.user.uid))
+          if (snap.exists() && snap.data()?.isActive === false) {
+            await signOut(auth)
+            const msg = 'Your account has been deactivated. Please contact support.'
+            error.value = msg
+            throw new Error(msg)
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.includes('deactivated')) throw e
+          // Firestore read failure — allow login to proceed
+        }
+
         // Return promise that resolves when onAuthStateChanged fires
         return new Promise<User>((resolve, reject) => {
           // Set up resolver FIRST, before any async operations
@@ -842,6 +850,79 @@ export const useAuthStore = defineStore('auth', () => {
     return multiFactor(currentUser).enrolledFactors
   }
 
+  // --- Account status polling ---
+  // Polls /api/auth/account-status on tab focus and every 2 minutes while active.
+  // Forces sign-out when the backend signals ACCOUNT_DEACTIVATED or TOKEN_REVOKED.
+  let _statusPollInterval: ReturnType<typeof setInterval> | null = null
+  let _visibilityHandler: (() => void) | null = null
+
+  async function _checkAccountStatus(): Promise<void> {
+    if (!isFirebaseMode) return
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) return
+
+    let token: string
+    try {
+      token = await currentUser.getIdToken()
+    } catch {
+      // Token fetch failed — the Firebase SDK will eventually force sign-out
+      return
+    }
+
+    let res: Response
+    try {
+      res = await fetch(buildBackendApiUrl('/auth/account-status'), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch {
+      // Network error — don't sign out on transient failures
+      return
+    }
+
+    if (res.status === 403 || res.status === 401) {
+      let body: { code?: string; message?: string } = {}
+      try { body = await res.clone().json() } catch { /* ignore */ }
+
+      const shouldForceOut =
+        body.code === 'ACCOUNT_DEACTIVATED' ||
+        body.code === 'TOKEN_REVOKED' ||
+        body.message?.toLowerCase().includes('deactivated')
+
+      if (shouldForceOut) {
+        stopAccountStatusPolling()
+        await logout()
+        const { default: router } = await import('@/router')
+        await router.push({ path: '/login', query: { reason: 'deactivated' } })
+      }
+    }
+  }
+
+  function startAccountStatusPolling(): void {
+    if (!isFirebaseMode) return
+    stopAccountStatusPolling()
+
+    _statusPollInterval = setInterval(_checkAccountStatus, 2 * 60 * 1000)
+
+    _visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        _checkAccountStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', _visibilityHandler)
+  }
+
+  function stopAccountStatusPolling(): void {
+    if (_statusPollInterval !== null) {
+      clearInterval(_statusPollInterval)
+      _statusPollInterval = null
+    }
+    if (_visibilityHandler !== null) {
+      document.removeEventListener('visibilitychange', _visibilityHandler)
+      _visibilityHandler = null
+    }
+  }
+
   return {
     user,
     loading,
@@ -867,5 +948,7 @@ export const useAuthStore = defineStore('auth', () => {
     completeMfaEnrollment,
     unenrollMfa,
     getMfaEnrolledFactors,
+    startAccountStatusPolling,
+    stopAccountStatusPolling,
   }
 })

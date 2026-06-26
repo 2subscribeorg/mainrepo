@@ -6,6 +6,7 @@ import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal
 import { Capacitor } from '@capacitor/core'
 import { getFirebaseAuth } from '@/config/firebase'
 import { buildBackendApiUrl } from '@/config/backendApi'
+import { apiFetch } from '@/utils/apiFetch'
 
 const ACTIVE_PLAN_KEY = 'billing_active_plan_id'
 const ENTITLEMENT_ID = '2Subscribe Pro'
@@ -209,7 +210,7 @@ class BillingService {
     const token = await getFirebaseAuth().currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
 
-    await fetch(buildBackendApiUrl('/purchases/cancel'), {
+    await apiFetch(buildBackendApiUrl('/purchases/cancel'), {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     })
@@ -222,7 +223,7 @@ class BillingService {
     const token = await getFirebaseAuth().currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
 
-    await fetch(buildBackendApiUrl('/purchases/record'), {
+    await apiFetch(buildBackendApiUrl('/purchases/record'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ productId, platform, customerInfo }),

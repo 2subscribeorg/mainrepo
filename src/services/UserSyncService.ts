@@ -17,8 +17,7 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
         displayName: user.displayName || null,
         photoURL: user.photoURL || null,
         lastLogin: new Date().toISOString(),
-        isActive: true,
-        // Don't overwrite these fields if they already exist
+        // isActive is admin-controlled — never overwrite it here
       },
       { merge: true }
     )
