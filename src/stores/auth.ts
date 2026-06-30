@@ -380,7 +380,7 @@ export const useAuthStore = defineStore('auth', () => {
             let statusBody: { code?: string; error?: { message?: string } } = {}
             try { statusBody = await statusRes.clone().json() } catch { /* ignore */ }
             await signOut(auth)
-            const msg = statusBody.error?.message || 'Your account has been deactivated. Please contact support.'
+            const msg = 'Your account has been deactivated. Please contact support.'
             error.value = msg
             throw new Error(msg)
           }
