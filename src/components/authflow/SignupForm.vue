@@ -117,6 +117,7 @@ import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vu
 import { validatePassword as validatePasswordStrength, isPasswordValid } from '@/utils/passwordValidation'
 import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
 import { isEmailVerificationRequired } from '@/config/authFlow'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 // Emits
 defineEmits<{
@@ -130,7 +131,7 @@ const router = useRouter()
 async function checkEmailAllowed(email: string): Promise<string | null> {
   try {
     const res = await fetch(
-      (import.meta.env.VITE_API_BASE_URL as string) + '/api/auth/check-email',
+      buildBackendApiUrl('/auth/check-email'),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

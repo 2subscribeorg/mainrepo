@@ -158,7 +158,7 @@ function getSignInErrorMessage(code: string): string {
   switch (code.toUpperCase()) {
     case 'ACCOUNT_BANNED':
     case 'ACCOUNT_DISABLED':
-      return 'Your account has been suspended. Please contact support.'
+      return 'Your account has been deactivated. Please contact support.'
     case 'ACCOUNT_DEACTIVATED':
       return 'Your account has been deactivated by an administrator. Please contact support.'
     case 'ACCOUNT_DELETED_BANNED':
