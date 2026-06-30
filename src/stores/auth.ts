@@ -377,20 +377,15 @@ export const useAuthStore = defineStore('auth', () => {
             headers: { Authorization: `Bearer ${token}` },
           })
           if (statusRes.status === 403 || statusRes.status === 401) {
-            let statusBody: { code?: string } = {}
+            let statusBody: { code?: string; error?: { message?: string } } = {}
             try { statusBody = await statusRes.clone().json() } catch { /* ignore */ }
             await signOut(auth)
-            if (statusBody.code === 'ACCOUNT_BANNED') {
-              const msg = 'Your account has been suspended. Please contact support.'
-              error.value = msg
-              throw new Error(msg)
-            }
-            const msg = 'Your account has been deactivated. Please contact support.'
+            const msg = statusBody.error?.message || 'Your account has been deactivated. Please contact support.'
             error.value = msg
             throw new Error(msg)
           }
         } catch (e) {
-          if (e instanceof Error && (e.message.includes('suspended') || e.message.includes('deactivated'))) throw e
+          if (e instanceof Error && e.message.length > 0 && !e.message.includes('fetch')) throw e
           // Network error or backend unavailable — allow login to proceed
         }
 
