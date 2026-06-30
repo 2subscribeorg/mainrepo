@@ -14,18 +14,30 @@ export async function apiFetch(url: string, options?: RequestInit): Promise<Resp
       // non-JSON response — fall through to normal handling
     }
 
-    const isDeactivated =
-      body.code === 'ACCOUNT_DEACTIVATED' ||
+    const code = body.code
+    let reason: string | null = null
+
+    if (code === 'ACCOUNT_BANNED') {
+      reason = 'banned'
+    } else if (
+      code === 'ACCOUNT_DEACTIVATED' ||
       body.message?.toLowerCase().includes('deactivated')
+    ) {
+      reason = 'deactivated'
+    } else if (
+      code === 'TOKEN_REVOKED' ||
+      code === 'TOKEN_EXPIRED' ||
+      code === 'UNAUTHORIZED'
+    ) {
+      reason = 'session_expired'
+    }
 
-    const isRevoked = body.code === 'TOKEN_REVOKED'
-
-    if (isDeactivated || isRevoked) {
+    if (reason) {
       const { useAuthStore } = await import('@/stores/auth')
       const { default: router } = await import('@/router')
       const auth = useAuthStore()
       await auth.logout()
-      await router.push({ path: '/login', query: { reason: 'deactivated' } })
+      await router.push({ path: '/login', query: { reason } })
     }
   }
 
