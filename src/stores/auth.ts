@@ -31,20 +31,53 @@ import { logger } from '@/utils/logger'
 import { revenueCat } from '@/services/revenueCat'
 
 /**
- * SECURITY: Secure error message handler for authentication
- * Prevents information disclosure about user existence
+ * Calls the backend to get the exact reason a sign-in failed (banned, deleted,
+ * deactivated, or simply wrong password). Returns an internal error code string
+ * that LoginForm translates into a user-facing message.
+ * Falls back to 'WRONG_PASSWORD' if the backend is unreachable.
+ */
+async function diagnoseLoginFailure(email: string): Promise<string> {
+  try {
+    const res = await fetch(buildBackendApiUrl('/auth/diagnose-login-failure'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (!res.ok) return 'WRONG_PASSWORD'
+    const body = await res.json()
+    return (body?.data?.reason as string | undefined) ?? 'WRONG_PASSWORD'
+  } catch {
+    return 'WRONG_PASSWORD'
+  }
+}
+
+/**
+ * Maps Firebase auth error codes + internal sign-in error codes to safe,
+ * user-facing messages. All paths that reach this are from the signIn catch block.
  */
 function getSecureAuthMessage(error: unknown): string {
   const code = ((error as any)?.code as string | undefined) ?? ''
   const message = (error instanceof Error ? error.message : String((error as any)?.message ?? '')).toLowerCase()
 
+  // Pass-through internal codes already translated by signIn()
+  const internalCodes = [
+    'ACCOUNT_BANNED', 'ACCOUNT_DISABLED', 'ACCOUNT_DEACTIVATED',
+    'ACCOUNT_DELETED_BANNED', 'ACCOUNT_NOT_FOUND',
+    'WRONG_PASSWORD', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR',
+    'SESSION_EXPIRED', 'SIGN_IN_FAILED',
+  ]
+  if (internalCodes.includes(message.toUpperCase())) {
+    return message // will be translated by LoginForm's getSignInErrorMessage
+  }
+
   if (code === 'auth/user-disabled' || message.includes('auth/user-disabled') || message.includes('user_disabled')) {
-    return 'Your account has been suspended. Please contact support.'
+    return 'ACCOUNT_BANNED'
   }
 
   if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' ||
-      message.includes('auth/user-not-found') || message.includes('auth/wrong-password') || message.includes('auth/invalid-credential')) {
-    return 'Incorrect email or password.'
+      message.includes('auth/user-not-found') || message.includes('auth/wrong-password') ||
+      message.includes('auth/invalid-credential') || message.includes('invalid_login_credentials')) {
+    return 'WRONG_PASSWORD'
   }
 
   if (code === 'auth/email-already-in-use' || message.includes('auth/email-already-in-use')) {
@@ -58,16 +91,16 @@ function getSecureAuthMessage(error: unknown): string {
     return 'Password is too weak. Please choose a stronger password.'
   }
   if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
-    return 'Too many attempts. Please try again later.'
+    return 'TOO_MANY_REQUESTS'
   }
   if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
-    return 'Network error. Please check your connection and try again.'
+    return 'NETWORK_ERROR'
   }
   if (message.includes('timeout')) {
     return 'Request timed out. Please try again.'
   }
 
-  return 'Sign in failed. Please try again.'
+  return 'SIGN_IN_FAILED'
 }
 
 export interface User {
@@ -412,7 +445,25 @@ export const useAuthStore = defineStore('auth', () => {
         // Record failed login attempt
         authRateLimiter.recordLoginAttempt(email, false)
 
-        // SECURITY: Never expose Firebase error messages that reveal user existence
+        const firebaseCode = (e as any)?.code as string | undefined
+
+        // For errors where Firebase has no fine-grained info (disabled account,
+        // invalid credentials), ask the backend for the exact reason so we can
+        // show "banned" vs "deactivated" vs "deleted+banned" vs "wrong password".
+        if (
+          firebaseCode === 'auth/user-disabled' ||
+          firebaseCode === 'auth/invalid-credential' ||
+          firebaseCode === 'auth/wrong-password' ||
+          firebaseCode === 'auth/user-not-found' ||
+          (e instanceof Error && e.message?.includes('INVALID_LOGIN_CREDENTIALS'))
+        ) {
+          const diagnosedCode = await diagnoseLoginFailure(email)
+          error.value = diagnosedCode
+          logger.error('Sign in failed (diagnosed):', diagnosedCode)
+          throw new Error(diagnosedCode)
+        }
+
+        // All other Firebase errors — map to safe internal code
         const secureMessage = getSecureAuthMessage(e)
         error.value = secureMessage
         logger.error('Sign in failed:', e)

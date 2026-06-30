@@ -154,6 +154,31 @@ const mfaCodeSent = ref(false)
 const recaptchaContainer = ref<HTMLElement | null>(null)
 let recaptchaVerifier: RecaptchaVerifier | null = null
 
+function getSignInErrorMessage(code: string): string {
+  switch (code.toUpperCase()) {
+    case 'ACCOUNT_BANNED':
+    case 'ACCOUNT_DISABLED':
+      return 'Your account has been suspended. Please contact support.'
+    case 'ACCOUNT_DEACTIVATED':
+      return 'Your account has been deactivated by an administrator. Please contact support.'
+    case 'ACCOUNT_DELETED_BANNED':
+      return 'This account no longer exists and this email address cannot be reused. Please contact support.'
+    case 'ACCOUNT_NOT_FOUND':
+      return 'No account found with this email address.'
+    case 'WRONG_PASSWORD':
+      return 'Incorrect email or password.'
+    case 'TOO_MANY_REQUESTS':
+      return 'Too many sign-in attempts. Please wait a few minutes and try again.'
+    case 'NETWORK_ERROR':
+      return 'Network error. Please check your connection and try again.'
+    case 'SESSION_EXPIRED':
+      return 'Your session has expired. Please sign in again.'
+    case 'SIGN_IN_FAILED':
+    default:
+      return code.length > 30 ? code : 'Sign in failed. Please try again.'
+  }
+}
+
 async function handleSubmit() {
   errorMessage.value = null
   const result = await signIn(email.value, password.value)
@@ -165,7 +190,7 @@ async function handleSubmit() {
     mfaCodeSent.value = false
     await sendSmsChallenge()
   } else {
-    errorMessage.value = result.error || 'Failed to sign in'
+    errorMessage.value = getSignInErrorMessage(result.error || 'SIGN_IN_FAILED')
   }
 }
 

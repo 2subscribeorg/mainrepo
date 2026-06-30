@@ -85,6 +85,25 @@ const cooldownSeconds = ref(0)
 
 let cooldownInterval: number | null = null
 let unsubscribeAuth: (() => void) | null = null
+let pollInterval: number | null = null
+
+async function pollVerificationStatus() {
+  const user = auth.currentUser
+  if (!user) return
+  try {
+    await user.reload()
+    if (user.emailVerified) {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+        pollInterval = null
+      }
+      showMessage('Email verified successfully!', 'success')
+      setTimeout(() => router.push('/'), 1500)
+    }
+  } catch {
+    // Ignore transient errors — keep polling
+  }
+}
 
 const messageClass = computed(() => {
   if (messageType.value === 'success') {
@@ -116,6 +135,10 @@ async function checkVerification() {
   const isVerified = await emailVerificationService.reloadAndCheckVerification(user)
 
   if (isVerified) {
+    if (pollInterval) {
+      clearInterval(pollInterval)
+      pollInterval = null
+    }
     showMessage('Email verified successfully!', 'success')
     setTimeout(() => {
       router.push('/')
@@ -189,16 +212,19 @@ onMounted(() => {
 
     if (user.emailVerified) {
       router.push('/')
+      return
+    }
+
+    // Start automatic polling — page updates without user needing to press the button
+    if (!pollInterval) {
+      pollInterval = window.setInterval(pollVerificationStatus, 4000)
     }
   })
 })
 
 onUnmounted(() => {
-  if (cooldownInterval) {
-    clearInterval(cooldownInterval)
-  }
-  if (unsubscribeAuth) {
-    unsubscribeAuth()
-  }
+  if (cooldownInterval) clearInterval(cooldownInterval)
+  if (pollInterval) clearInterval(pollInterval)
+  if (unsubscribeAuth) unsubscribeAuth()
 })
 </script>
