@@ -127,6 +127,36 @@ defineEmits<{
 const { signUp, loading } = useAuth()
 const router = useRouter()
 
+async function checkEmailAllowed(email: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      (import.meta.env.VITE_API_BASE_URL as string) + '/api/auth/check-email',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }
+    )
+    if (res.ok) return null
+    let body: { error?: { code?: string } } = {}
+    try { body = await res.json() } catch { /* ignore */ }
+    const code = body.error?.code
+    if (res.status === 403 && code === 'EMAIL_BANNED') {
+      return 'This email address cannot be used to create an account. Please contact support.'
+    }
+    if (res.status === 409 && code === 'EMAIL_TAKEN') {
+      return 'An account with this email already exists. Please sign in instead.'
+    }
+    if (res.status === 429) {
+      return 'Too many requests. Please wait a moment and try again.'
+    }
+    return null
+  } catch {
+    // Network error or backend unavailable — allow signup to proceed
+    return null
+  }
+}
+
 // Form state
 const email = ref('')
 const password = ref('')
@@ -192,9 +222,16 @@ async function handleSubmit() {
     return
   }
 
+  // Pre-registration backend check (banned email, already taken, etc.)
+  const emailBlockReason = await checkEmailAllowed(email.value)
+  if (emailBlockReason) {
+    errorMessage.value = emailBlockReason
+    return
+  }
+
   // Check if email verification is required
   const requireVerification = isEmailVerificationRequired()
-  
+
   const result = await signUp(email.value, password.value, requireVerification)
 
   if (result?.success) {

@@ -7,6 +7,14 @@
         <p class="mt-2 text-gray-600">Manage your subscriptions effortlessly</p>
       </div>
 
+      <!-- Force-logout reason banner -->
+      <div
+        v-if="forcedOutMessage && mode === 'login'"
+        class="mb-4 p-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg text-sm text-center"
+      >
+        {{ forcedOutMessage }}
+      </div>
+
       <!-- Login, Signup, or Forgot Password Form -->
       <ErrorBoundary component="AuthForms">
         <div class="mt-8">
@@ -40,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LoginForm from '@/components/authflow/LoginForm.vue'
 import SignupForm from '@/components/authflow/SignupForm.vue'
@@ -54,6 +62,15 @@ const router = useRouter()
 const mode = ref<'login' | 'signup' | 'forgot'>(
   (route.query.mode as string) === 'signup' ? 'signup' : 'login'
 )
+
+const forcedOutMessage = computed(() => {
+  const reason = route.query.reason as string | undefined
+  if (reason === 'banned')          return 'Your account has been suspended. Please contact support.'
+  if (reason === 'deactivated')     return 'Your account has been deactivated. Please contact support.'
+  if (reason === 'deleted')         return 'Your account no longer exists.'
+  if (reason === 'session_expired') return 'Your session has expired. Please sign in again.'
+  return null
+})
 
 // When the header "Sign In" button sets ?mode=login, sync the mode
 watch(() => route.query.mode, (m) => {

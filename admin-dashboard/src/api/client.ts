@@ -37,17 +37,39 @@ class ApiClient {
         console.log('✅ API Response:', response.config.url, response.status)
         return response
       },
-      (error) => {
+      async (error) => {
         console.error('❌ API Error:', {
           url: error.config?.url,
           status: error.response?.status,
           message: error.response?.data?.error?.message || error.message,
           data: error.response?.data
         })
-        
-        if (error.response?.status === 401) {
+
+        const status = error.response?.status
+        const code: string | undefined = error.response?.data?.error?.code
+
+        if (status === 403 && code === 'ACCOUNT_BANNED') {
+          await auth.signOut()
+          window.location.href = '/login?reason=banned'
+          return Promise.reject(error)
+        }
+
+        if (status === 403 && (code === 'ACCOUNT_DEACTIVATED' || !code)) {
+          await auth.signOut()
+          window.location.href = '/login?reason=deactivated'
+          return Promise.reject(error)
+        }
+
+        if (status === 401 && (code === 'TOKEN_REVOKED' || code === 'TOKEN_EXPIRED')) {
+          await auth.signOut()
+          window.location.href = '/login?reason=session_expired'
+          return Promise.reject(error)
+        }
+
+        if (status === 401) {
           window.location.href = '/login'
         }
+
         return Promise.reject(error)
       }
     )

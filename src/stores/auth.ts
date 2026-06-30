@@ -39,24 +39,23 @@ function getSecureAuthMessage(error: unknown): string {
   const message = (error instanceof Error ? error.message : String((error as any)?.message ?? '')).toLowerCase()
 
   if (code === 'auth/user-disabled' || message.includes('auth/user-disabled') || message.includes('user_disabled')) {
-    return 'Your account has been deactivated. Please contact support.'
+    return 'Your account has been suspended. Please contact support.'
   }
 
-  const userExistenceErrors = [
-    'auth/user-not-found',
-    'auth/wrong-password',
-    'auth/email-already-in-use',
-    'auth/invalid-credential',
-  ]
-  if (userExistenceErrors.includes(code) || userExistenceErrors.some(c => message.includes(c))) {
-    return 'Invalid email or password. Please try again.'
+  if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' ||
+      message.includes('auth/user-not-found') || message.includes('auth/wrong-password') || message.includes('auth/invalid-credential')) {
+    return 'Incorrect email or password.'
+  }
+
+  if (code === 'auth/email-already-in-use' || message.includes('auth/email-already-in-use')) {
+    return 'An account with this email already exists. Please sign in instead.'
   }
 
   if (code === 'auth/invalid-email' || message.includes('auth/invalid-email')) {
     return 'Invalid email address. Please check and try again.'
   }
   if (code === 'auth/weak-password' || message.includes('auth/weak-password')) {
-    return 'Password does not meet security requirements.'
+    return 'Password is too weak. Please choose a stronger password.'
   }
   if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
     return 'Too many attempts. Please try again later.'
@@ -68,7 +67,7 @@ function getSecureAuthMessage(error: unknown): string {
     return 'Request timed out. Please try again.'
   }
 
-  return 'Authentication failed. Please try again.'
+  return 'Sign in failed. Please try again.'
 }
 
 export interface User {
@@ -336,6 +335,30 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
           if (e instanceof Error && e.message.includes('deactivated')) throw e
           // Firestore read failure — allow login to proceed
+        }
+
+        // Backend status check — catches banned accounts and token revocations.
+        try {
+          const token = await userCredential.user.getIdToken()
+          const statusRes = await fetch(buildBackendApiUrl('/auth/account-status'), {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (statusRes.status === 403 || statusRes.status === 401) {
+            let statusBody: { code?: string } = {}
+            try { statusBody = await statusRes.clone().json() } catch { /* ignore */ }
+            await signOut(auth)
+            if (statusBody.code === 'ACCOUNT_BANNED') {
+              const msg = 'Your account has been suspended. Please contact support.'
+              error.value = msg
+              throw new Error(msg)
+            }
+            const msg = 'Your account has been deactivated. Please contact support.'
+            error.value = msg
+            throw new Error(msg)
+          }
+        } catch (e) {
+          if (e instanceof Error && (e.message.includes('suspended') || e.message.includes('deactivated'))) throw e
+          // Network error or backend unavailable — allow login to proceed
         }
 
         // Return promise that resolves when onAuthStateChanged fires
@@ -884,16 +907,29 @@ export const useAuthStore = defineStore('auth', () => {
       let body: { code?: string; message?: string } = {}
       try { body = await res.clone().json() } catch { /* ignore */ }
 
-      const shouldForceOut =
-        body.code === 'ACCOUNT_DEACTIVATED' ||
-        body.code === 'TOKEN_REVOKED' ||
-        body.message?.toLowerCase().includes('deactivated')
+      const code = body.code
+      let reason: string | null = null
 
-      if (shouldForceOut) {
+      if (code === 'ACCOUNT_BANNED') {
+        reason = 'banned'
+      } else if (
+        code === 'ACCOUNT_DEACTIVATED' ||
+        body.message?.toLowerCase().includes('deactivated')
+      ) {
+        reason = 'deactivated'
+      } else if (
+        code === 'TOKEN_REVOKED' ||
+        code === 'TOKEN_EXPIRED' ||
+        code === 'UNAUTHORIZED'
+      ) {
+        reason = 'session_expired'
+      }
+
+      if (reason) {
         stopAccountStatusPolling()
         await logout()
         const { default: router } = await import('@/router')
-        await router.push({ path: '/login', query: { reason: 'deactivated' } })
+        await router.push({ path: '/login', query: { reason } })
       }
     }
   }

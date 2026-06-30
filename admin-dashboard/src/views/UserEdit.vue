@@ -225,9 +225,16 @@ async function save() {
       email: form.value.email,
       status: form.value.status,
     }
-    message.success('User updated')
+    if (updates.status === 'inactive') {
+      message.success("Account deactivated. The user's session has been terminated.")
+    } else if (updates.status === 'active') {
+      message.success('Account reactivated. The user can now sign in.')
+    } else {
+      message.success('User updated')
+    }
   } catch (err: any) {
-    message.error('Failed to update user')
+    const detail = err?.response?.data?.error?.message
+    message.error(detail || 'Failed to update user')
   } finally {
     saving.value = false
   }
@@ -253,9 +260,10 @@ async function handleBan() {
     await usersApi.banUser(user.value.id, banReason.value || undefined)
     user.value = { ...user.value, isBanned: true, bannedReason: banReason.value || undefined }
     banReason.value = ''
-    message.success('User banned')
-  } catch {
-    message.error('Failed to ban user')
+    message.success('User has been banned and their session terminated.')
+  } catch (err: any) {
+    const detail = err?.response?.data?.error?.message
+    message.error(detail || 'Failed to ban user')
   } finally {
     banning.value = false
     showBanModal.value = false
@@ -268,9 +276,10 @@ async function handleUnban() {
   try {
     await usersApi.unbanUser(user.value.id)
     user.value = { ...user.value, isBanned: false, bannedReason: undefined, bannedAt: undefined }
-    message.success('User unbanned')
-  } catch {
-    message.error('Failed to unban user')
+    message.success('User has been unbanned and can now sign in.')
+  } catch (err: any) {
+    const detail = err?.response?.data?.error?.message
+    message.error(detail || 'Failed to unban user')
   } finally {
     banning.value = false
   }
@@ -281,10 +290,16 @@ async function handleDelete() {
   deleting.value = true
   try {
     await usersApi.deleteUser(user.value.id)
-    message.success('User deleted')
+    message.success('User account and all associated data have been permanently deleted.')
     router.push('/users')
   } catch (err: any) {
-    message.error('Failed to delete user')
+    const code = err?.response?.data?.error?.code
+    const detail = err?.response?.data?.error?.message
+    if (code === 'BAD_REQUEST' && detail?.toLowerCase().includes('subscription')) {
+      message.error('Cannot delete: this user has an active subscription. Cancel it first.')
+    } else {
+      message.error(detail || 'Failed to delete user')
+    }
   } finally {
     deleting.value = false
     showDeleteModal.value = false
