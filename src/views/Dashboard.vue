@@ -3,8 +3,35 @@
     <div>
       <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
 
-      <div v-if="loading" class="flex justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div v-if="loading" class="mt-6 space-y-6">
+        <!-- Hero skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="40%" />
+          <div class="mt-4 flex items-center gap-4">
+            <SkeletonLoader variant="circle" />
+            <div class="flex-1 space-y-2">
+              <SkeletonLoader variant="text" width="60%" />
+              <SkeletonLoader variant="text" width="30%" height="1.5rem" />
+            </div>
+          </div>
+        </div>
+        <!-- Donut skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="50%" />
+          <div class="mt-4 flex flex-col items-center gap-4">
+            <SkeletonLoader variant="circle" width="240px" height="240px" />
+            <div class="w-full max-w-sm space-y-3">
+              <SkeletonLoader variant="card" height="60px" :count="3" />
+            </div>
+          </div>
+        </div>
+        <!-- Suggestions skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="35%" />
+          <div class="mt-4 space-y-3">
+            <SkeletonLoader variant="card" height="80px" :count="2" />
+          </div>
+        </div>
       </div>
 
       <div v-else class="mt-6 space-y-6">
@@ -73,9 +100,10 @@
                   :key="item.categoryId" 
                   class="legend-item"
                   :class="{ 'legend-item--highlighted': highlightedIndex === index }"
-                  @click="highlightSegment(index)"
-                  @mouseenter="highlightSegment(index)"
-                  @mouseleave="clearHighlight"
+                  role="button"
+                  tabindex="0"
+                  @click="toggleSegment(index)"
+                  @keydown.enter="toggleSegment(index)"
                 >
                   <div class="legend-visual">
                     <CategoryIcon 
@@ -191,6 +219,7 @@ import { useLoadingStates } from '@/composables/useLoadingStates'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
 import VirtualScrollerWrapper from '@/components/ui/VirtualScrollerWrapper.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
@@ -624,6 +653,14 @@ function goToTransactions() {
   router.push('/transactions')
 }
 
+function toggleSegment(index: number) {
+  if (highlightedIndex.value === index) {
+    clearHighlight()
+  } else {
+    highlightSegment(index)
+  }
+}
+
 function highlightSegment(index: number) {
   highlightedIndex.value = index
 }
@@ -746,8 +783,8 @@ onMounted(async () => {
   transition: transform 0.2s ease;
 }
 
-.donut-card__chart:hover {
-  transform: scale(1.02);
+.donut-card__chart:active {
+  transform: scale(0.98);
 }
 
 .donut-segment-icon {
@@ -872,11 +909,8 @@ onMounted(async () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.legend-item:hover {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: rgba(99, 102, 241, 0.15);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+.legend-item:active {
+  transform: scale(0.98);
 }
 
 .legend-item--highlighted {

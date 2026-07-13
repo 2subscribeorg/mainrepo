@@ -150,6 +150,19 @@ class ErrorManager {
     return undefined
   }
 
+  private sanitizeForReporting(value: string): string {
+    if (!value) return ''
+    return value
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]')
+      .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+=*/g, 'Bearer [TOKEN]')
+      .replace(/(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.?[A-Za-z0-9_-]*)/g, '[JWT]')
+      .replace(/apiKey[=:]\s*['"]?[A-Za-z0-9]+['"]?/gi, 'apiKey=[REDACTED]')
+      .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]')
+      .replace(/\b\d{16}\b/g, '[CARD]')
+      .replace(/(sk_live_|pk_live_|sk_test_|pk_test_)[A-Za-z0-9]+/g, '[STRIPE_KEY]')
+      .replace(/(\/Users\/|\/home\/|C:\\)[^\s:]+/g, '[PATH]')
+  }
+
   private async sendToErrorService(errorReport: ErrorReport): Promise<void> {
     try {
       // In production, send to error reporting service
@@ -157,8 +170,8 @@ class ErrorManager {
       
       const payload = {
         id: errorReport.id,
-        message: errorReport.error.message,
-        stack: errorReport.error.stack,
+        message: this.sanitizeForReporting(errorReport.error.message),
+        stack: this.sanitizeForReporting(errorReport.error.stack || ''),
         component: errorReport.component,
         route: errorReport.route,
         timestamp: errorReport.timestamp,

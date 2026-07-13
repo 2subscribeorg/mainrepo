@@ -40,29 +40,37 @@
       
       <!-- Existing Categories -->
       <div class="mb-4">
-        <label for="category-select" class="block text-sm font-medium text-text-primary mb-2">
+        <label class="block text-sm font-medium text-text-primary mb-2">
           Choose existing category:
         </label>
-        <select 
-          id="category-select"
-          v-model="selectedCategoryId" 
-          class="w-full border border-[rgba(15,23,42,0.12)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-[var(--color-background)] text-text-primary"
-          aria-describedby="category-description"
-          :disabled="isCreatingNew"
-        >
-          <option value="">Select a category...</option>
-          <option 
-            v-for="category in categories" 
-            :key="category.id" 
-            :value="category.id"
-          >
-            {{ category.name }}
-          </option>
-        </select>
+        <div class="max-h-48 overflow-y-auto rounded-lg border border-[rgba(15,23,42,0.08)] p-2">
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="category in categories"
+              :key="category.id"
+              type="button"
+              class="touch-target rounded-lg border text-sm font-medium transition-all flex items-center gap-2 px-3 py-2"
+              :class="
+                selectedCategoryId === category.id
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border-light bg-surface text-text-secondary hover:border-primary/30'
+              "
+              :aria-pressed="selectedCategoryId === category.id"
+              :disabled="isCreatingNew"
+              @click="selectedCategoryId = category.id"
+            >
+              <span
+                class="h-4 w-4 rounded-full flex-shrink-0"
+                :style="{ backgroundColor: category.colour || '#6366f1' }"
+              />
+              <span class="truncate">{{ category.name }}</span>
+              <span v-if="selectedCategoryId === category.id" class="ml-auto text-primary">✓</span>
+            </button>
+          </div>
+        </div>
         <p id="category-description" class="sr-only">
-          Select an existing category from the dropdown list or create a new one below
+          Select an existing category from the list or create a new one below
         </p>
-
       </div>
 
       <!-- Or Create New (hidden when existing category is selected) -->
@@ -293,6 +301,8 @@ function handleConfirm() {
 }
 
 // Focus trap and restoration
+let savedOverflow = ''
+
 watch(() => props.show, async (show) => {
   if (show) {
     // Reset form when modal opens
@@ -302,6 +312,12 @@ watch(() => props.show, async (show) => {
     newCategoryColor.value = DEFAULT_COLORS[0]
     newCategoryIcon.value = undefined
     
+    // Lock body scroll
+    if (typeof document !== 'undefined') {
+      savedOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+    }
+    
     // Store previous focus
     previousFocusRef.value = document.activeElement as HTMLElement
     
@@ -309,11 +325,16 @@ watch(() => props.show, async (show) => {
     await nextTick()
     
     // Focus first focusable element
-    const firstFocusable = modalRef.value?.querySelector('select, input, button') as HTMLElement
+    const firstFocusable = modalRef.value?.querySelector('button, input, [tabindex]') as HTMLElement
     if (firstFocusable) {
       firstFocusable.focus()
     }
   } else {
+    // Restore body scroll
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = savedOverflow
+    }
+    
     // Restore focus
     if (previousFocusRef.value) {
       previousFocusRef.value.focus()
@@ -337,6 +358,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (typeof document !== 'undefined') {
     document.removeEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = savedOverflow
   }
 })
 

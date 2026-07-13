@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TransactionFilterPanel from '@/components/transactions/TransactionFilterPanel.vue'
 import type { BankAccount, Category } from '@/domain/models'
@@ -45,7 +45,7 @@ describe('TransactionFilterPanel', () => {
       },
       global: {
         stubs: {
-          // Stub any child components if needed
+          ChevronDown: true,
         }
       }
     })
@@ -130,14 +130,20 @@ describe('TransactionFilterPanel', () => {
       expect(wrapper.emitted('clear-all')).toHaveLength(1)
     })
 
-    it('emits "update:merchantSearch" when user types in search box', async () => {
+    it('emits "update:merchantSearch" when user types in search box (debounced)', async () => {
+      vi.useFakeTimers()
       const wrapper = createWrapper()
       const input = wrapper.find('[data-testid="merchant-search"]')
       
       await input.setValue('Amazon')
       
+      // Emit is debounced by 250ms
+      vi.advanceTimersByTime(300)
+      await wrapper.vm.$nextTick()
+      
       expect(wrapper.emitted()).toHaveProperty('update:merchantSearch')
       expect(wrapper.emitted('update:merchantSearch')?.[0]).toEqual(['Amazon'])
+      vi.useRealTimers()
     })
 
     it('emits "update:selectedAccount" when account filter is changed', async () => {

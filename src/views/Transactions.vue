@@ -30,7 +30,9 @@
       </ErrorBoundary>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <div v-if="loading" class="space-y-3">
+      <SkeletonLoader variant="card" height="100px" :count="5" />
+    </div>
 
     <template v-else>
       <!-- Transactions List -->
@@ -55,11 +57,19 @@
         <ErrorBoundary component="EmptyState">
           <EmptyState
             v-if="paginatedTransactions.length === 0"
-        title="No transactions found"
-        description="Connect a bank account to see your transactions here."
-        action-text="Connect Bank Account"
-        action-to="/settings"
-      />
+            eyebrow="Get Started"
+            title="No transactions yet"
+            description="Connect a bank account to automatically import and track your subscription payments."
+            :tips="[
+              'Automatically detect recurring charges',
+              'See every transaction in one place',
+              'Match payments to subscriptions instantly',
+            ]"
+            action-text="Connect Bank Account"
+            action-to="/settings"
+            secondary-action-text="Learn how it works"
+            secondary-action-to="/settings"
+          />
         </ErrorBoundary>
       </AsyncErrorBoundary>
     </template>
@@ -91,7 +101,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import type { Transaction } from '@/domain/models'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import TransactionFilterPanel from '@/components/transactions/TransactionFilterPanel.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'

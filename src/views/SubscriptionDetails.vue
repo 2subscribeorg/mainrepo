@@ -1,27 +1,21 @@
 <template>
-  <div class="min-height-screen bg-surface-elevated pb-20">
-    <!-- Header -->
-    <header class="sticky top-0 z-10 bg-surface border-b border-border-light px-4 py-4 safe-top">
-      <div class="flex items-center justify-between max-w-lg mx-auto">
-        <button 
-          @click="router.back()" 
-          class="p-2 -ml-2 rounded-full hover:bg-surface-elevated transition-colors"
-          aria-label="Back"
-        >
-          <ArrowLeft class="w-6 h-6 text-text-primary" />
-        </button>
-        <h1 class="text-lg font-bold text-text-primary">Subscription Details</h1>
-        <button 
-          @click="handleEdit" 
-          class="p-2 -mr-2 rounded-full hover:bg-surface-elevated transition-colors"
-          aria-label="Edit"
-        >
-          <Edit2 class="w-5 h-5 text-primary" />
-        </button>
-      </div>
-    </header>
+  <MobileLayout
+    title="Subscription Details"
+    :show-back="true"
+    :show-bottom-nav="true"
+    @back="router.back()"
+  >
+    <template #header-actions>
+      <button
+        @click="handleEdit"
+        class="p-2 -mr-2 rounded-full hover:bg-surface-elevated transition-colors"
+        aria-label="Edit"
+      >
+        <Edit2 class="w-5 h-5 text-primary" />
+      </button>
+    </template>
 
-    <div class="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div class="max-w-lg mx-auto space-y-6">
       <div v-if="loading" class="flex flex-col items-center justify-center py-20">
         <LoadingSpinner />
         <p class="mt-4 text-text-secondary animate-pulse">Loading details...</p>
@@ -126,22 +120,23 @@
       @confirm="handleDelete"
       @cancel="showDeleteConfirm = false"
     />
-  </div>
+  </MobileLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 
-  ArrowLeft, 
   Edit2, 
   History, 
   Pause, 
   Trash2, 
   AlertCircle 
 } from 'lucide-vue-next'
+import MobileLayout from '@/components/layout/MobileLayout.vue'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useCategoriesStore } from '@/stores/categories'
+import { useToast } from '@/composables/useToast'
 import { formatMoney, formatDate, formatRelativeDate, formatRecurrence } from '@/utils/formatters'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -151,6 +146,7 @@ const route = useRoute()
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
 const categoriesStore = useCategoriesStore()
+const toast = useToast()
 
 const subscription = ref<Subscription | null>(null)
 const loading = ref(true)
@@ -201,13 +197,11 @@ onMounted(async () => {
 })
 
 function handleEdit() {
-  // Placeholder for edit functionality
-  alert('Edit functionality coming soon!')
+  toast.info('Edit functionality coming soon!')
 }
 
 function handlePause() {
-  // Placeholder for pause functionality
-  alert('Pause functionality coming soon!')
+  toast.info('Pause functionality coming soon!')
 }
 
 async function handleDelete() {
@@ -217,7 +211,7 @@ async function handleDelete() {
       showDeleteConfirm.value = false
       router.push('/')
     } catch (error) {
-      alert('Failed to delete subscription')
+      toast.error('Failed to delete subscription')
     }
   }
 }

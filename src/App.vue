@@ -18,6 +18,17 @@
         Skip to main content
       </a>
       
+      <!-- Offline banner -->
+      <div
+        v-if="showOfflineBanner"
+        class="fixed top-0 left-0 right-0 z-sticky bg-warning-bg border-b border-warning-border text-warning-text-emphasis text-sm font-medium text-center"
+        style="padding: 0.5rem 1rem;"
+        role="alert"
+        aria-live="assertive"
+      >
+        You're offline — some data may be outdated
+      </div>
+
       <RouteErrorBoundary>
         <MobileLayout>
           <main id="main-content">
@@ -71,6 +82,7 @@ import ConsentModal from '@/components/ConsentModal.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
+import { useOnlineStatus } from '@/composables/useOnlineStatus'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
@@ -80,6 +92,8 @@ const globalError = ref<Error | null>(null)
 const isDevelopment = computed(() => import.meta.env.DEV)
 const isNativePlatform = computed(() => Capacitor.isNativePlatform())
 const showRecoveryNotification = ref(false)
+const { isOnline } = useOnlineStatus()
+const showOfflineBanner = computed(() => !isOnline.value)
 
 let errorTimeout: ReturnType<typeof setTimeout> | null = null
 let recoveryTimeout: ReturnType<typeof setTimeout> | null = null

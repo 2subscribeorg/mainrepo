@@ -22,139 +22,179 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <!-- Account Filter -->
-      <div class="filter-input-group">
-        <label class="filter-label">Account</label>
-        <select 
-          data-testid="account-filter"
-          :value="filters.selectedAccount"
-          @change="$emit('update:selectedAccount', ($event.target as HTMLSelectElement).value)"
-          class="filter-input input-animated"
-        >
-          <option value="">All Accounts</option>
-          <option v-for="account in accounts" :key="account.id" :value="account.id">
-            {{ account.institutionName }} - {{ account.accountName }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Subscription Filter -->
-      <div class="filter-input-group">
-        <label class="filter-label">Type</label>
-        <select 
-          data-testid="subscription-filter"
-          :value="filters.subscriptionFilter"
-          @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value as 'all' | 'subscriptions')"
-          class="filter-input input-animated"
-        >
-          <option value="all">All Transactions</option>
-          <option value="subscriptions">Subscription Transactions</option>
-        </select>
-      </div>
-
-      <!-- Merchant Search -->
-      <div class="filter-input-group">
-        <label class="filter-label">Merchant</label>
-        <input
-          data-testid="merchant-search"
-          :value="filters.merchantSearch || ''"
-          @input="$emit('update:merchantSearch', sanitizeSearchQuery(($event.target as HTMLInputElement).value))"
-          type="text"
-          placeholder="Search merchants..."
-          class="filter-input input-animated"
-        />
-      </div>
-
-      <!-- Date Range -->
-      <div class="filter-input-group">
-        <label class="filter-label">Date Range</label>
-        <div class="flex gap-2">
-          <input
-            :value="filters.dateRange?.start || ''"
-            @input="updateDateRange('start', ($event.target as HTMLInputElement).value)"
-            type="date"
-            :max="todayDate"
-            class="filter-input flex-1 input-animated"
-          />
-          <input
-            :value="filters.dateRange?.end || ''"
-            @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
-            type="date"
-            :max="todayDate"
-            class="filter-input flex-1 input-animated"
-          />
-        </div>
-      </div>
-
-      <!-- Amount Range -->
-      <div class="filter-input-group">
-        <label class="filter-label">Amount Range</label>
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <input
-            :value="filters.amountRange?.min || ''"
-            @input="updateAmountRange('min', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
-            type="number"
-            placeholder="Min"
-            class="filter-input flex-1 min-w-0 input-animated"
-          />
-          <input
-            :value="filters.amountRange?.max || ''"
-            @input="updateAmountRange('max', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
-            type="number"
-            placeholder="Max"
-            class="filter-input flex-1 min-w-0 input-animated"
-          />
-        </div>
-      </div>
-
-      <!-- Category Filter -->
-      <div class="md:col-span-2">
-        <label class="filter-label mb-2">Categories</label>
-        <div class="flex items-center gap-2">
-          <!-- Horizontal scrollable chips -->
-          <div class="flex-1 overflow-x-auto scrollbar-hide">
-            <div class="flex gap-2 pb-2">
-              <button
-                v-for="category in visibleCategories"
-                :key="category.id"
-                type="button"
-                class="touch-target interactive rounded-full border text-sm category-btn gpu-accelerated flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
-                style="min-height: var(--touch-target-min); padding: var(--padding-touch-sm);"
-                :class="
-                  selectedCategories.has(category.id)
-                    ? 'border-primary bg-primary/10 text-primary category-btn--active'
-                    : 'border-border-light bg-background text-text-secondary category-btn--default'
-                "
-                :aria-pressed="selectedCategories.has(category.id)"
-                :aria-label="`${category.name} category ${selectedCategories.has(category.id) ? '(selected)' : '(not selected)'}`"
-                @click="toggleCategory(category.id)"
-              >
-                {{ category.name }}
-                <span 
-                  v-if="selectedCategories.has(category.id)"
-                  class="text-xs font-medium"
-                  aria-hidden="true"
-                >
-                  ×
-                </span>
-              </button>
-            </div>
-          </div>
-          
-          <!-- All Categories button (only show if there are more categories) -->
-          <button
-            v-if="hasMoreCategories"
-            type="button"
-            class="touch-target rounded-full border border-border-medium bg-surface text-text-primary text-sm font-medium whitespace-nowrap flex-shrink-0"
-            style="min-height: var(--touch-target-min); padding: var(--padding-touch-sm);"
-            @click="showAllCategoriesModal = true"
-          >
-            All ({{ categories.length }})
-          </button>
-        </div>
-      </div>
+    <!-- Quick Filter Chips -->
+    <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+      <button
+        v-for="chip in quickFilterChips"
+        :key="chip.key"
+        type="button"
+        class="touch-target rounded-full border text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors"
+        style="min-height: 36px; padding: 0.375rem 0.875rem;"
+        :class="
+          chip.active
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border-light bg-background text-text-secondary'
+        "
+        @click="toggleQuickFilter(chip.key)"
+      >
+        {{ chip.label }}
+      </button>
     </div>
+
+    <!-- Merchant Search (always visible) -->
+    <div class="filter-input-group">
+      <label class="filter-label">Merchant</label>
+      <input
+        data-testid="merchant-search"
+        :value="merchantSearchInput"
+        @input="merchantSearchInput = sanitizeSearchQuery(($event.target as HTMLInputElement).value)"
+        type="text"
+        placeholder="Search merchants..."
+        class="filter-input input-animated"
+      />
+    </div>
+
+    <!-- Advanced Filters Toggle -->
+    <button
+      type="button"
+      @click="showAdvancedFilters = !showAdvancedFilters"
+      class="flex items-center justify-center gap-1.5 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-150 py-1"
+      :aria-expanded="showAdvancedFilters"
+      aria-controls="advanced-filters"
+    >
+      <ChevronDown
+        :size="18"
+        class="transition-transform duration-200"
+        :class="{ 'rotate-180': showAdvancedFilters }"
+      />
+      {{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}
+    </button>
+
+    <!-- Advanced Filters (collapsible) -->
+    <Transition name="expand">
+      <div v-show="showAdvancedFilters" id="advanced-filters" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Account Filter -->
+        <div class="filter-input-group">
+          <label class="filter-label">Account</label>
+          <select 
+            data-testid="account-filter"
+            :value="filters.selectedAccount"
+            @change="$emit('update:selectedAccount', ($event.target as HTMLSelectElement).value)"
+            class="filter-input input-animated"
+          >
+            <option value="">All Accounts</option>
+            <option v-for="account in accounts" :key="account.id" :value="account.id">
+              {{ account.institutionName }} - {{ account.accountName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Subscription Filter -->
+        <div class="filter-input-group">
+          <label class="filter-label">Type</label>
+          <select 
+            data-testid="subscription-filter"
+            :value="filters.subscriptionFilter"
+            @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value as 'all' | 'subscriptions')"
+            class="filter-input input-animated"
+          >
+            <option value="all">All Transactions</option>
+            <option value="subscriptions">Subscription Transactions</option>
+          </select>
+        </div>
+
+        <!-- Date Range -->
+        <div class="filter-input-group">
+          <label class="filter-label">Date Range</label>
+          <div class="flex gap-2">
+            <input
+              :value="filters.dateRange?.start || ''"
+              @input="updateDateRange('start', ($event.target as HTMLInputElement).value)"
+              type="date"
+              :max="todayDate"
+              class="filter-input flex-1 input-animated"
+            />
+            <input
+              :value="filters.dateRange?.end || ''"
+              @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
+              type="date"
+              :max="todayDate"
+              class="filter-input flex-1 input-animated"
+            />
+          </div>
+        </div>
+
+        <!-- Amount Range -->
+        <div class="filter-input-group">
+          <label class="filter-label">Amount Range</label>
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <input
+              :value="filters.amountRange?.min || ''"
+              @input="updateAmountRange('min', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
+              type="number"
+              inputmode="decimal"
+              placeholder="Min"
+              class="filter-input flex-1 min-w-0 input-animated"
+            />
+            <input
+              :value="filters.amountRange?.max || ''"
+              @input="updateAmountRange('max', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
+              type="number"
+              inputmode="decimal"
+              placeholder="Max"
+              class="filter-input flex-1 min-w-0 input-animated"
+            />
+          </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="md:col-span-2">
+          <label class="filter-label mb-2">Categories</label>
+          <div class="flex items-center gap-2">
+            <!-- Horizontal scrollable chips -->
+            <div class="flex-1 overflow-x-auto scrollbar-hide">
+              <div class="flex gap-2 pb-2">
+                <button
+                  v-for="category in visibleCategories"
+                  :key="category.id"
+                  type="button"
+                  class="touch-target interactive rounded-full border text-sm category-btn gpu-accelerated flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
+                  style="min-height: var(--touch-target-min); padding: var(--padding-touch-sm);"
+                  :class="
+                    selectedCategories.has(category.id)
+                      ? 'border-primary bg-primary/10 text-primary category-btn--active'
+                      : 'border-border-light bg-background text-text-secondary category-btn--default'
+                  "
+                  :aria-pressed="selectedCategories.has(category.id)"
+                  :aria-label="`${category.name} category ${selectedCategories.has(category.id) ? '(selected)' : '(not selected)'}`"
+                  @click="toggleCategory(category.id)"
+                >
+                  {{ category.name }}
+                  <span 
+                    v-if="selectedCategories.has(category.id)"
+                    class="text-xs font-medium"
+                    aria-hidden="true"
+                  >
+                    ×
+                  </span>
+                </button>
+              </div>
+            </div>
+            
+            <!-- All Categories button (only show if there are more categories) -->
+            <button
+              v-if="hasMoreCategories"
+              type="button"
+              class="touch-target rounded-full border border-border-medium bg-surface text-text-primary text-sm font-medium whitespace-nowrap flex-shrink-0"
+              style="min-height: var(--touch-target-min); padding: var(--padding-touch-sm);"
+              @click="showAllCategoriesModal = true"
+            >
+              All ({{ categories.length }})
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Apply/Clear Buttons (Manual Mode) -->
     <div v-if="mode === 'manual'" class="border-t border-[rgba(15,23,42,0.08)] pt-4">
@@ -266,7 +306,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
 import type { BankAccount, Category } from '@/domain/models'
 import type { TransactionFilterConfig } from '@/stores/transactions'
 import { useAnimations } from '@/utils/useAnimations'
@@ -299,21 +340,126 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<Emits>()
 
+// Debounced merchant search
+const merchantSearchInput = ref(props.filters.merchantSearch || '')
+let merchantSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(merchantSearchInput, (value) => {
+  if (merchantSearchTimer) clearTimeout(merchantSearchTimer)
+  merchantSearchTimer = setTimeout(() => {
+    emit('update:merchantSearch', value)
+  }, 250)
+})
+
+// Sync from external changes (e.g. clear-all)
+watch(() => props.filters.merchantSearch, (value) => {
+  if (value !== merchantSearchInput.value) {
+    merchantSearchInput.value = value || ''
+  }
+})
+
+// Quick filter chips
+interface QuickFilterChip {
+  key: string
+  label: string
+  active: boolean
+}
+
+const isThisMonthActive = computed(() => {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const today = now.toISOString().split('T')[0]
+  return props.filters.dateRange?.start === monthStart && props.filters.dateRange?.end === today
+})
+
+const isLast30DaysActive = computed(() => {
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now)
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  return props.filters.dateRange?.start === thirtyDaysAgo.toISOString().split('T')[0] && props.filters.dateRange?.end === now.toISOString().split('T')[0]
+})
+
+const isSubsOnlyActive = computed(() => props.filters.subscriptionFilter === 'subscriptions')
+
+const quickFilterChips = computed<QuickFilterChip[]>(() => [
+  { key: 'this-month', label: 'This Month', active: isThisMonthActive.value },
+  { key: 'last-30', label: 'Last 30 Days', active: isLast30DaysActive.value },
+  { key: 'subs-only', label: 'Subscriptions Only', active: isSubsOnlyActive.value },
+])
+
+function toggleQuickFilter(key: string) {
+  switch (key) {
+    case 'this-month': {
+      if (isThisMonthActive.value) {
+        emit('update:dateRange', { start: '', end: '' })
+      } else {
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+        const today = now.toISOString().split('T')[0]
+        emit('update:dateRange', { start: monthStart, end: today })
+      }
+      break
+    }
+    case 'last-30': {
+      if (isLast30DaysActive.value) {
+        emit('update:dateRange', { start: '', end: '' })
+      } else {
+        const now = new Date()
+        const thirtyDaysAgo = new Date(now)
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        emit('update:dateRange', { start: thirtyDaysAgo.toISOString().split('T')[0], end: now.toISOString().split('T')[0] })
+      }
+      break
+    }
+    case 'subs-only': {
+      if (isSubsOnlyActive.value) {
+        emit('update:subscriptionFilter', 'all')
+      } else {
+        emit('update:subscriptionFilter', 'subscriptions')
+      }
+      break
+    }
+  }
+}
+
 // Use animation utilities
 const { animateEntrance } = useAnimations()
 const containerRef = ref<HTMLElement>()
 
-// Entrance animation
+// Collapsible advanced filters
+const showAdvancedFilters = ref(false)
+
+// Category selection state (must be before hasActiveAdvancedFilters which references it)
+const selectedCategories = computed(() => new Set(props.filters.categories || []))
+
+// Auto-expand if advanced filters are already active on mount
+const hasActiveAdvancedFilters = computed(() => {
+  return !!(
+    props.filters.selectedAccount ||
+    props.filters.subscriptionFilter !== 'all' ||
+    props.filters.dateRange?.start ||
+    props.filters.dateRange?.end ||
+    (props.filters.amountRange && (props.filters.amountRange.min || props.filters.amountRange.max)) ||
+    selectedCategories.value.size > 0
+  )
+})
+
 onMounted(() => {
   if (containerRef.value) {
     animateEntrance(containerRef.value, 'fade-in', 100)
   }
+  if (hasActiveAdvancedFilters.value) {
+    showAdvancedFilters.value = true
+  }
+})
+
+// Auto-expand when a new advanced filter becomes active
+watch(hasActiveAdvancedFilters, (active) => {
+  if (active) showAdvancedFilters.value = true
 })
 
 // Get today's date in YYYY-MM-DD format for max date validation
 const todayDate = new Date().toISOString().split('T')[0]
-
-const selectedCategories = computed(() => new Set(props.filters.categories || []))
 
 // Category filtering - KISS: show top 8, rest in modal
 const MAX_VISIBLE_CATEGORIES = 8
@@ -411,6 +557,25 @@ const activeFilters = computed(() => {
 </script>
 
 <style scoped>
+/* Expand/collapse transition for advanced filters */
+.expand-enter-active,
+.expand-leave-active {
+  transition: opacity 0.2s ease-out, max-height 0.3s ease-out;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 600px;
+}
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

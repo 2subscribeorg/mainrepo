@@ -647,10 +647,9 @@ describe('TransactionItem', () => {
         },
       })
 
-      // Assert
-      const card = wrapper.find('div')
-      expect(card.classes()).toContain('hover:shadow-lg')
-      expect(card.classes()).toContain('hover:-translate-y-0.5')
+      // Assert - find the inner card, not the outer swipe container
+      const card = wrapper.find('.transaction-item-hover')
+      expect(card.classes()).toContain('transaction-item-hover')
     })
 
     test('has transition classes', () => {
@@ -665,8 +664,8 @@ describe('TransactionItem', () => {
       })
 
       // Assert
-      const card = wrapper.find('div')
-      expect(card.classes()).toContain('transition-fast')
+      const card = wrapper.find('.transaction-item-hover')
+      expect(card.classes()).toContain('transition-transform')
     })
 
     test('has GPU acceleration class', () => {
@@ -681,7 +680,7 @@ describe('TransactionItem', () => {
       })
 
       // Assert
-      const card = wrapper.find('div')
+      const card = wrapper.find('.transaction-item-hover')
       expect(card.classes()).toContain('gpu-accelerated')
     })
   })

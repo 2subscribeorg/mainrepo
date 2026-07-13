@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onUnmounted } from 'vue'
 
 interface Props {
   isOpen: boolean
@@ -127,13 +127,29 @@ function handleCancel() {
   emit('cancel')
 }
 
+let savedOverflow = ''
+
 watch(
   () => props.isOpen,
   async (isOpen) => {
     if (isOpen) {
+      if (typeof document !== 'undefined') {
+        savedOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+      }
       await nextTick()
       modalRef.value?.focus()
+    } else {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = savedOverflow
+      }
     }
   }
 )
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = savedOverflow
+  }
+})
 </script>

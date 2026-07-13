@@ -44,6 +44,7 @@ export function useTransactionManagement() {
         date: t.date,
         pending: false,
         transactionType: 'purchase' as const,
+        matchedSubscriptionId: t.subscriptionId,
         userId: authStore.user!.id,
       }))
 

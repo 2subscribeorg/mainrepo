@@ -5,6 +5,12 @@ import { useBankTransactionsStore } from '@/stores/bankTransactions'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0 }
+  },
   routes: [
     // Auth Routes (public)
     {
@@ -17,6 +23,12 @@ const router = createRouter({
       path: '/verify-email',
       name: 'verify-email',
       component: () => import('@/pages/VerifyEmail.vue'),
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/Onboarding.vue'),
+      beforeEnter: requireAuth,
     },
     // Protected Routes (require authentication)
     {

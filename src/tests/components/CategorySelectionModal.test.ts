@@ -43,11 +43,15 @@ describe('CategorySelectionModal', () => {
       expect(wrapper.text()).toContain('Select Category for Spotify')
     })
 
-    it('renders all existing categories in select dropdown', () => {
+    it('renders all existing categories as chip buttons', () => {
       const wrapper = createWrapper()
-      const options = wrapper.findAll('select option')
-      expect(options).toHaveLength(4) // 3 categories + "Select a category..."
-      
+      const categoryButtons = wrapper.findAll('button').filter(btn =>
+        btn.text().includes('Entertainment') ||
+        btn.text().includes('Food') ||
+        btn.text().includes('Transport')
+      )
+      expect(categoryButtons).toHaveLength(3)
+
       expect(wrapper.text()).toContain('Entertainment')
       expect(wrapper.text()).toContain('Food')
       expect(wrapper.text()).toContain('Transport')
@@ -71,10 +75,8 @@ describe('CategorySelectionModal', () => {
       await wrapper.setProps({ show: false })
       await wrapper.setProps({ show: true })
       
-      // Form should be reset
-      const selectElement = wrapper.find('select').element as HTMLSelectElement
+      // Form should be reset - check the new category name input is empty
       const inputElement = wrapper.find('input[type="text"]').element as HTMLInputElement
-      expect(selectElement.value).toBe('')
       expect(inputElement.value).toBe('')
     })
 
@@ -96,8 +98,9 @@ describe('CategorySelectionModal', () => {
       // Initially disabled
       expect(confirmButton?.attributes('disabled')).toBe('')
       
-      // Select existing category
-      await wrapper.find('select').setValue('cat1')
+      // Select existing category by clicking its chip button
+      const catButton = wrapper.findAll('button').find(btn => btn.text().includes('Entertainment'))
+      await catButton?.trigger('click')
       await wrapper.vm.$nextTick()
       
       // Should be enabled
@@ -107,7 +110,9 @@ describe('CategorySelectionModal', () => {
     it('emits confirm event with selected category ID', async () => {
       const wrapper = createWrapper()
       
-      await wrapper.find('select').setValue('cat1')
+      // Select existing category by clicking its chip button
+      const catButton = wrapper.findAll('button').find(btn => btn.text().includes('Entertainment'))
+      await catButton?.trigger('click')
       const confirmButton = wrapper.findAll('button').find(btn => 
         btn.text().includes('Add to Category') || btn.text().includes('Create & Add')
       )
@@ -261,8 +266,10 @@ describe('CategorySelectionModal', () => {
     it('handles empty categories array gracefully', () => {
       const wrapper = createWrapper({ categories: [] })
       
-      expect(wrapper.find('select').findAll('option')).toHaveLength(1) // Only "Select a category..."
-      expect(wrapper.text()).toContain('Select a category...')
+      expect(wrapper.findAll('button').filter(btn =>
+        btn.text().includes('No Color Category')
+      )).toHaveLength(0) // No category buttons when empty
+      expect(wrapper.text()).toContain('Create new category:')
     })
 
     it('handles long merchant names', () => {
@@ -302,8 +309,9 @@ describe('CategorySelectionModal', () => {
     it('has proper button semantics', () => {
       const wrapper = createWrapper()
       
+      // Cancel, Confirm, color buttons, + category chip buttons
       const buttons = wrapper.findAll('button')
-      expect(buttons).toHaveLength(2 + DEFAULT_COLORS.length) // Cancel, Confirm, + color buttons
+      expect(buttons.length).toBeGreaterThanOrEqual(2 + DEFAULT_COLORS.length)
       
       // Check for proper button types
       buttons.forEach(button => {

@@ -9,7 +9,7 @@
       <button
         @click="$emit('goToPage', currentPage - 1)"
         :disabled="currentPage <= 1"
-        class="w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+        class="w-11 h-11 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         ‹
       </button>
@@ -19,7 +19,7 @@
       <button
         @click="$emit('goToPage', currentPage + 1)"
         :disabled="currentPage >= totalPages"
-        class="w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+        class="w-11 h-11 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         ›
       </button>

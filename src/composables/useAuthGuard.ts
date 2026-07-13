@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboarding } from './useOnboarding'
 import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
@@ -84,6 +85,16 @@ export async function requireAuth(
     
     if (user && !user.emailVerified && to.path !== '/verify-email') {
       next('/verify-email')
+      return
+    }
+  }
+
+  // Onboarding check — redirect users who haven't completed onboarding
+  if (to.path !== '/onboarding') {
+    const { checkOnboardingStatus } = useOnboarding()
+    const onboardingDone = await checkOnboardingStatus()
+    if (!onboardingDone) {
+      next('/onboarding')
       return
     }
   }

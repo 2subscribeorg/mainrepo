@@ -23,7 +23,9 @@
       </button>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <div v-if="loading" class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <SkeletonLoader variant="card" height="120px" :count="6" />
+    </div>
 
     <div v-else class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <ErrorBoundary component="CategoryGrid">
@@ -72,7 +74,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useCategoriesStore } from '@/stores/categories'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
 import { sanitizeAmount } from '@/utils/sanitize'
