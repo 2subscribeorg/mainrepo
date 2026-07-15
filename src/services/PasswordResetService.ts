@@ -1,5 +1,4 @@
-import { sendPasswordResetEmail } from 'firebase/auth'
-import { getFirebaseAuth } from '@/config/firebase'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 export interface PasswordResetResult {
   success: boolean
@@ -9,17 +8,32 @@ export interface PasswordResetResult {
 export class PasswordResetService {
   async sendPasswordResetEmail(email: string): Promise<PasswordResetResult> {
     try {
-      const auth = getFirebaseAuth()
-      await sendPasswordResetEmail(auth, email)
-      return {
-        success: true,
-        message: 'If an account exists for this email, a password reset link has been sent.',
+      const response = await fetch(buildBackendApiUrl('/auth/password-reset'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result?.error?.message || 'Failed to send password reset email',
+        }
       }
-    } catch {
-      // Always return a safe generic message to prevent email enumeration
+
       return {
         success: true,
-        message: 'If an account exists for this email, a password reset link has been sent.',
+        // Generic message to prevent email enumeration
+        message: result?.data?.message || 'If an account exists for this email, a password reset email has been sent.',
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send password reset email',
       }
     }
   }

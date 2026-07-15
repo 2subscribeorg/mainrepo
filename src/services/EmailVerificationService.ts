@@ -1,8 +1,5 @@
-import {
-  sendEmailVerification,
-  type ActionCodeSettings,
-  type User,
-} from 'firebase/auth'
+import type { User } from 'firebase/auth'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 export interface EmailVerificationConfig {
   continueUrl?: string
@@ -20,14 +17,32 @@ export class EmailVerificationService {
     config?: EmailVerificationConfig
   ): Promise<EmailVerificationResult> {
     try {
-      const actionCodeSettings = this.getActionCodeSettings(config)
-      await sendEmailVerification(user, actionCodeSettings)
+      const token = await user.getIdToken()
+
+      const response = await fetch(buildBackendApiUrl('/auth/email-verification'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          continueUrl: config?.continueUrl,
+          handleCodeInApp: config?.handleCodeInApp,
+        }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error?.message || 'Failed to send verification email')
+      }
 
       return { success: true }
-    } catch (error: any) {
+    } catch (error) {
       return {
         success: false,
-        error: this.getErrorMessage(error),
+        error: error instanceof Error && error.message
+          ? error.message
+          : 'Failed to send verification email',
       }
     }
   }
@@ -43,41 +58,6 @@ export class EmailVerificationService {
     } catch {
       return false
     }
-  }
-
-  private getActionCodeSettings(config?: EmailVerificationConfig): ActionCodeSettings | undefined {
-    if (!config?.continueUrl) {
-      return undefined
-    }
-
-    return {
-      url: config.continueUrl,
-      handleCodeInApp: config.handleCodeInApp,
-    }
-  }
-
-  private getErrorMessage(error: unknown): string {
-    const code = typeof error === 'object' && error !== null && 'code' in error
-      ? String((error as { code?: unknown }).code)
-      : ''
-
-    if (code === 'auth/too-many-requests') {
-      return 'Too many verification emails were requested. Please try again later.'
-    }
-
-    if (code === 'auth/network-request-failed') {
-      return 'Network error. Please check your connection and try again.'
-    }
-
-    if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
-      return 'Verification link configuration is invalid. Please contact support.'
-    }
-
-    if (error instanceof Error && error.message) {
-      return error.message
-    }
-
-    return 'Failed to send verification email'
   }
 }
 
