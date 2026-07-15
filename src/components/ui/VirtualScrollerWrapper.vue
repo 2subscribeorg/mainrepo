@@ -25,7 +25,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
@@ -36,22 +35,10 @@ interface Props {
   enableVirtual?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   itemSize: 80, // Default height for transaction items
   threshold: 50, // Only virtualize if more than 50 items
   enableVirtual: true // Feature flag
-})
-
-// Auto-disable virtual scrolling for small lists
-const shouldVirtualize = computed(() => {
-  const shouldVirtual = props.enableVirtual && props.items.length >= props.threshold
-  
-  // Performance monitoring
-  if (props.items.length > 0) {
-    console.debug(`[VIRTUAL SCROLL] Items: ${props.items.length}, Virtual: ${shouldVirtual}, Threshold: ${props.threshold}`)
-  }
-  
-  return shouldVirtual
 })
 </script>
 

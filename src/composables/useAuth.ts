@@ -27,6 +27,39 @@ export function useAuth() {
   const userId = computed(() => authStore.userId)
   const userEmail = computed(() => authStore.userEmail)
 
+  function getMfaErrorMessage(e: unknown, fallback: string) {
+    const code = (e as { code?: string })?.code
+    const message = e instanceof Error ? e.message : ''
+    const source = `${code || ''} ${message}`.toLowerCase()
+
+    if (source.includes('auth/requires-recent-login')) {
+      return 'Please confirm your password before changing two-factor authentication.'
+    }
+    if (source.includes('auth/invalid-phone-number') || source.includes('auth/missing-phone-number')) {
+      return 'Enter a valid phone number with country code, e.g. +919985520424.'
+    }
+    if (source.includes('auth/invalid-verification-code')) {
+      return 'Invalid verification code. Check the SMS and try again.'
+    }
+    if (source.includes('auth/code-expired')) {
+      return 'This verification code expired. Send a new code and try again.'
+    }
+    if (source.includes('auth/too-many-requests') || source.includes('auth/quota-exceeded')) {
+      return 'SMS verification is temporarily limited. Please try again later.'
+    }
+    if (
+      source.includes('auth/captcha-check-failed') ||
+      source.includes('auth/invalid-app-credential') ||
+      source.includes('auth/missing-app-credential')
+    ) {
+      return 'Phone verification could not confirm this app. Try again or check Firebase app verification setup.'
+    }
+    if (source.includes('auth/network-request-failed')) {
+      return 'Network error. Please check your connection and try again.'
+    }
+
+    return message || fallback
+  }
   /**
    * Sign in with email and password
    * Waits for auth state to be updated before resolving
@@ -95,6 +128,18 @@ export function useAuth() {
    */
   function initAuthListener() {
     authStore.initAuthListener()
+  }
+
+
+  async function reauthenticate(currentPassword: string) {
+    try {
+      return await authStore.reauthenticate(currentPassword)
+    } catch (e) {
+      return {
+        success: false,
+        message: getMfaErrorMessage(e, 'Failed to confirm password')
+      }
+    }
   }
 
   /**
@@ -166,7 +211,7 @@ export function useAuth() {
       await authStore.sendMfaChallengeCode(appVerifier as any)
       return { success: true, error: null }
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : 'Failed to send code' }
+      return { success: false, error: getMfaErrorMessage(e, 'Failed to send code') }
     }
   }
 
@@ -175,7 +220,7 @@ export function useAuth() {
       await authStore.completeMfaSignIn(otp)
       return { success: true, error: null }
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : 'Invalid code' }
+      return { success: false, error: getMfaErrorMessage(e, 'Invalid code') }
     }
   }
 
@@ -184,7 +229,7 @@ export function useAuth() {
       await authStore.sendMfaEnrollmentCode(phoneNumber, appVerifier as any)
       return { success: true, error: null }
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : 'Failed to send code' }
+      return { success: false, error: getMfaErrorMessage(e, 'Failed to send code') }
     }
   }
 
@@ -193,7 +238,7 @@ export function useAuth() {
       await authStore.completeMfaEnrollment(otp)
       return { success: true, error: null }
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : 'Invalid code' }
+      return { success: false, error: getMfaErrorMessage(e, 'Invalid code') }
     }
   }
 
@@ -202,7 +247,7 @@ export function useAuth() {
       await authStore.unenrollMfa()
       return { success: true, error: null }
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : 'Failed to disable 2FA' }
+      return { success: false, error: getMfaErrorMessage(e, 'Failed to disable 2FA') }
     }
   }
 
@@ -249,6 +294,7 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    reauthenticate,
     resetPassword,
     updateEmail,
     updatePassword,

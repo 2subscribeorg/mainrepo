@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { requireAuth, redirectIfAuthenticated } from '@/composables/useAuthGuard'
+import { requireAuth, redirectIfAuthenticated, requireVerifyEmailRoute } from '@/composables/useAuthGuard'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +15,7 @@ const router = createRouter({
       path: '/verify-email',
       name: 'verify-email',
       component: () => import('@/pages/VerifyEmail.vue'),
+      beforeEnter: requireVerifyEmailRoute,
     },
     {
       path: '/verify-email/confirm',

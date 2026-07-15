@@ -52,9 +52,9 @@
 
           <div class="space-y-3">
             <button
-              @click="confirmDeletion"
               :disabled="deleting"
               class="w-full bg-red-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="confirmDeletion"
             >
               {{ deleting ? 'Deleting...' : 'Yes, permanently delete my account' }}
             </button>

@@ -72,10 +72,6 @@ import UserProfile from '@/components/settings/UserProfile.vue'
 
 const notificationsStore = useNotificationsStore()
 
-// Environment flags
-const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
-const isProduction = import.meta.env.PROD
-
 const navLinks = computed(() => {
   const links = [
     { path: '/', label: 'Dashboard' },

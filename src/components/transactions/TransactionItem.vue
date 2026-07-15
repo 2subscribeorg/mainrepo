@@ -63,9 +63,9 @@
         <div class="mt-2">
           <select
             :value="transaction.categoryId || ''"
-            @change="handleCategoryChange($event)"
             class="category-dropdown w-full rounded-xl border border-[rgba(15,23,42,0.15)] bg-[var(--color-background)] px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
             size="1"
+            @change="handleCategoryChange($event)"
           >
             <option value="">{{ currentCategoryName ? 'Change category…' : 'Select category…' }}</option>
             <option
@@ -104,7 +104,7 @@
       :saving="savingCategory"
       :editing="false"
       :validation-errors="categoryValidationErrors"
-      @update:formData="categoryFormData = $event"
+      @update:form-data="categoryFormData = $event"
       @save="handleSaveCategory"
       @close="closeCategoryModal"
     />
@@ -114,16 +114,12 @@
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
 import { computed, ref } from 'vue'
-import type { Transaction, Subscription } from '@/domain/models'
+import type { Transaction } from '@/domain/models'
 import { formatMoney, formatDate } from '@/utils/formatters'
 import { DuplicateSubscriptionChecker, type DuplicateCheckResult } from '@/services/DuplicateSubscriptionChecker'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
-import { useCategoriesStore } from '@/stores/categories'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
-import { useAuth } from '@/composables/useAuth'
-import type { Category } from '@/domain/models'
-import type { CategoryFormData } from '@/schemas/form-validation.schema'
 import { validateCategoryForm } from '@/schemas/form-validation.schema'
 import TransactionBadge from './TransactionBadge.vue'
 import DuplicateSubscriptionModal from '@/components/DuplicateSubscriptionModal.vue'
@@ -153,8 +149,6 @@ const emit = defineEmits<{
 
 const subscriptionsStore = useSubscriptionsStore()
 const transactionsStore = useTransactionsStore()
-const categoriesStore = useCategoriesStore()
-const { user } = useAuth()
 const { createCategory } = useCategoryManagement()
 const duplicateChecker = new DuplicateSubscriptionChecker()
 
@@ -280,14 +274,7 @@ function handleAddToExisting() {
   if (duplicateResult.value?.existingSubscription) {
     // Link this transaction to the existing subscription
     const existingSubscription = duplicateResult.value.existingSubscription
-    
-    // Update the transaction to link it to the existing subscription
-    const updatedTransaction = {
-      ...props.transaction,
-      subscriptionId: existingSubscription.id,
-      categoryId: existingSubscription.categoryId // Use the existing subscription's category
-    }
-    
+
     // Emit a different event for linking to existing subscription
     emit('link-to-existing-subscription', {
       transactionId: props.transaction.id,

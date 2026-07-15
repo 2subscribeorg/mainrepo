@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import { describe, it, expect } from 'vitest'
 import { CategoryInputSchema, validateCategoryWithZod } from '@/schemas/category.schema'
 

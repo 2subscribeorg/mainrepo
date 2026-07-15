@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 import { FirebaseSubscriptionFeedbackRepo } from '@/data/repo/firebase/FirebaseSubscriptionFeedbackRepo'
 
@@ -134,6 +135,7 @@ global.fetch = vi.fn()
 
 describe('useSubscriptionFeedback', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     // Reset mock call history but keep implementations
     vi.clearAllMocks()
     
@@ -143,6 +145,7 @@ describe('useSubscriptionFeedback', () => {
     })
     
     // Re-apply Firebase repo mock implementation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(FirebaseSubscriptionFeedbackRepo).mockImplementation(() => ({
       recordFeedback: mockRecordFeedback,
       getById: vi.fn().mockResolvedValue(null),
@@ -152,7 +155,7 @@ describe('useSubscriptionFeedback', () => {
       collectionName: 'subscriptionFeedback',
       getUserFeedback: vi.fn().mockResolvedValue([]),
       deleteFeedback: vi.fn().mockResolvedValue(undefined),
-    }))
+    } as any))
     
     // Reset the mock implementations
     mockRecordFeedback.mockResolvedValue({ id: 'feedback-123' })

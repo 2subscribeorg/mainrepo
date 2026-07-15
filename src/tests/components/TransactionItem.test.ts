@@ -41,7 +41,7 @@ describe('TransactionItem', () => {
     { id: 'cat-3', name: 'Transport' },
   ]
 
-  const mockGetAccountName = vi.fn((accountId: string) => 'Main Account')
+  const mockGetAccountName = vi.fn((_accountId: string) => 'Main Account')
   const mockGetAmountColor = vi.fn((amount: number) => 
     amount < 0 ? 'text-error-text' : 'text-success-text'
   )

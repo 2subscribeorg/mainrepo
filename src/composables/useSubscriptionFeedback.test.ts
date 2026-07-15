@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -87,6 +88,7 @@ import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
 
 describe('Merchant Rejection Race Condition Fix', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     localStorageMock.clear()
     vi.clearAllMocks()
   })

@@ -11,7 +11,7 @@ describe('ConfidenceScorer', () => {
     amount: { amount, currency: 'GBP' },
     merchantName: 'Test Merchant',
     date: '2024-01-01',
-    category: { name: 'Entertainment' },
+    category: ['Entertainment'],
     pending: false,
     transactionType: 'purchase',
     userId: 'user-1',

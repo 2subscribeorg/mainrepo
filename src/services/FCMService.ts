@@ -35,11 +35,11 @@ export async function initFCM(): Promise<void> {
     if (permission.receive !== 'granted') return
 
     await PushNotifications.addListener('registration', async ({ value: fcmToken }) => {
-      await saveTokenToBackend(fcmToken)
+      await saveTokenToBackend(fcmToken).catch(() => {})
     })
 
     await PushNotifications.addListener('registrationError', (err) => {
-      console.error('FCM registration error:', err)
+      console.warn('FCM registration error:', err)
     })
 
     await PushNotifications.addListener('pushNotificationReceived', (_notification) => {
@@ -50,8 +50,15 @@ export async function initFCM(): Promise<void> {
       // User tapped notification — handle deep link here if needed
     })
 
-    await PushNotifications.register()
+    // register() dispatches to a native background thread; errors surface via
+    // the 'registrationError' listener rather than as a thrown exception.
+    // Do NOT await — on emulators without Google Play Services the native call
+    // throws IllegalStateException on the CapacitorPlugins thread which would
+    // crash the process if it propagates before Firebase finishes initialising.
+    PushNotifications.register().catch((err) => {
+      console.warn('FCM register() failed (emulator or no Play Services):', err)
+    })
   } catch (err) {
-    console.error('FCM init error:', err)
+    console.warn('FCM init skipped:', err)
   }
 }

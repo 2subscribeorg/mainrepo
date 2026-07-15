@@ -33,10 +33,23 @@ dist-ssr
 *.sln
 *.sw?
 
-# Capacitor
+# Capacitor - native platform folders contain secrets
 android/
 ios/
 .capacitor/
+
+# Firebase native config files (contain API keys — managed per-environment)
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+ios/App/App/Info.plist
+
+# Compiled app binaries
+*.apk
+*.ipa
+*.aab
+
+# Vite/Vitest build cache timestamps
+*.timestamp-*.mjs
 
 # Testing
 test-results/
@@ -55,3 +68,7 @@ coverage/
 
 # Backend (deployed separately on Railway)
 backend/
+
+# Android signing keystore — never commit this
+*.jks
+*.keystore

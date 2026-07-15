@@ -433,7 +433,7 @@ describe('useTransactionManagement', () => {
   })
 
   describe('bulk operations', () => {
-    const mockBulkUpdates = [
+    const mockBulkUpdates: Array<{ id: string; data: Record<string, unknown> }> = [
       { id: 'transaction-1', data: { categoryId: 'new-category-1' } },
       { id: 'transaction-2', data: { categoryId: 'new-category-2' } },
       { id: 'non-existent', data: { categoryId: 'category-3' } }
@@ -452,7 +452,7 @@ describe('useTransactionManagement', () => {
       const validUpdates = mockBulkUpdates.slice(0, 2) // Exclude non-existent
       
       // Act
-      const results = await bulkUpdateTransactions(validUpdates)
+      const results = await bulkUpdateTransactions(validUpdates as any)
       
       // Assert
       expect(results).toHaveLength(2)
@@ -489,7 +489,7 @@ describe('useTransactionManagement', () => {
       ]
       
       // Act
-      const results = await bulkUpdateTransactions(updates)
+      const results = await bulkUpdateTransactions(updates as any)
       
       // Assert - should continue processing despite one failure
       expect(results).toHaveLength(1) // Only successful updates returned
@@ -506,7 +506,7 @@ describe('useTransactionManagement', () => {
       ]
       
       // Act
-      const results = await bulkUpdateTransactions(orderedUpdates)
+      const results = await bulkUpdateTransactions(orderedUpdates as any)
       
       // Assert - results should maintain input order
       expect(results[0]).toEqual(
@@ -536,7 +536,7 @@ describe('useTransactionManagement', () => {
       ]
       
       // Act
-      await bulkUpdateTransactions(updates)
+      await bulkUpdateTransactions(updates as any)
       
       // Assert - should log bulk completion message
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -554,7 +554,7 @@ describe('useTransactionManagement', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       
       // Act
-      const results = await bulkUpdateTransactions(mockBulkUpdates)
+      const results = await bulkUpdateTransactions(mockBulkUpdates as any)
       
       // Assert
       expect(results).toHaveLength(2) // Only existing transactions processed
@@ -587,7 +587,7 @@ describe('useTransactionManagement', () => {
       ]
       
       // Act
-      await bulkUpdateTransactions(updates)
+      await bulkUpdateTransactions(updates as any)
       
       // Assert - should merge new data with existing transaction
       expect(mockDataStore.updateTransaction).toHaveBeenCalledWith({
@@ -611,7 +611,7 @@ describe('useTransactionManagement', () => {
       // Act
       try {
         await detectPatterns()
-      } catch (e) {
+      } catch {
         // Expected to throw
       }
       
@@ -630,7 +630,7 @@ describe('useTransactionManagement', () => {
       // Act
       try {
         await detectPatterns()
-      } catch (e) {
+      } catch {
         // Expected to fail
       }
       

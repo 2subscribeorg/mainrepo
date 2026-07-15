@@ -10,7 +10,7 @@
 
     <div v-else-if="error" class="error-banner">
       <p>{{ error }}</p>
-      <button @click="initialize" class="btn-retry">Retry</button>
+      <button class="btn-retry" @click="initialize">Retry</button>
     </div>
 
     <div v-if="isPro" class="pro-badge-banner">
@@ -21,59 +21,63 @@
       <p>You have access to all premium features!</p>
     </div>
 
-    <div v-if="!isPro" class="no-subscription">
-      <div class="current-plan-card">
-        <h3>Current Plan: Free</h3>
-        <p class="plan-description">You're currently on the free plan with limited features.</p>
+    <!-- Pricing plans — shown whether free OR pro (pro plans are disabled/labelled) -->
+    <div class="pricing-section">
+      <h3>{{ isPro ? 'Your Plan' : 'Upgrade to Premium' }}</h3>
+      <div v-if="availablePlans.length === 0" class="empty-plans">
+        No subscription plans are available right now. Please try again later.
       </div>
-
-      <div class="pricing-section">
-        <h3>Upgrade to Premium</h3>
-        <div class="pricing-cards">
-          <div
-            v-for="plan in availablePlans"
-            :key="plan.id"
-            class="pricing-card"
-            :class="{ recommended: plan.id === '$rc_annual' }"
-          >
-            <div v-if="plan.id === '$rc_annual'" class="recommended-badge">Best Value</div>
-            <h4>{{ plan.name }}</h4>
-            <div class="price">
-              <span class="currency">£</span>
-              <span class="amount">{{ plan.price.toFixed(2) }}</span>
-              <span class="interval">/ {{ plan.interval }}</span>
-            </div>
-            <ul class="features">
-              <li v-for="feature in plan.features" :key="feature">
-                <span class="checkmark">✓</span> {{ feature }}
-              </li>
-            </ul>
-            <button @click="purchase(plan.id)" :disabled="purchasing" class="btn-subscribe">
-              {{ purchasing ? 'Processing...' : 'Subscribe' }}
-            </button>
+      <div class="pricing-cards">
+        <div
+          v-for="plan in availablePlans"
+          :key="plan.id"
+          class="pricing-card"
+          :class="{
+            recommended: plan.id === '$rc_annual' && !isPro,
+            'pricing-card--active': isActivePlan(plan.id),
+          }"
+        >
+          <div v-if="isActivePlan(plan.id)" class="active-badge">Your Plan</div>
+          <div v-else-if="plan.id === '$rc_annual' && !isPro" class="recommended-badge">Best Value</div>
+          <h4>{{ plan.name }}</h4>
+          <div class="price">
+            <span class="currency">{{ currencySymbol(plan.currency) }}</span>
+            <span class="amount">{{ plan.price.toFixed(2) }}</span>
+            <span class="interval">/ {{ plan.interval }}</span>
           </div>
+          <ul class="features">
+            <li v-for="feature in plan.features" :key="feature">
+              <span class="checkmark">✓</span> {{ feature }}
+            </li>
+          </ul>
+          <button
+            :disabled="purchasing || isActivePlan(plan.id)"
+            class="btn-subscribe"
+            :class="{ 'btn-subscribe--active': isActivePlan(plan.id) }"
+            @click="purchase(plan.id)"
+          >
+            <template v-if="isActivePlan(plan.id)">✓ Active</template>
+            <template v-else-if="purchasing && purchasingPlanId === plan.id">Processing...</template>
+            <template v-else>Subscribe</template>
+          </button>
         </div>
       </div>
     </div>
 
-    <div v-else class="active-subscription">
+    <!-- Active subscription management — only shown when pro -->
+    <div v-if="isPro" class="active-subscription">
       <div class="subscription-card">
         <div class="subscription-header">
           <div>
-            <h3>{{ currentPlan?.name }} Active</h3>
+            <h3>{{ currentPlan?.name || 'Premium' }} — Active</h3>
             <span class="status-badge status-active">Active</span>
-          </div>
-          <div class="subscription-actions">
-            <button @click="cancelSubscription" :disabled="actionInProgress" class="btn-cancel">
-              {{ actionInProgress ? 'Processing...' : 'Cancel Subscription' }}
-            </button>
           </div>
         </div>
 
         <div class="subscription-details">
           <div class="detail-row">
             <span class="label">Plan:</span>
-            <span class="value">{{ currentPlan ? `£${currentPlan.price}/${currentPlan.interval}` : '' }}</span>
+            <span class="value">{{ currentPlan ? `${currencySymbol(currentPlan.currency)}${currentPlan.price}/${currentPlan.interval}` : 'Premium' }}</span>
           </div>
           <div class="detail-row">
             <span class="label">Status:</span>
@@ -81,13 +85,17 @@
           </div>
         </div>
 
-        <div v-if="alternatePlan" class="upgrade-section">
-          <p class="upgrade-text">
-            Upgrade to <strong>{{ alternatePlan.name }}</strong> —
-            {{ formatCurrency(alternatePlan.price) }}{{ alternatePlan.interval === 'lifetime' ? ' one-time' : `/${alternatePlan.interval}` }}
-          </p>
-          <button @click="purchase(alternatePlan.id)" :disabled="purchasing" class="btn-upgrade">
-            {{ purchasing ? 'Processing...' : `Upgrade to ${alternatePlan.name}` }}
+        <div class="subscription-actions">
+          <button @click="restorePurchases" :disabled="actionInProgress" class="btn-secondary-action">
+            <span v-if="actionInProgress && activeAction === 'restore'">Refreshing...</span>
+            <span v-else>Restore / Renew</span>
+          </button>
+          <button @click="manageSubscription" :disabled="actionInProgress" class="btn-secondary-action">
+            <span v-if="actionInProgress && activeAction === 'manage'">Opening...</span>
+            <span v-else>Manage / Pause</span>
+          </button>
+          <button @click="showCancelConfirm = true" :disabled="actionInProgress" class="btn-cancel">
+            Cancel Subscription
           </button>
         </div>
       </div>
@@ -96,6 +104,41 @@
         {{ successMessage }}
       </div>
     </div>
+
+    <!-- Free plan restore section (shown when not pro) -->
+    <div v-if="!isPro" class="restore-section">
+      <p class="restore-hint">Already purchased a plan? Restore it to this device.</p>
+      <button @click="restorePurchases" :disabled="actionInProgress" class="btn-secondary-action">
+        <span v-if="actionInProgress && activeAction === 'restore'">Refreshing...</span>
+        <span v-else>Restore Purchases</span>
+      </button>
+      <div v-if="successMessage" class="success-banner" style="margin-top: 1rem;">
+        {{ successMessage }}
+      </div>
+    </div>
+
+    <!-- Cancel Confirmation Dialog -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showCancelConfirm" class="modal-overlay" @click.self="showCancelConfirm = false">
+          <div class="modal-content">
+            <h3>Cancel Subscription</h3>
+            <p class="warning-text">
+              Are you sure you want to cancel? You will lose access to all premium features.
+            </p>
+            <div class="modal-actions">
+              <button class="btn-modal-secondary" @click="showCancelConfirm = false">
+                Keep Subscription
+              </button>
+              <button class="btn-modal-danger" :disabled="actionInProgress" @click="cancelSubscription">
+                <span v-if="actionInProgress && activeAction === 'cancel'">Cancelling...</span>
+                <span v-else>Yes, Cancel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <div v-if="!loading && transactions.length > 0" class="transaction-history">
       <button class="transaction-history-toggle" @click="showHistory = !showHistory">
@@ -168,26 +211,32 @@ const { userId } = useAuth()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const purchasing = ref(false)
+const purchasingPlanId = ref<string | null>(null)
 const actionInProgress = ref(false)
+const activeAction = ref<'restore' | 'cancel' | 'manage' | null>(null)
 const successMessage = ref<string | null>(null)
 const transactions = ref<PurchaseTransaction[]>([])
 const showHistory = ref(false)
+const showCancelConfirm = ref(false)
 
 const isPro = billingService.isProReactive
 const currentPlan = billingService.activePlan
 
-const alternatePlan = computed(() => {
-  const active = currentPlan.value
-  if (!active) return null
-  const paidPlans = billingService.getPricingPlans().filter(p => p.id !== 'free')
-  const currentIndex = paidPlans.findIndex(p => p.id === active.id)
-  if (currentIndex === -1 || currentIndex === paidPlans.length - 1) return null
-  return paidPlans[currentIndex + 1]
-})
-
 const availablePlans = computed(() =>
   billingService.getPricingPlans().filter(p => p.id !== 'free')
 )
+
+function isActivePlan(planId: string): boolean {
+  return isPro.value && currentPlan.value?.id === planId
+}
+
+function currencySymbol(currency: string): string {
+  try {
+    return (0).toLocaleString('en', { style: 'currency', currency, minimumFractionDigits: 0 }).replace(/\d/g, '').trim()
+  } catch {
+    return currency
+  }
+}
 
 const totalSpent = computed(() =>
   transactions.value
@@ -239,12 +288,20 @@ async function initialize(): Promise<void> {
 
 async function purchase(planId: string): Promise<void> {
   if (purchasing.value) return
+  // Block re-purchase of already active plan
+  if (isActivePlan(planId)) {
+    error.value = 'You are already subscribed to this plan.'
+    setTimeout(() => { error.value = null }, 4000)
+    return
+  }
   try {
     purchasing.value = true
+    purchasingPlanId.value = planId
     error.value = null
     const result = await billingService.purchase(planId)
     if (result.success) {
       successMessage.value = 'Subscription updated successfully!'
+      await reloadBillingState()
       setTimeout(() => { successMessage.value = null }, 5000)
     } else {
       error.value = result.error ?? 'Purchase failed'
@@ -253,22 +310,82 @@ async function purchase(planId: string): Promise<void> {
     error.value = err instanceof Error ? err.message : 'Purchase failed'
   } finally {
     purchasing.value = false
+    purchasingPlanId.value = null
   }
 }
 
 async function cancelSubscription(): Promise<void> {
   if (actionInProgress.value) return
+  showCancelConfirm.value = false
   try {
     actionInProgress.value = true
+    activeAction.value = 'cancel'
     error.value = null
-    await billingService.cancelSubscription()
-    successMessage.value = 'Subscription cancelled successfully'
-    setTimeout(() => { successMessage.value = null }, 5000)
+    const result = await billingService.cancelSubscription()
+    if (result.openedManagement) {
+      successMessage.value = 'Subscription management opened. Use your app store to cancel or pause.'
+    } else {
+      // Do NOT flip local state — let RC confirm cancellation on next refresh
+      successMessage.value = 'Cancellation request sent. Your plan stays active until the current period ends.'
+      await reloadBillingState()
+    }
+    setTimeout(() => { successMessage.value = null }, 7000)
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to cancel subscription'
   } finally {
     actionInProgress.value = false
+    activeAction.value = null
   }
+}
+
+async function manageSubscription(): Promise<void> {
+  if (actionInProgress.value) return
+  try {
+    actionInProgress.value = true
+    activeAction.value = 'manage'
+    error.value = null
+    const opened = await billingService.openSubscriptionManagement()
+    if (opened) {
+      successMessage.value = 'Subscription management opened in your browser.'
+    } else {
+      successMessage.value = 'No management link available. Use your device\'s app store to manage your subscription.'
+    }
+    setTimeout(() => { successMessage.value = null }, 6000)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to open subscription management'
+  } finally {
+    actionInProgress.value = false
+    activeAction.value = null
+  }
+}
+
+async function restorePurchases(): Promise<void> {
+  if (actionInProgress.value) return
+  try {
+    actionInProgress.value = true
+    activeAction.value = 'restore'
+    error.value = null
+    const result = await billingService.restorePurchases()
+    if (result.success) {
+      successMessage.value = isPro.value
+        ? 'Purchases verified — your plan is active.'
+        : 'Purchases restored successfully!'
+      await reloadBillingState()
+      setTimeout(() => { successMessage.value = null }, 5000)
+    } else {
+      error.value = 'No active purchases found for this account. If you purchased on a different account, sign in with that account and try again.'
+    }
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to restore purchases'
+  } finally {
+    actionInProgress.value = false
+    activeAction.value = null
+  }
+}
+
+async function reloadBillingState(): Promise<void> {
+  await billingService.refreshSubscriptionStatus()
+  transactions.value = await revenueCat.fetchTransactionHistory()
 }
 </script>
 
@@ -426,6 +543,119 @@ async function cancelSubscription(): Promise<void> {
   font-weight: 600;
 }
 
+.active-badge {
+  position: absolute;
+  top: -12px;
+  right: 1rem;
+  background: var(--color-income);
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pricing-card--active {
+  border-color: var(--color-income);
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.15);
+}
+
+.btn-subscribe--active {
+  background: var(--color-income) !important;
+  cursor: default;
+}
+
+.restore-section {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.restore-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/* Cancel confirmation modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 100%;
+}
+
+.modal-content h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #1a1a1a;
+}
+
+.warning-text {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-modal-secondary {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: #1a1a1a;
+  border: none;
+  transition: background 0.2s;
+}
+
+.btn-modal-secondary:hover { background: #e5e7eb; }
+
+.btn-modal-danger {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  transition: background 0.2s;
+}
+
+.btn-modal-danger:hover:not(:disabled) { background: #b91c1c; }
+.btn-modal-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+
+.subscription-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.08);
+}
+
 .pricing-card h4 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
@@ -535,7 +765,27 @@ async function cancelSubscription(): Promise<void> {
 .subscription-actions {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
+
+.btn-secondary-action {
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(31, 41, 55, 0.16);
+}
+
+.btn-secondary-action:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-secondary-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-cancel {
   flex: 1;
@@ -564,6 +814,22 @@ async function cancelSubscription(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.plan-switch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.empty-plans {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  padding: 1rem;
 }
 
 .upgrade-text {

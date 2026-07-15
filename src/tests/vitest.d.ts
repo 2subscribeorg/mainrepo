@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import type { VueWrapper } from '@vue/test-utils'
+import type { VueWrapper as _VueWrapper } from '@vue/test-utils'
 
 declare global {
   namespace Vi {

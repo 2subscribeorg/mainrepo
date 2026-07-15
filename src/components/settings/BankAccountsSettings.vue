@@ -56,9 +56,9 @@
       <div class="text-center pb-2">
         <PlaidLinkButton 
           v-if="usePlaidBackend"
-          @success="handlePlaidSuccess" 
+          class="text-sm text-primary hover:text-primary/80 font-medium" 
+          @success="handlePlaidSuccess"
           @error="handlePlaidError"
-          class="text-sm text-primary hover:text-primary/80 font-medium"
         >
           + Add another account
         </PlaidLinkButton>
@@ -154,8 +154,8 @@
           <!-- Reconnect button for expiring/expired/error states -->
           <button
             v-if="usePlaidBackend && needsReconnect(connection.status)"
-            @click="openReconnectionWizard(connection)"
             class="flex-1 rounded bg-warning/10 px-3 py-1.5 text-sm text-warning hover:bg-warning/20 transition-colors font-medium"
+            @click="openReconnectionWizard(connection)"
           >
             🔗 Reconnect
           </button>

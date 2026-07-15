@@ -67,8 +67,8 @@
       <div class="modal-actions">
         <button 
           class="btn-secondary btn-animated" 
-          @click="$emit('close')"
           aria-label="Cancel category form"
+          @click="$emit('close')"
         >
           Cancel
         </button>
@@ -76,16 +76,16 @@
           v-if="editing"
           class="btn-danger btn-animated"
           type="button"
-          @click="$emit('delete')"
           aria-label="Delete this category"
+          @click="$emit('delete')"
         >
           Delete
         </button>
         <button
           class="btn-primary btn-animated"
           :disabled="saving"
-          @click="$emit('save')"
           :aria-label="editing ? 'Update category' : 'Create new category'"
+          @click="$emit('save')"
         >
           {{ saving ? 'Saving...' : 'Save' }}
         </button>

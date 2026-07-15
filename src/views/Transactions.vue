@@ -16,11 +16,11 @@
           :categories="categoriesStore.categories"
           :active-filter-count="activeFilterCount"
           mode="realtime"
-          @update:selectedAccount="selectedAccount = $event"
-          @update:subscriptionFilter="subscriptionFilter = $event"
-          @update:merchantSearch="handleMerchantSearchUpdate"
-          @update:dateRange="handleDateRangeUpdate"
-          @update:amountRange="handleAmountRangeUpdate"
+          @update:selected-account="selectedAccount = $event"
+          @update:subscription-filter="subscriptionFilter = $event"
+          @update:merchant-search="handleMerchantSearchUpdate"
+          @update:date-range="handleDateRangeUpdate"
+          @update:amount-range="handleAmountRangeUpdate"
           @update:categories="handleCategoriesUpdate"
           @apply-filters="handleApplyFilters"
           @clear-all="handleClearAllFilters"
@@ -174,7 +174,7 @@ async function handleCategorySelected(categoryId: string) {
     
     alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
     
-  } catch (error) {
+  } catch {
     alert('❌ Failed to create subscription')
   } finally {
     showCategoryModal.value = false
@@ -203,7 +203,7 @@ async function handleCategoryChange(transaction: Transaction, categoryId: string
     // Save the updated transaction
     await transactionsStore.save(updatedTransaction)
     
-  } catch (error) {
+  } catch {
     alert('Failed to update category. Please try again.')
   }
 }
@@ -220,7 +220,7 @@ async function handleLinkToExistingSubscription(_transaction: Transaction, data:
     // Save the updated transaction
     await transactionsStore.save(updatedTransaction)
     
-  } catch (error) {
+  } catch {
     // Failed to link transaction to existing subscription
   }
 }

@@ -3,6 +3,8 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import type { RecurringPattern } from '@/services/PatternDetector'
+// type-only import for mock shape reference
+import type { useLoadingStates as _useLoadingStates } from '@/composables/useLoadingStates'
 
 // Mock the composables and stores
 vi.mock('@/composables/useSubscriptionFeedback')
@@ -26,25 +28,31 @@ describe('SubscriptionSuggestionCard', () => {
     // Mock pattern data
     mockPattern = {
       merchant: 'Netflix',
+      normalizedMerchant: 'netflix',
       amount: 15.99,
+      amountVariance: 0,
       frequency: 'monthly',
       confidence: 0.85,
+      lastDate: '2024-02-15',
+      nextDate: '2024-03-15',
+      detectionReason: 'amount_matching' as const,
+      flags: [],
       transactions: [
         {
           id: 'tx-1',
           date: '2024-01-15',
           merchantName: 'Netflix',
-          amount: { amount: 15.99, currency: 'USD' },
+          amount: { amount: 15.99, currency: 'USD' as const },
           accountId: 'acc-1',
           pending: false,
           transactionType: 'purchase',
           category: ['Entertainment']
         },
         {
-          id: 'tx-2', 
+          id: 'tx-2',
           date: '2024-02-15',
           merchantName: 'Netflix',
-          amount: { amount: 15.99, currency: 'USD' },
+          amount: { amount: 15.99, currency: 'USD' as const },
           accountId: 'acc-1',
           pending: false,
           transactionType: 'purchase',
@@ -57,13 +65,18 @@ describe('SubscriptionSuggestionCard', () => {
     const { ref } = await import('vue')
     mockSubscriptionFeedback = {
       confirmSubscription: vi.fn().mockResolvedValue(true),
-      rejectSubscription: vi.fn().mockResolvedValue('feedback-123'), // Now returns feedback ID
+      rejectSubscription: vi.fn().mockResolvedValue('feedback-123'),
+      recordFeedback: vi.fn().mockResolvedValue(null),
+      retryFailedRejections: vi.fn().mockResolvedValue(undefined),
       loading: ref(false),
-      error: ref(null),
+      error: ref<string | null>(null),
       showCategoryModal: ref(false),
       handleCategorySelection: vi.fn().mockResolvedValue(true),
       handleCategoryCreation: vi.fn().mockResolvedValue(true),
-      cancelCategorySelection: vi.fn()
+      cancelCategorySelection: vi.fn(),
+      pendingRejections: ref([]),
+      rejectionQueue: ref([]),
+      isProcessingQueue: ref(false),
     }
 
     // Mock loading states composable with all required properties
@@ -77,7 +90,7 @@ describe('SubscriptionSuggestionCard', () => {
       activeLoadingStates: ref([]),
       setBatchLoading: vi.fn(),
       clearLoading: vi.fn(),
-      states: ref(new Map()),
+      states: ref({} as Record<string, boolean>),
       resetAllLoading: vi.fn(),
       createScopedLoader: vi.fn()
     }
@@ -94,9 +107,12 @@ describe('SubscriptionSuggestionCard', () => {
     const { useLoadingStates } = await import('@/composables/useLoadingStates')
     const { useCategoriesStore } = await import('@/stores/categories')
     
-    vi.mocked(useSubscriptionFeedback).mockReturnValue(mockSubscriptionFeedback)
-    vi.mocked(useLoadingStates).mockReturnValue(mockLoadingStates)
-    vi.mocked(useCategoriesStore).mockReturnValue(mockCategoriesStore)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useSubscriptionFeedback).mockReturnValue(mockSubscriptionFeedback as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useLoadingStates).mockReturnValue(mockLoadingStates as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useCategoriesStore).mockReturnValue(mockCategoriesStore as any)
   })
 
   afterEach(() => {
@@ -191,7 +207,7 @@ describe('SubscriptionSuggestionCard', () => {
       await wrapper.vm.handleCategorySelection('cat-1')
 
       expect(wrapper.emitted('confirmed')).toBeTruthy()
-      expect(wrapper.emitted('confirmed')[0]).toEqual([mockPattern])
+      expect(wrapper.emitted('confirmed')![0]).toEqual([mockPattern])
     })
 
     it('emits rejected event after successful rejection', async () => {
@@ -208,8 +224,8 @@ describe('SubscriptionSuggestionCard', () => {
 
       expect(wrapper.emitted('rejected')).toBeTruthy()
       // Now expects [pattern, feedbackId] where feedbackId is a string
-      expect(wrapper.emitted('rejected')[0][0]).toEqual(mockPattern)
-      expect(typeof wrapper.emitted('rejected')[0][1]).toBe('string')
+      expect(wrapper.emitted('rejected')![0][0]).toEqual(mockPattern)
+      expect(typeof wrapper.emitted('rejected')![0][1]).toBe('string')
     })
   })
 
@@ -218,12 +234,14 @@ describe('SubscriptionSuggestionCard', () => {
       // Mock useSubscriptionFeedback to return loading state
       const { ref } = await import('vue')
       const { useSubscriptionFeedback } = await import('@/composables/useSubscriptionFeedback')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(useSubscriptionFeedback).mockReturnValue({
         loading: ref(true),
-        error: ref(null),
+        error: ref<string | null>(null),
         recordFeedback: vi.fn(),
         confirmSubscription: vi.fn(),
         rejectSubscription: vi.fn(),
+        retryFailedRejections: vi.fn(),
         getUserFeedback: vi.fn(),
         getFeedbackStats: vi.fn(),
         undoFeedback: vi.fn(),
@@ -232,7 +250,10 @@ describe('SubscriptionSuggestionCard', () => {
         handleCategorySelection: vi.fn(),
         handleCategoryCreation: vi.fn(),
         cancelCategorySelection: vi.fn(),
-      })
+        pendingRejections: ref([]),
+        rejectionQueue: ref([]),
+        isProcessingQueue: ref(false),
+      } as any)
 
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },
@@ -255,6 +276,7 @@ describe('SubscriptionSuggestionCard', () => {
       // Mock the loading state through the composable
       const { ref } = await import('vue')
       const { useLoadingStates } = await import('@/composables/useLoadingStates')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(useLoadingStates).mockReturnValue({
         setLoading: vi.fn(),
         withLoading: vi.fn(),
@@ -265,8 +287,10 @@ describe('SubscriptionSuggestionCard', () => {
         activeLoadingStates: ref(['subscriptionFeedback']),
         setBatchLoading: vi.fn(),
         clearLoading: vi.fn(),
-        states: ref(new Map([['subscriptionFeedback', true]]))
-      })
+        states: ref({} as Record<string, boolean>),
+        resetAllLoading: vi.fn(),
+        createScopedLoader: vi.fn()
+      } as any)
       
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },
@@ -412,6 +436,7 @@ describe('SubscriptionSuggestionCard', () => {
       // Mock loading states to ensure loading is false so button text is visible
       const { ref } = await import('vue')
       const { useLoadingStates } = await import('@/composables/useLoadingStates')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(useLoadingStates).mockReturnValue({
         setLoading: vi.fn(),
         withLoading: vi.fn(),
@@ -422,10 +447,10 @@ describe('SubscriptionSuggestionCard', () => {
         activeLoadingStates: ref([]),
         setBatchLoading: vi.fn(),
         clearLoading: vi.fn(),
-        states: ref(new Map()),
+        states: ref({} as Record<string, boolean>),
         resetAllLoading: vi.fn(),
         createScopedLoader: vi.fn()
-      })
+      } as any)
 
       const wrapper = mount(SubscriptionSuggestionCard, {
         props: { pattern: mockPattern },

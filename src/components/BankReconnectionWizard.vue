@@ -14,9 +14,9 @@
             </div>
           </div>
           <button
-            @click="$emit('close')"
             class="text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Close wizard"
+            @click="$emit('close')"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -103,14 +103,14 @@
 
           <div class="flex gap-3 pt-4">
             <button
-              @click="$emit('close')"
               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              @click="$emit('close')"
             >
               Maybe Later
             </button>
             <button
-              @click="currentStep = 'reconnect'"
               class="flex-1 px-4 py-2 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors font-medium"
+              @click="currentStep = 'reconnect'"
             >
               Continue
             </button>
@@ -132,9 +132,9 @@
 
             <PlaidLinkButton
               v-if="!reconnecting"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors font-medium"
               @success="handleReconnectSuccess"
               @error="handleReconnectError"
-              class="inline-flex items-center gap-2 px-6 py-3 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors font-medium"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -171,8 +171,8 @@
           </div>
 
           <button
-            @click="currentStep = 'why'"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            @click="currentStep = 'why'"
           >
             ← Back
           </button>
@@ -222,8 +222,8 @@
           </div>
 
           <button
-            @click="handleClose"
             class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            @click="handleClose"
           >
             Done
           </button>
@@ -255,14 +255,14 @@
 
           <div class="flex gap-3">
             <button
-              @click="currentStep = 'reconnect'"
               class="flex-1 px-4 py-2 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors font-medium"
+              @click="currentStep = 'reconnect'"
             >
               Try Again
             </button>
             <button
-              @click="$emit('close')"
               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              @click="$emit('close')"
             >
               Close
             </button>
@@ -274,7 +274,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { BankConnection } from '@/domain/models'
 import PlaidLinkButton from './PlaidLinkButton.vue'
 
@@ -283,7 +283,7 @@ interface Props {
   connection: BankConnection | null
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<{
   close: []
   success: []

@@ -124,7 +124,7 @@ describe('useTransactions', () => {
 
     test('teardown cleans up Pinia', () => {
       // Act
-      const result = useTransactions()
+      useTransactions()
 
       // Assert - Pinia should be active after composable creation
       expect(pinia).toBeDefined()
@@ -329,12 +329,14 @@ describe('useTransactions', () => {
       const mockAccounts: BankAccount[] = [
         {
           id: 'acc1',
+          institutionId: 'inst1',
           institutionName: 'Test Bank',
           accountName: 'Current Account',
           accountType: 'checking',
           mask: '1234',
           currency: 'GBP',
           balance: { amount: 1000, currency: 'GBP' },
+          status: 'connected' as const,
           userId: 'user1',
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'
@@ -419,12 +421,14 @@ describe('useTransactions', () => {
       const mockAccounts: BankAccount[] = [
         {
           id: 'acc1',
+          institutionId: 'inst1',
           institutionName: 'Test Bank',
           accountName: 'Current Account',
           accountType: 'checking',
           mask: '1234',
           currency: 'GBP',
           balance: { amount: 1000, currency: 'GBP' },
+          status: 'connected' as const,
           userId: 'user1',
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'

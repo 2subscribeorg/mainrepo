@@ -51,8 +51,8 @@
                   :style="{ left: seg.x + '%', top: seg.y + '%' }"
                 >
                   <component 
-                    v-if="seg.iconComponent" 
                     :is="seg.iconComponent" 
+                    v-if="seg.iconComponent" 
                     :size="seg.iconSize" 
                     class="donut-segment-icon__svg"
                   />
@@ -104,8 +104,8 @@
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">Subscription Insights</h3>
             <button 
-              @click="showAllSuggestions = !showAllSuggestions"
               class="text-sm text-blue-600 hover:underline focus:outline-none"
+              @click="showAllSuggestions = !showAllSuggestions"
             >
               {{ showAllSuggestions ? 'Show Less' : 'View All' }}
             </button>
@@ -137,9 +137,9 @@
                     <div v-for="suggestion in items" :key="suggestion.merchant">
                       <SubscriptionSuggestionCard 
                         :pattern="suggestion"
+                        :class="virtual ? 'border border-gray-100 rounded-xl p-4' : 'border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow'"
                         @confirmed="handleSuggestionConfirmed"
                         @rejected="handleSuggestionRejected"
-                        :class="virtual ? 'border border-gray-100 rounded-xl p-4' : 'border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow'"
                       />
                     </div>
                   </div>
@@ -196,7 +196,7 @@ const { activeWarnings, dismissWarning } = useRenewalWarnings()
 const categoriesStore = useCategoriesStore()
 const bankAccountsStore = useBankAccountsStore()
 const { user } = useAuth()
-const { setLoading, isLoading, withLoading } = useLoadingStates()
+const { isLoading, withLoading } = useLoadingStates()
 const highlightedIndex = ref<number | null>(null)
 const showAllSuggestions = ref(false)
 const suggestions = ref<RecurringPattern[]>([])
@@ -246,32 +246,8 @@ watch(() => user.value?.id, (newUserId, oldUserId) => {
   if (newUserId && newUserId !== oldUserId) {
     // Clear the current set and resync for the new user
     dismissedMerchants.value.clear()
-    categoryStatsCache.value.clear() // Also clear category cache on user change
     syncLocalDismissed()
   }
-}, { immediate: false })
-
-// Persistent cache for category statistics with automatic cleanup
-const categoryStatsCache = ref(new Map<string, { count: number; totalAmount: number }>())
-const lastCacheUpdate = ref<string>('')
-
-// Cache cleanup function to prevent memory bloat
-const cleanupCategoryCache = () => {
-  const maxCacheSize = 100 // Limit cache size
-  if (categoryStatsCache.value.size > maxCacheSize) {
-    // Remove oldest entries (simple FIFO cleanup)
-    const entries = Array.from(categoryStatsCache.value.entries())
-    categoryStatsCache.value.clear()
-    // Keep only the most recent entries
-    entries.slice(-maxCacheSize * 0.8).forEach(([key, value]) => {
-      categoryStatsCache.value.set(key, value)
-    })
-  }
-}
-
-// Watch for user changes to clear cache
-watch(() => user.value?.id, () => {
-  categoryStatsCache.value.clear()
 }, { immediate: false })
 
 // Get comprehensive category data from all sources
@@ -297,14 +273,6 @@ const subscriptionData = computed(() => {
         amount: existing.amount + Math.abs(tx.amount?.amount || 0),
         count: existing.count + 1
       })
-    }
-  })
-  
-  // Update subscriptions with transaction-derived category data
-  mergedData.forEach((sub: any) => {
-    if (sub.categoryId && categoryMap.has(sub.categoryId)) {
-      const categoryData = categoryMap.get(sub.categoryId)!
-      // Use subscription amount but ensure we have category info
     }
   })
   
@@ -469,41 +437,6 @@ const categoryData = computed(() => {
     return []
   }
   
-  // Create cache key based on data changes
-  const cacheKey = `${categories.length}-${subscriptionData.value.length}-${transactionsStore.transactions?.length || 0}`
-  
-  // Return cached data if unchanged
-  if (lastCacheUpdate.value === cacheKey && categoryStatsCache.value.size > 0) {
-    cleanupCategoryCache() // Still run cleanup to prevent memory bloat
-    return Array.from(categoryStatsCache.value.entries()).map(([categoryId, stats]) => {
-      if (categoryId === 'uncategorized') {
-        return {
-          categoryId,
-          categoryName: 'Unknown Category',
-          count: stats.count,
-          totalAmount: stats.totalAmount,
-          formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
-          color: '#9CA3AF',
-          icon: undefined,
-          percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
-        }
-      }
-      
-      const category = categories.find((c: any) => c.id === categoryId)
-      return {
-        categoryId,
-        categoryName: category?.name || 'Unknown Category',
-        count: stats.count,
-        totalAmount: stats.totalAmount,
-        formattedAmount: formatMoney({ amount: stats.totalAmount, currency: 'GBP' }),
-        color: category?.colour || '#6366f1',
-        icon: category?.icon,
-        percentage: totalSubscriptions.value ? (stats.count / totalSubscriptions.value) * 100 : 0
-      }
-    }).sort((a, b) => b.totalAmount - a.totalAmount)
-  }
-  
-  // Data changed - recalculate and cache
   const categoryStats = new Map<string, { count: number; totalAmount: number }>()
   
   // DEBUG: Let's see what we're working with
@@ -551,11 +484,8 @@ const categoryData = computed(() => {
     })
   })
 
-  // Update cache
-  categoryStatsCache.value = new Map(categoryStats)
-  lastCacheUpdate.value = cacheKey
-  cleanupCategoryCache()
-
+  // computed() memoizes on its reactive dependencies, so no manual cache is
+  // needed here — mutating refs inside a computed getter is a side effect.
   const result = Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
     if (categoryId === 'uncategorized') {
       return {
@@ -681,17 +611,13 @@ function clearHighlight() {
 
 onMounted(async () => {
   await withLoading('dashboard', async () => {
-    try {
-      await Promise.all([
-        loadSubscriptionSuggestions(),
-        subscriptionsStore.fetchAll().catch(() => []),
-        transactionsStore.fetchTransactions().catch(() => []),
-        categoriesStore.fetchAll().catch(() => []),
-        bankAccountsStore.fetchConnections().catch(() => []),
-      ])
-    } catch (error) {
-      throw error // Re-throw to let withLoading handle the finally
-    }
+    await Promise.all([
+      loadSubscriptionSuggestions(),
+      subscriptionsStore.fetchAll().catch(() => []),
+      transactionsStore.fetchTransactions().catch(() => []),
+      categoriesStore.fetchAll().catch(() => []),
+      bankAccountsStore.fetchConnections().catch(() => []),
+    ])
   })
 })
 </script>

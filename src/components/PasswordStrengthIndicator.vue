@@ -59,8 +59,7 @@ import {
   PASSWORD_REQUIREMENTS,
   calculatePasswordStrength,
   getPasswordStrengthColor,
-  isCommonWeakPassword,
-  type PasswordRequirement
+  isCommonWeakPassword
 } from '@/utils/passwordValidation'
 
 interface Props {

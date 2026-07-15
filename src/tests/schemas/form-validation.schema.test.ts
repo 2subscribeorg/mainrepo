@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import { describe, it, expect } from 'vitest'
 import {
   EmailSchema,
@@ -9,8 +10,6 @@ import {
   AmountSchema,
   ISODateSchema,
   RecurrenceSchema,
-  SubscriptionFormSchema,
-  MerchantRuleFormSchema,
   validateLoginForm,
   validateSignupForm,
   validateSubscriptionForm,

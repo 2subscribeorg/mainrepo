@@ -86,7 +86,7 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
   async function getTransactionsForSubscription(subscriptionId: ID): Promise<BankTransaction[]> {
     try {
       return await repo.getForSubscription(subscriptionId)
-    } catch (e) {
+    } catch {
       return []
     }
   }
@@ -96,23 +96,15 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
   }
 
   async function createSubscriptionFromPattern(pattern: RecurringPattern) {
-    try {
-      // Remove from pending patterns
-      pendingPatterns.value = pendingPatterns.value.filter(p => p !== pattern)
-      // Note: Actual subscription creation will be handled by SubscriptionDetectionService
-      return pattern
-    } catch (e) {
-      throw e
-    }
+    // Remove from pending patterns
+    pendingPatterns.value = pendingPatterns.value.filter(p => p !== pattern)
+    // Note: Actual subscription creation will be handled by SubscriptionDetectionService
+    return pattern
   }
 
   async function dismissPattern(pattern: RecurringPattern) {
-    try {
-      // Remove from pending patterns
-      pendingPatterns.value = pendingPatterns.value.filter(p => p !== pattern)
-    } catch (e) {
-      throw e
-    }
+    // Remove from pending patterns
+    pendingPatterns.value = pendingPatterns.value.filter(p => p !== pattern)
   }
 
   return {

@@ -17,7 +17,7 @@ describe('PatternBuilder', () => {
     amount: { amount, currency: 'GBP' },
     merchantName,
     date,
-    category: { name: 'Entertainment' },
+    category: ['Entertainment'],
     pending: false,
     transactionType: 'purchase',
     userId: 'user-1',
@@ -211,8 +211,8 @@ describe('PatternBuilder', () => {
 
     it('predicts quarterly payment correctly', () => {
       const nextDate = builder.predictNextPayment('2024-01-01', 'quarterly')
-      // Jan 1 + 3 months = March 31 (setMonth behavior)
-      expect(nextDate).toBe('2024-03-31')
+      // Jan 1 + 3 months = April 1
+      expect(nextDate).toBe('2024-04-01')
     })
 
     it('predicts yearly payment correctly', () => {

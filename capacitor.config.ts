@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   android: {
-    allowMixedContent: true  // allows HTTP API calls during local development
+    allowMixedContent: false
   }
 };
 

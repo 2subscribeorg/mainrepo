@@ -20,7 +20,7 @@ export class PlaidTokenService {
         updatedAt: new Date().toISOString(),
       })
       
-    } catch (error) {
+    } catch {
       throw new Error('Failed to store access token')
     }
   }
@@ -40,7 +40,7 @@ export class PlaidTokenService {
       }
       
       return tokenDoc.data().accessToken
-    } catch (error) {
+    } catch {
       return null
     }
   }
@@ -55,7 +55,7 @@ export class PlaidTokenService {
       
       await deleteDoc(tokenRef)
       
-    } catch (error) {
+    } catch {
       throw new Error('Failed to delete access token')
     }
   }

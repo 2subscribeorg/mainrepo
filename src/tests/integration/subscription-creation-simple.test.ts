@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref } from 'vue'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
@@ -315,7 +314,7 @@ describe('Subscription Creation Integration Test', () => {
 
       try {
         await subscriptionsStore.save(subscriptionData)
-      } catch (error) {
+      } catch {
         // Expected to fail
       }
 
@@ -338,7 +337,7 @@ describe('Subscription Creation Integration Test', () => {
 
       try {
         await transactionsStore.save(updatedTransaction)
-      } catch (error) {
+      } catch {
         // Expected to fail
       }
 

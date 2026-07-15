@@ -56,7 +56,7 @@
     </main>
 
     <nav
-      v-if="showBottomNav"
+      v-if="showBottomNav && !isAuthRoute"
       class="mobile-bottom-nav sticky bottom-0 z-sticky border-t border-border-medium bg-surface-overlay-dark backdrop-blur-md"
     >
       <div class="grid grid-cols-4 gap-0 px-2 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-2">
@@ -98,7 +98,6 @@ import UserProfile from '@/components/settings/UserProfile.vue'
 import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
 import RenewalWarningModal from '@/components/RenewalWarningModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
-import { useAuthStore } from '@/stores/auth'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 
 interface NavLink {
@@ -107,7 +106,7 @@ interface NavLink {
   badge?: string
 }
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     title?: string
     subtitle?: string
@@ -128,13 +127,16 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 
 // Renewal warnings
 const { warningCount, hasCriticalWarnings } = useRenewalWarnings()
 const showWarningsModal = ref(false)
 
+
+const AUTH_ROUTES = ['/login', '/verify-email', '/delete-account-request', '/delete-account-confirm']
+
+const isAuthRoute = computed(() => AUTH_ROUTES.some(r => route.path === r || route.path.startsWith(r + '/')))
 
 const navLinks = computed(() => {
   const links: NavLink[] = [

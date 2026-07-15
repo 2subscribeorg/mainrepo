@@ -46,7 +46,7 @@ export class PatternDetector {
       const patterns = this.detectHybridPatterns(recentTransactions)
       
       return patterns.sort((a, b) => b.confidence - a.confidence)
-    } catch (error) {
+    } catch {
       return []
     }
   }

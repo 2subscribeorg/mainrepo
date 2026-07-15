@@ -8,13 +8,13 @@
         <p>{{ errorMessage }}</p>
         
         <div class="error-actions">
-          <button @click="retry" class="retry-button">
+          <button class="retry-button" @click="retry">
             Try Again
           </button>
-          <button @click="reportError" class="report-button">
+          <button class="report-button" @click="reportError">
             Report Issue
           </button>
-          <button @click="goHome" class="home-button">
+          <button class="home-button" @click="goHome">
             Go Home
           </button>
         </div>
@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
-import { ref, computed, onErrorCaptured, onMounted } from 'vue'
+import { ref, computed, onErrorCaptured } from 'vue'
 import { useRouter } from 'vue-router'
 
 interface ErrorBoundaryProps {

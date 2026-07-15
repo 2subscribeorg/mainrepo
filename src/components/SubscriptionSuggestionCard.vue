@@ -12,8 +12,8 @@
       <span class="text-sm text-gray-500">Suggestion {{ currentIndex }} of {{ totalCount }}</span>
       <button
         v-if="onReviewLater"
-        @click="handleReviewLater"
         class="text-sm font-medium text-primary hover:text-primary-dark transition-colors duration-150"
+        @click="handleReviewLater"
       >
         Review later
       </button>
@@ -70,19 +70,19 @@
     <!-- Action Buttons - Stacked vertically on mobile, horizontal on desktop -->
     <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-2">
       <button
-        @click="handleConfirm"
         :disabled="loading"
         class="w-full sm:flex-1 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-white hover:bg-primary-dark active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
         style="min-height: 48px"
+        @click="handleConfirm"
       >
         <span v-if="!loading">✓ Yes, it's a subscription</span>
         <span v-else>Processing...</span>
       </button>
       <button
-        @click="handleReject"
         :disabled="loading"
         class="w-full sm:flex-1 rounded-xl border-2 border-border-light px-6 py-3 text-sm font-medium text-text-secondary hover:bg-surface-hover active:scale-[0.98] transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed touch-target"
         style="min-height: 44px"
+        @click="handleReject"
       >
         <span v-if="!loading">✗ Not a subscription</span>
         <span v-else>Processing...</span>
@@ -268,7 +268,7 @@ function handleTouchMove(e: TouchEvent) {
   }
 }
 
-function handleTouchEnd(e: TouchEvent) {
+function handleTouchEnd(_e: TouchEvent) {
   if (!isDragging.value) return
   
   const deltaX = currentX.value

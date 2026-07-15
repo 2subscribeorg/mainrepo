@@ -5,8 +5,8 @@ import { Purchases, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { Capacitor } from '@capacitor/core'
 import { getFirebaseAuth } from '@/config/firebase'
-
-const baseUrl = import.meta.env.VITE_BACKEND_API_URL
+import { buildBackendApiUrl } from '@/config/backendApi'
+import { apiFetch } from '@/utils/apiFetch'
 
 const ACTIVE_PLAN_KEY = 'billing_active_plan_id'
 const ENTITLEMENT_ID = '2Subscribe Pro'
@@ -73,6 +73,15 @@ class BillingService {
   private _activePlanId = ref<string | null>(localStorage.getItem(ACTIVE_PLAN_KEY))
   private _plans = ref<PricingPlan[]>([FREE_PLAN])
 
+  constructor() {
+    // When RevenueCat finishes configuring (after user login), reload offerings
+    // so the subscription screen shows plans without needing a manual retry.
+    revenueCat.onConfigured(() => {
+      this.initialized = false
+      this.initialize().catch(() => {})
+    })
+  }
+
   get activePlanId() {
     return this._activePlanId
   }
@@ -102,9 +111,16 @@ class BillingService {
   }
 
   async initialize(): Promise<void> {
-    if (this.initialized) return
+    // Re-run if not yet initialized OR if we still only have the free plan
+    // (means offerings failed on first call, e.g. RC not yet configured).
+    if (this.initialized && this._plans.value.length > 1) return
     await Promise.all([this.loadOfferings(), this.syncActivePlanFromRC()])
     this.initialized = true
+  }
+
+  async refreshSubscriptionStatus(): Promise<void> {
+    await revenueCat.refreshSubscriptionStatus()
+    await this.syncActivePlanFromRC()
   }
 
   async purchase(planId: string): Promise<PurchaseResult> {
@@ -113,7 +129,14 @@ class BillingService {
       return { success: false, error: plan ? 'Cannot purchase free plan' : 'Invalid plan ID' }
     }
 
+    // Prevent duplicate purchase of already active plan
+    if (this._activePlanId.value === planId && revenueCat.hasProAccess()) {
+      return { success: false, error: 'You are already subscribed to this plan.' }
+    }
+
     try {
+      await revenueCat.refreshSubscriptionStatus()
+
       const offerings = await Purchases.getOfferings()
       const packages = offerings?.current?.availablePackages ?? []
       if (!packages.length) {
@@ -121,12 +144,22 @@ class BillingService {
       }
 
       const selectedPackage = packages.find(pkg => pkg.identifier === planId) ?? packages[0]
-      const success = await revenueCat.purchase(selectedPackage)
+      const currentEntitlement = this.customerInfo.value?.entitlements.active[ENTITLEMENT_ID]
+      const currentProductId = currentEntitlement?.isActive
+        && currentEntitlement.productIdentifier
+        && this.customerInfo.value?.activeSubscriptions.includes(currentEntitlement.productIdentifier)
+        ? currentEntitlement.productIdentifier
+        : undefined
+      const success = await revenueCat.purchase(selectedPackage, currentProductId)
       if (success) {
         this._activePlanId.value = planId
         localStorage.setItem(ACTIVE_PLAN_KEY, planId)
         const customerInfo = revenueCat.customerInfo.value
-        if (customerInfo) this.recordPurchase(selectedPackage.product.identifier, customerInfo)
+        if (customerInfo) {
+          await this.recordPurchase(selectedPackage.product.identifier, customerInfo).catch(() => {
+            // Purchase succeeded; backend can reconcile from RevenueCat webhooks if configured.
+          })
+        }
       }
       return { success }
     } catch (error: unknown) {
@@ -135,17 +168,52 @@ class BillingService {
     }
   }
 
-  async restorePurchases(): Promise<{ hadPurchases: boolean }> {
-    const customerInfo = await revenueCat.restorePurchases()
-    const isActive = !!customerInfo.entitlements.active[ENTITLEMENT_ID]
-    if (isActive) {
-      await this.syncActivePlanFromRC()
+  async cancelSubscription(): Promise<{ openedManagement: boolean }> {
+    const managementOpened = await revenueCat.openSubscriptionManagement()
+
+    if (managementOpened) {
+      // User is redirected to the store's subscription management page.
+      // Do NOT flip local state — the subscription is still active until they cancel there.
+      return { openedManagement: true }
     }
-    return { hadPurchases: isActive }
+
+    // No management URL (sandbox / sideloaded APK): record the cancellation request
+    // on the backend but do NOT optimistically revoke — let RC confirm on next refresh.
+    try {
+      await this.recordCancellation()
+    } catch {
+      // Best-effort — proceed even if backend is unavailable
+    }
+    // Refresh RC state so the UI reflects whatever RC currently says
+    await revenueCat.refreshSubscriptionStatus()
+    await this.syncActivePlanFromRC()
+    return { openedManagement: false }
   }
 
-  async cancelSubscription(): Promise<void> {
-    await revenueCat.revokeProAccess()
+  async openSubscriptionManagement(): Promise<boolean> {
+    return revenueCat.openSubscriptionManagement()
+  }
+
+  async restorePurchases(): Promise<PurchaseResult> {
+    try {
+      const customerInfo = await revenueCat.restorePurchases()
+      if (!customerInfo) return { success: false, error: 'No purchases found to restore' }
+      await this.syncActivePlanFromRC()
+      return { success: revenueCat.hasProAccess() }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to restore purchases'
+      return { success: false, error: message }
+    }
+  }
+
+  private async recordCancellation(): Promise<void> {
+    const token = await getFirebaseAuth().currentUser?.getIdToken()
+    if (!token) throw new Error('Not authenticated')
+
+    await apiFetch(buildBackendApiUrl('/purchases/cancel'), {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
   }
 
   private async recordPurchase(productId: string, customerInfo: CustomerInfo): Promise<void> {
@@ -155,7 +223,7 @@ class BillingService {
     const token = await getFirebaseAuth().currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
 
-    await fetch(`${baseUrl}/purchases/record`, {
+    await apiFetch(buildBackendApiUrl('/purchases/record'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ productId, platform, customerInfo }),
@@ -164,26 +232,35 @@ class BillingService {
 
   private async loadOfferings(): Promise<void> {
     try {
+      const { isConfigured } = await Purchases.isConfigured().catch(() => ({ isConfigured: false }))
+      if (!isConfigured) {
+        console.warn('[BillingService] RevenueCat not yet configured — skipping getOfferings. Will retry when subscription screen opens.')
+        return
+      }
       const offerings = await Purchases.getOfferings()
       const packages = offerings?.current?.availablePackages ?? []
-      if (!packages.length) return
-
+      if (!packages.length) {
+        console.warn('[BillingService] RevenueCat returned 0 packages. Check that a "Current" offering with packages is set in the RevenueCat dashboard.')
+        return
+      }
       const rcPlans = packages
         .map(packageToPlan)
         .sort((a, b) => a.price - b.price)
-
       this._plans.value = [FREE_PLAN, ...rcPlans]
-    } catch {
-      // RC unavailable (web/emulator) — plans stay as [FREE_PLAN]
+      console.log('[BillingService] Loaded', rcPlans.length, 'plan(s) from RevenueCat:', rcPlans.map(p => p.id).join(', '))
+    } catch (err) {
+      console.warn('[BillingService] getOfferings failed:', err)
     }
   }
 
   private async syncActivePlanFromRC(): Promise<void> {
-    if (this._activePlanId.value) return
-
     const activeProductId = this.customerInfo.value
       ?.entitlements.active[ENTITLEMENT_ID]?.productIdentifier
-    if (!activeProductId) return
+    if (!activeProductId) {
+      this._activePlanId.value = null
+      localStorage.removeItem(ACTIVE_PLAN_KEY)
+      return
+    }
 
     try {
       const offerings = await Purchases.getOfferings()

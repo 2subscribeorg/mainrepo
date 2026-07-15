@@ -2,9 +2,9 @@
   <div class="plaid-link-container">
     <button 
       ref="buttonRef"
-      @click="openPlaidLink" 
-      :disabled="loading || connectingBank"
+      :disabled="loading || connectingBank" 
       class="connect-bank-button btn-animated gpu-accelerated"
+      @click="openPlaidLink"
     >
       <span v-if="loading">Creating connection...</span>
       <span v-else-if="connectingBank">Connecting...</span>
