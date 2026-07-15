@@ -17,6 +17,16 @@ const router = createRouter({
       component: () => import('@/pages/VerifyEmail.vue'),
     },
     {
+      path: '/verify-email/confirm',
+      name: 'verify-email-confirm',
+      component: () => import('@/pages/AuthAction.vue'),
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/pages/AuthAction.vue'),
+    },
+    {
       path: '/delete-account-request',
       name: 'delete-account-request',
       component: () => import('@/pages/DeleteAccountRequest.vue'),
