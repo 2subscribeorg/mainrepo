@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app'
-import { getAuth, Auth } from 'firebase/auth'
+import { getAuth, Auth, RecaptchaVerifier } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -59,4 +59,9 @@ export function getFirebaseDb(): Firestore {
     throw new Error('Firebase not initialized. Call initializeFirebase() first.')
   }
   return firestore
+}
+
+export function createRecaptchaVerifier(element: HTMLElement | string): RecaptchaVerifier {
+  const authInstance = getFirebaseAuth()
+  return new RecaptchaVerifier(authInstance, element, { size: 'invisible' })
 }

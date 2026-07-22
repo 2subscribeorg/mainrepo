@@ -1,28 +1,30 @@
 /**
  * Billing system types for Paddle + RevenueCat integration
  */
+import type { PurchasesEntitlementInfo, } from '@revenuecat/purchases-capacitor';
 
 export interface PricingPlan {
   id: string
   name: string
   price: number
   currency: string
-  interval: 'month' | 'year'
+  interval: 'month' | 'year' | 'lifetime'
   features: string[]
-  paddlePriceId: string
+  paddlePriceId?: string
 }
 
 export interface CustomerInfo {
   userId: string
   entitlements: {
     active: {
-      [key: string]: Entitlement
+      [key: string]: PurchasesEntitlementInfo
     }
   }
   activeSubscriptions: string[]
-  allPurchaseDates: { [key: string]: string }
+  allPurchaseDates: { [key: string]: string | null }
   latestExpirationDate: string | null
   originalPurchaseDate: string | null
+  managementURL: string | null
 }
 
 export interface Entitlement {

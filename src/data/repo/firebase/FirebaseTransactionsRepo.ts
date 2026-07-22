@@ -54,10 +54,14 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     const q = this.buildQuery(filter)
     const snapshot = await getDocs(q)
     
-    const rawResults = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
+    const rawResults = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
+      }
+    })
 
     // Validate Firebase response with Zod
     const validation = validateFirebaseTransactions(rawResults)
@@ -90,7 +94,12 @@ export class FirebaseTransactionsRepo implements ITransactionsRepo {
     
     if (!snapshot.exists()) return null
     
-    const rawData = { ...snapshot.data(), id: snapshot.id }
+    const docData = snapshot.data()
+    const rawData = {
+      ...docData,
+      id: snapshot.id,
+      createdAt: docData.createdAt?.toDate?.()?.toISOString() ?? docData.createdAt,
+    }
     
     // Validate Firebase response with Zod
     const validation = validateFirebaseTransaction(rawData)

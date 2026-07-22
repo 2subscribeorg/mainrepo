@@ -83,6 +83,9 @@ import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
 import { useOnlineStatus } from '@/composables/useOnlineStatus'
+import { revenueCat } from '@/services/revenueCat'
+import { notificationScheduler } from '@/services/NotificationScheduler'
+import { initFCM } from '@/services/FCMService'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
@@ -136,6 +139,8 @@ function clearGlobalError() {
   globalError.value = null
 }
 
+let appStateListener: { remove: () => void } | null = null
+
 onMounted(async () => {
   // Initialize Crashlytics
   try {
@@ -158,10 +163,8 @@ onMounted(async () => {
   // Handle Android hardware back button
   App.addListener('backButton', ({ canGoBack }) => {
     if (!canGoBack) {
-      // If there's no history, let the default behavior happen (exit app)
       App.exitApp()
     } else {
-      // Navigate back through Vue Router history
       router.back()
     }
   })
@@ -171,14 +174,9 @@ onMounted(async () => {
     logger.debug('Deep link opened:', { url: data.url })
 
     try {
-      // Parse the deep link URL
       const url = new URL(data.url)
-
-      // Handle custom scheme deep links
       if (url.protocol === 'twosubscribe:') {
         const path = url.pathname || url.host
-
-        // Map deep link paths to router paths
         if (path === 'manage-subscriptions' || path === '/manage-subscriptions') {
           router.push('/platform-subscription')
         }
@@ -187,12 +185,25 @@ onMounted(async () => {
       logger.warn('Failed to parse deep link URL:', { url: data.url, error: e })
     }
   })
+
+  await notificationScheduler.requestPermission()
+
+  try {
+    await initFCM()
+  } catch (e) {
+    console.error('Notification init error:', e)
+  }
+
+  appStateListener = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+    if (isActive) {
+      revenueCat.refreshSubscriptionStatus()
+    }
+  })
 })
 
 onUnmounted(() => {
-  // Clean up back button listener
   App.removeAllListeners()
-  // Clean up pending timeouts
+  appStateListener?.remove()
   if (errorTimeout) clearTimeout(errorTimeout)
   if (recoveryTimeout) clearTimeout(recoveryTimeout)
 })

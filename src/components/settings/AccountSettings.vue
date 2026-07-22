@@ -227,6 +227,8 @@
         </form>
       </div>
 
+      <TwoFactorSettings />
+
       <!-- Delete Account Section -->
       <div class="border border-error-border rounded-lg p-4 bg-error-bg/30">
         <h4 class="font-medium text-error-text mb-2">Danger Zone</h4>
@@ -258,6 +260,7 @@
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import DeleteAccountModal from './DeleteAccountModal.vue'
+import TwoFactorSettings from './TwoFactorSettings.vue'
 import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'
 
 const { userEmail, updateEmail, updatePassword, deleteAccount, loading } = useAuth()
