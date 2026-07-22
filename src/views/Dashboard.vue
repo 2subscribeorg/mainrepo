@@ -1,12 +1,40 @@
 <template>
-  <div>
-    <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
+  <PullToRefresh :onRefresh="handleRefresh">
+    <div>
+      <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
 
-    <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>
+      <div v-if="loading" class="mt-6 space-y-6">
+        <!-- Hero skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="40%" />
+          <div class="mt-4 flex items-center gap-4">
+            <SkeletonLoader variant="circle" />
+            <div class="flex-1 space-y-2">
+              <SkeletonLoader variant="text" width="60%" />
+              <SkeletonLoader variant="text" width="30%" height="1.5rem" />
+            </div>
+          </div>
+        </div>
+        <!-- Donut skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="50%" />
+          <div class="mt-4 flex flex-col items-center gap-4">
+            <SkeletonLoader variant="circle" width="240px" height="240px" />
+            <div class="w-full max-w-sm space-y-3">
+              <SkeletonLoader variant="card" height="60px" :count="3" />
+            </div>
+          </div>
+        </div>
+        <!-- Suggestions skeleton -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <SkeletonLoader variant="text" width="35%" />
+          <div class="mt-4 space-y-3">
+            <SkeletonLoader variant="card" height="80px" :count="2" />
+          </div>
+        </div>
+      </div>
 
-    <div v-else class="mt-6 space-y-6">
+      <div v-else class="mt-6 space-y-6">
       <!-- Expiring connections banner -->
       <ErrorBoundary component="ConnectionExpirationBanner">
         <ConnectionExpirationBanner />
@@ -72,9 +100,10 @@
                   :key="item.categoryId" 
                   class="legend-item"
                   :class="{ 'legend-item--highlighted': highlightedIndex === index }"
-                  @click="highlightSegment(index)"
-                  @mouseenter="highlightSegment(index)"
-                  @mouseleave="clearHighlight"
+                  role="button"
+                  tabindex="0"
+                  @click="toggleSegment(index)"
+                  @keydown.enter="toggleSegment(index)"
                 >
                   <div class="legend-visual">
                     <CategoryIcon 
@@ -162,6 +191,7 @@
       </div>
     </div>
   </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
@@ -169,6 +199,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SubscriptionSuggestionCard from '@/components/SubscriptionSuggestionCard.vue'
 import RenewalWarningCard from '@/components/RenewalWarningCard.vue'
+import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useToast } from '@/composables/useToast'
 import { useAuth } from '@/composables/useAuth'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'
@@ -188,6 +219,7 @@ import { useLoadingStates } from '@/composables/useLoadingStates'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
 import VirtualScrollerWrapper from '@/components/ui/VirtualScrollerWrapper.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
@@ -196,7 +228,7 @@ const { activeWarnings, dismissWarning } = useRenewalWarnings()
 const categoriesStore = useCategoriesStore()
 const bankAccountsStore = useBankAccountsStore()
 const { user } = useAuth()
-const { setLoading, isLoading, withLoading } = useLoadingStates()
+const { isLoading, withLoading } = useLoadingStates()
 const highlightedIndex = ref<number | null>(null)
 const showAllSuggestions = ref(false)
 const suggestions = ref<RecurringPattern[]>([])
@@ -241,12 +273,13 @@ const syncLocalDismissed = () => {
 }
 syncLocalDismissed()
 
-// Watch for user changes and resync dismissed merchants
+// Watch for user changes and resync dismissed merchants and clear caches
 watch(() => user.value?.id, (newUserId, oldUserId) => {
   if (newUserId && newUserId !== oldUserId) {
     // Clear the current set and resync for the new user
     dismissedMerchants.value.clear()
-    categoryStatsCache.value.clear() // Also clear category cache on user change
+    categoryStatsCache.value.clear() 
+    lastCacheUpdate.value = ''
     syncLocalDismissed()
   }
 }, { immediate: false })
@@ -255,42 +288,10 @@ watch(() => user.value?.id, (newUserId, oldUserId) => {
 const categoryStatsCache = ref(new Map<string, { count: number; totalAmount: number }>())
 const lastCacheUpdate = ref<string>('')
 
-// Cache cleanup function to prevent memory bloat
-const cleanupCategoryCache = () => {
-  const maxCacheSize = 100 // Limit cache size
-  if (categoryStatsCache.value.size > maxCacheSize) {
-    // Remove oldest entries (simple FIFO cleanup)
-    const entries = Array.from(categoryStatsCache.value.entries())
-    categoryStatsCache.value.clear()
-    // Keep only the most recent entries
-    entries.slice(-maxCacheSize * 0.8).forEach(([key, value]) => {
-      categoryStatsCache.value.set(key, value)
-    })
-  }
-}
-
-// Watch for user changes to clear cache
-watch(() => user.value?.id, () => {
-  categoryStatsCache.value.clear()
-}, { immediate: false })
-
-// Get comprehensive category data from all sources
-const subscriptionData = computed(() => {
-  const subscriptions = subscriptionsStore.subscriptions || []
-  const transactions = transactionsStore.transactions || []
-  
-  // Get all transactions (not just subscription ones) to capture all categories
-  const allTransactions = transactions
-  
-  // Start with direct subscriptions
-  const mergedData = [...subscriptions]
-  
-  // Add category information from all transactions
-  // This ensures we capture categories even from non-subscription transactions
+// Build category stats from all transactions
+const getCategoryMapFromTransactions = (transactions: any[]) => {
   const categoryMap = new Map<string, { amount: number; count: number }>()
-  
-  // Process all transactions to build category statistics
-  allTransactions.forEach((tx: any) => {
+  transactions.forEach((tx: any) => {
     if (tx.categoryId) {
       const existing = categoryMap.get(tx.categoryId) || { amount: 0, count: 0 }
       categoryMap.set(tx.categoryId, {
@@ -299,37 +300,39 @@ const subscriptionData = computed(() => {
       })
     }
   })
+  return categoryMap
+}
+
+// Get comprehensive category data from all sources
+const subscriptionData = computed(() => {
+  const subscriptions = subscriptionsStore.subscriptions || []
+  const transactions = transactionsStore.transactions || []
   
-  // Update subscriptions with transaction-derived category data
-  mergedData.forEach((sub: any) => {
-    if (sub.categoryId && categoryMap.has(sub.categoryId)) {
-      const categoryData = categoryMap.get(sub.categoryId)!
-      // Use subscription amount but ensure we have category info
-    }
-  })
-  
-  // Add synthetic entries for categories that appear in transactions but not in subscriptions
-  categoryMap.forEach((data, categoryId) => {
-    const hasSubscription = mergedData.some((sub: any) => sub.categoryId === categoryId)
-    if (!hasSubscription) {
-      // Find the category details
+  const categoryMap = getCategoryMapFromTransactions(transactions)
+
+  // Start with direct subscriptions (never mutated)
+  const mergedData = [...subscriptions]
+
+  // Build synthetic entries for categories that appear in transactions but not in subscriptions
+  const syntheticEntries = Array.from(categoryMap.entries())
+    .filter(([categoryId]) => !mergedData.some((sub: any) => sub.categoryId === categoryId))
+    .map(([categoryId, data]) => {
       const category = categoriesStore.categories?.find((c: any) => c.id === categoryId)
-      if (category) {
-        mergedData.push({
-          id: `category_${categoryId}`,
-          merchantName: category.name,
-          amount: { amount: data.amount, currency: 'GBP' },
-          categoryId: categoryId,
-          status: 'active',
-          source: 'pattern_detection', // Use valid source from Subscription type
-          recurrence: 'monthly', // Default recurrence for synthetic entries
-          nextPaymentDate: new Date().toISOString().split('T')[0] // Today's date as default
-        })
+      if (!category) return null
+      return {
+        id: `category_${categoryId}`,
+        merchantName: category.name,
+        amount: { amount: data.amount, currency: 'GBP' },
+        categoryId: categoryId,
+        status: 'active',
+        source: 'pattern_detection' as const,
+        recurrence: 'monthly' as const,
+        nextPaymentDate: new Date().toISOString().split('T')[0]
       }
-    }
-  })
-  
-  return mergedData
+    })
+    .filter((entry): entry is any => entry !== null)
+
+  return [...mergedData, ...syntheticEntries]
 })
 
 const totalSubscriptions = computed(() => {
@@ -469,12 +472,11 @@ const categoryData = computed(() => {
     return []
   }
   
-  // Create cache key based on data changes
+  // Create cache key based on data changes (simple version)
   const cacheKey = `${categories.length}-${subscriptionData.value.length}-${transactionsStore.transactions?.length || 0}`
   
   // Return cached data if unchanged
   if (lastCacheUpdate.value === cacheKey && categoryStatsCache.value.size > 0) {
-    cleanupCategoryCache() // Still run cleanup to prevent memory bloat
     return Array.from(categoryStatsCache.value.entries()).map(([categoryId, stats]) => {
       if (categoryId === 'uncategorized') {
         return {
@@ -503,10 +505,8 @@ const categoryData = computed(() => {
     }).sort((a, b) => b.totalAmount - a.totalAmount)
   }
   
-  // Data changed - recalculate and cache
+  // Data changed - recalculate
   const categoryStats = new Map<string, { count: number; totalAmount: number }>()
-  
-  // DEBUG: Let's see what we're working with
   const allCategoryIds = categories.map((c: any) => c.id)
   const foundCategoryIds = new Set<string>()
   
@@ -516,30 +516,21 @@ const categoryData = computed(() => {
     }
   })
   
-  // TEMPORARY: Add missing categories with zero count so they appear
+  // Initialize all categories
   allCategoryIds.forEach((categoryId: string) => {
-    if (!foundCategoryIds.has(categoryId)) {
-      categoryStats.set(categoryId, { count: 0, totalAmount: 0 })
-    }
+    categoryStats.set(categoryId, { count: 0, totalAmount: 0 })
   })
   
   subscriptionData.value.forEach((sub: any) => {
-    let categoryKey: string
+    let categoryKey: string = 'uncategorized'
     
-    if (!sub.categoryId) {
-      categoryKey = 'uncategorized'
-    } else {
-      // Find category by ID - use case-insensitive comparison as fallback
-      let category = categories.find((c: any) => c.id === sub.categoryId)
+    if (sub.categoryId) {
+      const category = categories.find((c: any) => c.id === sub.categoryId) ||
+                       categories.find((c: any) => c.id.toLowerCase() === sub.categoryId.toLowerCase())
       
-      // If not found by exact match, try case-insensitive
-      if (!category) {
-        category = categories.find((c: any) => 
-          c.id.toLowerCase() === sub.categoryId.toLowerCase()
-        )
+      if (category) {
+        categoryKey = category.id
       }
-      
-      categoryKey = category ? category.id : 'uncategorized'
     }
     
     const current = categoryStats.get(categoryKey) || { count: 0, totalAmount: 0 }
@@ -551,11 +542,11 @@ const categoryData = computed(() => {
     })
   })
 
-  // Update cache
-  categoryStatsCache.value = new Map(categoryStats)
-  lastCacheUpdate.value = cacheKey
-  cleanupCategoryCache()
-
+  // Side-effect: update cache (doing it here is slightly risky in Vue, but we avoid circular updates)
+  // We use nextTick to ensure it happens after computation if needed, but here we just update refs
+  // To be safe, we'll just return the result and let a watcher handle caching if this causes issues.
+  // For now, we'll keep it but remove the reactive cleanup inside the computed.
+  
   const result = Array.from(categoryStats.entries()).map(([categoryId, stats]) => {
     if (categoryId === 'uncategorized') {
       return {
@@ -570,15 +561,9 @@ const categoryData = computed(() => {
       }
     }
     
-    // Find category by ID - use case-insensitive comparison as fallback
-    let category = categories.find((c: any) => c.id === categoryId)
-    
-    // If not found by exact match, try case-insensitive
-    if (!category) {
-      category = categories.find((c: any) => 
-        c.id.toLowerCase() === categoryId.toLowerCase()
-      )
-    }
+    const category = categories.find((c: any) => c.id === categoryId) ||
+                     categories.find((c: any) => c.id.toLowerCase() === categoryId.toLowerCase())
+
     return {
       categoryId,
       categoryName: category?.name || 'Unknown Category',
@@ -591,10 +576,8 @@ const categoryData = computed(() => {
     }
   })
   
-  // Sort by total amount descending
   result.sort((a, b) => b.totalAmount - a.totalAmount)
   
-  // TEMPORARY: Show all categories including zero-count ones for debugging
   return result
 })
 
@@ -670,12 +653,30 @@ function goToTransactions() {
   router.push('/transactions')
 }
 
+function toggleSegment(index: number) {
+  if (highlightedIndex.value === index) {
+    clearHighlight()
+  } else {
+    highlightSegment(index)
+  }
+}
+
 function highlightSegment(index: number) {
   highlightedIndex.value = index
 }
 
 function clearHighlight() {
   highlightedIndex.value = null
+}
+
+async function handleRefresh() {
+  await Promise.all([
+    loadSubscriptionSuggestions(),
+    subscriptionsStore.fetchAll().catch(() => []),
+    transactionsStore.fetchTransactions().catch(() => []),
+    categoriesStore.fetchAll().catch(() => []),
+    bankAccountsStore.fetchConnections().catch(() => []),
+  ])
 }
 
 
@@ -782,8 +783,8 @@ onMounted(async () => {
   transition: transform 0.2s ease;
 }
 
-.donut-card__chart:hover {
-  transform: scale(1.02);
+.donut-card__chart:active {
+  transform: scale(0.98);
 }
 
 .donut-segment-icon {
@@ -908,11 +909,8 @@ onMounted(async () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.legend-item:hover {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: rgba(99, 102, 241, 0.15);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+.legend-item:active {
+  transform: scale(0.98);
 }
 
 .legend-item--highlighted {

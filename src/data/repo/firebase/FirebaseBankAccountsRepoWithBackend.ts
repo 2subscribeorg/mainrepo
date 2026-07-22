@@ -10,8 +10,7 @@ import type { ID, BankConnection, BankAccount } from '@/domain/models'
 import { logger } from '@/utils/logger'
 import type { IBankAccountsRepo } from '../interfaces/IBankAccountsRepo'
 import { PlaidBackendService } from '@/services/plaid/PlaidBackendService'
-import { PlaidTokenService } from '@/services/plaid/PlaidTokenService'
-import { getFirebaseDb } from '@/config/firebase'
+import { getFirebaseDb, getFirebaseAuth } from '@/config/firebase'
 
 /**
  * Firebase implementation with backend API
@@ -21,14 +20,21 @@ import { getFirebaseDb } from '@/config/firebase'
  */
 export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
   private backend = new PlaidBackendService()
-  private tokens = new PlaidTokenService()
+
+  private getUserId(): string {
+    const auth = getFirebaseAuth()
+    if (!auth.currentUser) {
+      throw new Error('User not authenticated')
+    }
+    return auth.currentUser.uid
+  }
 
   /**
    * List all bank connections for current user
    */
   async listConnections(): Promise<BankConnection[]> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const connectionsQuery = query(
@@ -55,7 +61,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    */
   async getConnection(id: ID): Promise<BankConnection | null> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const connectionRef = doc(db, 'bankConnections', id)
@@ -83,15 +89,15 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
   /**
    * Initialize a new bank connection (get link token from backend)
    */
-  async initializeConnection(): Promise<{ linkToken: string }> {
+  async initializeConnection(): Promise<{ linkToken: string; state: string }> {
     try {
       logger.debug('📝 Initializing connection via backend...')
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       
-      const linkToken = await this.backend.createLinkToken(userId)
+      const { linkToken, state } = await this.backend.createLinkToken(userId)
       
       logger.success('Link token created via backend')
-      return { linkToken }
+      return { linkToken, state }
     } catch (error) {
       logger.error('❌ Failed to initialize connection:', error)
       if (error instanceof Error) {
@@ -105,15 +111,15 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    * Complete connection after user authenticates with Plaid Link
    * Backend handles: token exchange, fetching accounts, storing everything
    */
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(publicToken: string, state: string): Promise<BankConnection> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       logger.debug('🔄 Completing connection via backend...')
       
       // Backend does all the heavy lifting
-      const { itemId } = await this.backend.exchangePublicToken(publicToken, userId)
+      const { itemId } = await this.backend.exchangePublicToken(publicToken, userId, state)
       
       // Fetch the connection that backend created
       const connectionRef = doc(db, 'bankConnections', itemId)
@@ -141,7 +147,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    */
   async disconnect(connectionId: ID): Promise<void> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       
       logger.debug('🔌 Disconnecting bank via backend...')
       
@@ -161,7 +167,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    */
   async syncTransactions(connectionId: ID): Promise<void> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       
       logger.debug('🔄 Syncing transactions via backend...')
       
@@ -180,7 +186,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    */
   async listAccounts(): Promise<BankAccount[]> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const accountsQuery = query(

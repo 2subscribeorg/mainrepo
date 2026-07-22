@@ -62,6 +62,7 @@
             <input
               v-model="newEmail"
               type="email"
+              inputmode="email"
               required
               placeholder="newemail@example.com"
               class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
@@ -72,14 +73,33 @@
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Current Password (for verification)
             </label>
-            <input
-              v-model="emailCurrentPassword"
-              type="password"
-              required
-              placeholder="••••••••"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-              :disabled="loading"
-            />
+            <div class="relative">
+              <input
+                v-model="emailCurrentPassword"
+                :type="showEmailCurrentPassword ? 'text' : 'password'"
+                required
+                placeholder="••••••••"
+                class="w-full px-3 py-2 pr-10 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                @click="showEmailCurrentPassword = !showEmailCurrentPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="loading"
+              >
+                <svg v-if="showEmailCurrentPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.9 0 1.74-.13 2.5-.35"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
           </div>
           <button
             type="submit"
@@ -100,28 +120,66 @@
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Current Password
             </label>
-            <input
-              v-model="currentPassword"
-              type="password"
-              required
-              placeholder="••••••••"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-              :disabled="loading"
-            />
+            <div class="relative">
+              <input
+                v-model="currentPassword"
+                :type="showCurrentPassword ? 'text' : 'password'"
+                required
+                placeholder="••••••••"
+                class="w-full px-3 py-2 pr-10 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                @click="showCurrentPassword = !showCurrentPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="loading"
+              >
+                <svg v-if="showCurrentPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.9 0 1.74-.13 2.5-.35"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               New Password
             </label>
-            <input
-              v-model="newPassword"
-              type="password"
-              required
-              placeholder="••••••••"
-              minlength="8"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-              :disabled="loading"
-            />
+            <div class="relative">
+              <input
+                v-model="newPassword"
+                :type="showNewPassword ? 'text' : 'password'"
+                required
+                placeholder="••••••••"
+                minlength="8"
+                class="w-full px-3 py-2 pr-10 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                @click="showNewPassword = !showNewPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="loading"
+              >
+                <svg v-if="showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.9 0 1.74-.13 2.5-.35"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
             <p class="mt-1 text-xs text-text-muted">
               Must be at least 8 characters
             </p>
@@ -130,14 +188,33 @@
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Confirm New Password
             </label>
-            <input
-              v-model="confirmNewPassword"
-              type="password"
-              required
-              placeholder="••••••••"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-              :disabled="loading"
-            />
+            <div class="relative">
+              <input
+                v-model="confirmNewPassword"
+                :type="showConfirmNewPassword ? 'text' : 'password'"
+                required
+                placeholder="••••••••"
+                class="w-full px-3 py-2 pr-10 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                @click="showConfirmNewPassword = !showConfirmNewPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="loading"
+              >
+                <svg v-if="showConfirmNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.9 0 1.74-.13 2.5-.35"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
           </div>
           <button
             type="submit"
@@ -189,6 +266,12 @@ import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/f
 const { userEmail, updateEmail, updatePassword, deleteAccount, loading } = useAuth()
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
+
+// Password visibility toggles
+const showEmailCurrentPassword = ref(false)
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmNewPassword = ref(false)
 
 // Change Email Form
 const newEmail = ref('')

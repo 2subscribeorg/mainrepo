@@ -1,6 +1,36 @@
 <template>
+  <div class="transaction-swipe-container relative overflow-hidden" @click="showSwipeActions = false">
+    <!-- Swipe action background -->
+    <Transition name="swipe-actions">
+      <div
+        v-if="showSwipeActions"
+        class="absolute inset-y-0 right-0 flex items-center gap-2 pr-3"
+      >
+        <button
+          v-if="!transaction.subscriptionId"
+          class="flex h-full items-center gap-1.5 rounded-xl bg-[color-mix(in_srgb,var(--color-success)_90%,black)] px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[color-mix(in_srgb,var(--color-success)_80%,black)]"
+          @click.stop="handleCreateSubscription"
+        >
+          <span class="text-base leading-none">+</span>
+          Subscription
+        </button>
+        <button
+          class="flex h-full items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/90"
+          @click.stop="handleSwipeCategory"
+        >
+          Category
+        </button>
+      </div>
+    </Transition>
+
+    <!-- Main card (swipeable) -->
   <div
-    class="rounded-2xl bg-surface shadow-sm border border-border-light hover:shadow-lg transition-fast hover:-translate-y-0.5 transaction-item-hover gpu-accelerated" style="padding: var(--space-4);"
+    class="rounded-2xl bg-surface shadow-sm border border-border-light transition-transform duration-200 transaction-item-hover gpu-accelerated"
+    :style="{ transform: showSwipeActions ? 'translateX(-110px)' : 'translateX(0)' }"
+    style="padding: var(--space-4);"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
   >
     <div class="flex items-start gap-3 min-w-0">
       <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-info-bg text-sm font-semibold text-info-text shadow-inner">
@@ -109,6 +139,7 @@
       @close="closeCategoryModal"
     />
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -161,6 +192,40 @@ const duplicateChecker = new DuplicateSubscriptionChecker()
 const showDuplicateModal = ref(false)
 const duplicateResult = ref<DuplicateCheckResult | null>(null)
 const warningMessage = ref('')
+
+// Swipe gesture state
+const showSwipeActions = ref(false)
+let touchStartX = 0
+let touchStartY = 0
+let touchCurrentX = 0
+
+function onTouchStart(e: TouchEvent) {
+  touchStartX = e.changedTouches[0].screenX
+  touchStartY = e.changedTouches[0].screenY
+  touchCurrentX = touchStartX
+}
+
+function onTouchMove(e: TouchEvent) {
+  touchCurrentX = e.changedTouches[0].screenX
+}
+
+function onTouchEnd(e: TouchEvent) {
+  const deltaX = touchCurrentX - touchStartX
+  const deltaY = e.changedTouches[0].screenY - touchStartY
+
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+    if (deltaX < 0) {
+      showSwipeActions.value = true
+    } else {
+      showSwipeActions.value = false
+    }
+  }
+}
+
+function handleSwipeCategory() {
+  showSwipeActions.value = false
+  openCategoryModal()
+}
 
 // Category creation modal state
 const showCategoryModal = ref(false)
@@ -318,6 +383,17 @@ const currentCategoryName = computed(() => {
 </script>
 
 <style scoped>
+/* Swipe actions transition */
+.swipe-actions-enter-active,
+.swipe-actions-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.swipe-actions-enter-from,
+.swipe-actions-leave-to {
+  opacity: 0;
+}
+
 /* Mobile-optimized layout */
 .transaction-item-hover {
   max-width: 100%;

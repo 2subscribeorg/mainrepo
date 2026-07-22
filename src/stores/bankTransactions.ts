@@ -115,6 +115,12 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
     }
   }
 
+  function reset() {
+    unmatchedTransactions.value = []
+    pendingPatterns.value = []
+    error.value = null
+  }
+
   return {
     unmatchedTransactions,
     pendingPatterns,
@@ -129,5 +135,6 @@ export const useBankTransactionsStore = defineStore('bankTransactions', () => {
     addPendingPattern,
     createSubscriptionFromPattern,
     dismissPattern,
+    reset,
   }
 })

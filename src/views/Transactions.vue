@@ -1,4 +1,5 @@
 <template>
+  <PullToRefresh :onRefresh="handleRefresh">
   <div class="max-w-full overflow-x-hidden">
     <!-- Page Header -->
     <div class="mb-6 space-y-4">
@@ -29,7 +30,9 @@
       </ErrorBoundary>
     </div>
 
-    <LoadingSpinner v-if="loading" />
+    <div v-if="loading" class="space-y-3">
+      <SkeletonLoader variant="card" height="100px" :count="5" />
+    </div>
 
     <template v-else>
       <!-- Transactions List -->
@@ -54,11 +57,19 @@
         <ErrorBoundary component="EmptyState">
           <EmptyState
             v-if="paginatedTransactions.length === 0"
-        title="No transactions found"
-        description="Connect a bank account to see your transactions here."
-        action-text="Connect Bank Account"
-        action-to="/settings"
-      />
+            eyebrow="Get Started"
+            title="No transactions yet"
+            description="Connect a bank account to automatically import and track your subscription payments."
+            :tips="[
+              'Automatically detect recurring charges',
+              'See every transaction in one place',
+              'Match payments to subscriptions instantly',
+            ]"
+            action-text="Connect Bank Account"
+            action-to="/settings"
+            secondary-action-text="Learn how it works"
+            secondary-action-to="/settings"
+          />
         </ErrorBoundary>
       </AsyncErrorBoundary>
     </template>
@@ -76,10 +87,13 @@
     </ErrorBoundary>
 
   </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useToast } from '@/composables/useToast'
+import PullToRefresh from '@/components/PullToRefresh.vue'
 import { useTransactions } from '@/composables/useTransactions'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import { useTransactionsStore } from '@/stores/transactions'
@@ -87,7 +101,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryManagement } from '@/composables/useCategoryManagement'
 import type { Transaction } from '@/domain/models'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import TransactionFilterPanel from '@/components/transactions/TransactionFilterPanel.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -123,12 +137,16 @@ const transactionsStore = useTransactionsStore()
 const categoriesStore = useCategoriesStore()
 const authStore = useAuthStore()
 const { createCategory } = useCategoryManagement()
+const toast = useToast()
 
 // Load transactions on component mount
 onMounted(() => {
   refreshTransactions()
 })
 
+async function handleRefresh() {
+  await refreshTransactions()
+}
 
 // Modal state
 const showCategoryModal = ref(false)
@@ -172,10 +190,10 @@ async function handleCategorySelected(categoryId: string) {
     }
     await transactionsStore.save(updatedTransaction)
     
-    alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
+    toast.success(`Subscription created for ${selectedTransaction.value.merchantName}!`)
     
   } catch (error) {
-    alert('❌ Failed to create subscription')
+    toast.error('Failed to create subscription')
   } finally {
     showCategoryModal.value = false
     selectedTransaction.value = null
@@ -204,7 +222,7 @@ async function handleCategoryChange(transaction: Transaction, categoryId: string
     await transactionsStore.save(updatedTransaction)
     
   } catch (error) {
-    alert('Failed to update category. Please try again.')
+    toast.error('Failed to update category. Please try again.')
   }
 }
 
@@ -270,11 +288,11 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     }
     await transactionsStore.save(updatedTransaction)
     
-    alert(`✅ New category "${categoryName}" created and subscription assigned!`)
+    toast.success(`New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    alert(`❌ Failed to create category and subscription: ${errorMessage}`)
+    toast.error(`Failed to create category and subscription: ${errorMessage}`)
   }
 }
 

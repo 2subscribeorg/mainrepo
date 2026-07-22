@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboarding } from './useOnboarding'
 import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
@@ -35,7 +36,17 @@ export async function requireAuth(
   
   // Wait for initial auth state to be resolved (prevents redirect on page refresh)
   const authStore = useAuthStore()
-  await authStore.waitForInitialAuthCheck()
+  const authCheckCompleted = await authStore.waitForInitialAuthCheck()
+
+  // If auth check timed out, redirect to login for safety
+  if (!authCheckCompleted) {
+    logger.warn('Auth check timed out, redirecting to login for safety')
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    })
+    return
+  }
 
   // Skip auth check in Mock mode for development
   if (import.meta.env.VITE_DATA_BACKEND === 'MOCK') {
@@ -74,6 +85,16 @@ export async function requireAuth(
     
     if (user && !user.emailVerified && to.path !== '/verify-email') {
       next('/verify-email')
+      return
+    }
+  }
+
+  // Onboarding check — redirect users who haven't completed onboarding
+  if (to.path !== '/onboarding') {
+    const { checkOnboardingStatus } = useOnboarding()
+    const onboardingDone = await checkOnboardingStatus()
+    if (!onboardingDone) {
+      next('/onboarding')
       return
     }
   }

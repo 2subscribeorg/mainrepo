@@ -1,6 +1,7 @@
 import { doc, setDoc } from 'firebase/firestore'
 import { getFirebaseDb } from '@/config/firebase'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { logger } from '@/utils/logger'
 
 /**
  * Syncs Firebase Auth user to Firestore users collection
@@ -24,7 +25,8 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
     )
 
   } catch (error) {
-    // Don't throw - we don't want to block login if Firestore sync fails
+    // Log error but don't throw - we don't want to block login if Firestore sync fails
+    logger.warn('Failed to sync user to Firestore', { error, userId: user.uid })
   }
 }
 

@@ -24,8 +24,14 @@ export const ConnectionIdSchema = z.string()
   .refine((val) => val.length > 0, 'Connection ID cannot be empty after trimming')
 
 export const LinkTokenResponseSchema = z.object({
-  linkToken: z.string().min(1, 'Link token is required')
+  linkToken: z.string().min(1, 'Link token is required'),
+  state: z.string().min(1, 'State token is required').max(128, 'State token too long')
 })
+
+export const StateTokenSchema = z.string()
+  .min(1, 'State token is required')
+  .max(128, 'State token too long')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid state token format')
 
 export const ExchangeTokenResponseSchema = z.object({
   itemId: z.string().min(1, 'Item ID is required')
@@ -97,7 +103,7 @@ export function validateConnectionId(connectionId: string): string {
  * Validates link token response from backend
  * @throws {PlaidValidationError} if validation fails
  */
-export function validateLinkTokenResponse(data: unknown): { linkToken: string } {
+export function validateLinkTokenResponse(data: unknown): { linkToken: string; state: string } {
   try {
     return LinkTokenResponseSchema.parse(data)
   } catch (error) {
@@ -106,6 +112,22 @@ export function validateLinkTokenResponse(data: unknown): { linkToken: string } 
       throw new PlaidValidationError(firstError?.message || 'Invalid link token response', 'linkToken')
     }
     throw new PlaidValidationError('Invalid link token response')
+  }
+}
+
+/**
+ * Validates and sanitizes a state token
+ * @throws {PlaidValidationError} if validation fails
+ */
+export function validateStateToken(state: string): string {
+  try {
+    return StateTokenSchema.parse(state)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const firstError = error.issues[0]
+      throw new PlaidValidationError(firstError?.message || 'Invalid state token', 'state')
+    }
+    throw new PlaidValidationError('Invalid state token', 'state')
   }
 }
 

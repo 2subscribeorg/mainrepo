@@ -4,6 +4,13 @@ import type { IBankAccountsRepo } from '../interfaces/IBankAccountsRepo'
 
 export class MockBankAccountsRepo implements IBankAccountsRepo {
   private connections: BankConnection[] = []
+  private seed = 12345
+  
+  // Simple seeded pseudo-random number generator
+  private seededRandom() {
+    this.seed = (this.seed * 9301 + 49297) % 233280
+    return this.seed / 233280
+  }
   
   async listConnections(): Promise<BankConnection[]> {
     // Simulate API delay
@@ -16,15 +23,16 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     return this.connections.find(c => c.id === id) || null
   }
   
-  async initializeConnection(): Promise<{ linkToken: string }> {
+  async initializeConnection(): Promise<{ linkToken: string; state: string }> {
     // Simulate getting a link token
     await new Promise(resolve => setTimeout(resolve, 500))
     return {
-      linkToken: 'mock-link-token-' + crypto.randomUUID()
+      linkToken: 'mock-link-token-' + crypto.randomUUID(),
+      state: 'mock-state-' + crypto.randomUUID()
     }
   }
   
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(publicToken: string, _state: string): Promise<BankConnection> {
     // Simulate exchanging public token for connection
     await new Promise(resolve => setTimeout(resolve, 800))
     
@@ -38,7 +46,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
       { id: 'santander', name: 'Santander UK' },
     ]
     
-    const randomBank = mockBanks[Math.floor(Math.random() * mockBanks.length)]
+    const randomBank = mockBanks[Math.floor(this.seededRandom() * mockBanks.length)]
     
     const mockAccounts: BankAccount[] = [
       {
@@ -47,10 +55,10 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
         institutionName: randomBank.name,
         accountName: 'Current Account',
         accountType: 'checking',
-        mask: String(Math.floor(Math.random() * 9999)).padStart(4, '0'),
+        mask: String(Math.floor(this.seededRandom() * 9999)).padStart(4, '0'),
         currency: 'GBP',
         balance: {
-          amount: Math.floor(Math.random() * 5000) + 500,
+          amount: Math.floor(this.seededRandom() * 5000) + 500,
           currency: 'GBP'
         },
         status: 'connected',
@@ -61,17 +69,17 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     ]
     
     // Maybe add a savings account
-    if (Math.random() > 0.5) {
+    if (this.seededRandom() > 0.5) {
       mockAccounts.push({
         id: crypto.randomUUID(),
         institutionId: randomBank.id,
         institutionName: randomBank.name,
         accountName: 'Savings Account',
         accountType: 'savings',
-        mask: String(Math.floor(Math.random() * 9999)).padStart(4, '0'),
+        mask: String(Math.floor(this.seededRandom() * 9999)).padStart(4, '0'),
         currency: 'GBP',
         balance: {
-          amount: Math.floor(Math.random() * 10000) + 1000,
+          amount: Math.floor(this.seededRandom() * 10000) + 1000,
           currency: 'GBP'
         },
         status: 'connected',
@@ -83,6 +91,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     
     const connection: BankConnection = {
       id: connectionId,
+      userId: 'mock-user-id',
       institutionId: randomBank.id,
       institutionName: randomBank.name,
       accounts: mockAccounts,
@@ -93,7 +102,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     }
     
     this.connections.push(connection)
-    logger.debug('🏦 Mock bank connected:', randomBank.name, publicToken)
+    logger.debug('🏦 Mock bank connected', { name: randomBank.name, token: publicToken })
     
     return connection
   }
@@ -104,7 +113,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     const index = this.connections.findIndex(c => c.id === connectionId)
     if (index !== -1) {
       const connection = this.connections[index]
-      logger.debug('🔌 Mock bank disconnected:', connection.institutionName)
+      logger.debug('🔌 Mock bank disconnected', { name: connection.institutionName })
       this.connections.splice(index, 1)
     }
   }
@@ -118,7 +127,7 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
       connection.accounts.forEach(account => {
         account.lastSynced = new Date().toISOString()
       })
-      logger.debug('🔄 Mock transactions synced for:', connection.institutionName)
+      logger.debug('🔄 Mock transactions synced', { name: connection.institutionName })
     }
   }
   

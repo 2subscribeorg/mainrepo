@@ -20,7 +20,7 @@
         </div>
         
         <!-- Error details for development -->
-        <details v-if="isDevelopment" class="error-details">
+        <details v-if="isDevelopment && error.stack" class="error-details">
           <summary>Error Details</summary>
           <pre>{{ error.stack }}</pre>
         </details>
@@ -34,8 +34,9 @@
 
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
-import { ref, computed, onErrorCaptured, onMounted } from 'vue'
+import { ref, computed, onErrorCaptured } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 
 interface ErrorBoundaryProps {
   fallbackMessage?: string
@@ -49,6 +50,7 @@ const props = withDefaults(defineProps<ErrorBoundaryProps>(), {
 })
 
 const router = useRouter()
+const toast = useToast()
 const error = ref<Error | null>(null)
 const errorInfo = ref<any>(null)
 const retryKey = ref(0)
@@ -110,15 +112,15 @@ function reportError() {
       stack: error.value.stack,
       component: errorInfo.value?.instance?.$options?.name || 'Unknown',
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      url: window.location.href
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      url: typeof window !== 'undefined' ? window.location.href : 'unknown'
     }
     
     // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
     logger.debug('Error reported:', errorData)
     
     // Show feedback to user
-    alert('Error has been reported. Thank you for your feedback!')
+    toast.success('Error has been reported. Thank you for your feedback!')
   }
 }
 

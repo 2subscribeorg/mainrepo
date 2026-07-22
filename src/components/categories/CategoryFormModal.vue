@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import CategoryColorPicker from './CategoryColorPicker.vue'
 import ValidationErrors from '@/components/ValidationErrors.vue'
 import IconSelector from '@/components/ui/IconSelector.vue'
@@ -185,17 +185,20 @@ watch(() => props.show, async (show) => {
 })
 
 // Close on Escape key
-onMounted(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && props.show) {
-      handleEscape()
-    }
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.show) {
+    handleEscape()
   }
-  
-  document.addEventListener('keydown', handleKeyDown)
-  
-  // Cleanup
-  return () => {
+}
+
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
     document.removeEventListener('keydown', handleKeyDown)
   }
 })
@@ -209,7 +212,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-modal);
   padding: 1rem;
 }
 

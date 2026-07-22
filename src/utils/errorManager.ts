@@ -36,14 +36,14 @@ class ErrorManager {
   /**
    * Report an error to the global error manager
    */
-  reportError(error: Error, component: string = 'Unknown', route: string = window.location.pathname): ErrorReport {
+  reportError(error: Error, component: string = 'Unknown', route: string = typeof window !== 'undefined' ? window.location.pathname : ''): ErrorReport {
     const errorReport: ErrorReport = {
       id: this.generateErrorId(),
       error,
       component,
       route,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       userId: this.getCurrentUserId(),
       resolved: false
     }
@@ -137,17 +137,30 @@ class ErrorManager {
   }
 
   private getCurrentUserId(): string | undefined {
-    // Try to get user ID from various sources
+    // Try to get user ID from auth store via window property
+    // The auth store sets this property when user changes
     try {
-      // Check if there's a global user state
-      if (window.localStorage.getItem('auth_user')) {
-        const user = JSON.parse(window.localStorage.getItem('auth_user') || '{}')
-        return user.id
+      if (typeof window !== 'undefined') {
+        // @ts-ignore - Custom property set by auth store for error reporting
+        return window.__authStoreUserId
       }
     } catch {
-      // Ignore errors
+      // Ignore errors - user ID is optional for error reporting
     }
     return undefined
+  }
+
+  private sanitizeForReporting(value: string): string {
+    if (!value) return ''
+    return value
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]')
+      .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+=*/g, 'Bearer [TOKEN]')
+      .replace(/(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.?[A-Za-z0-9_-]*)/g, '[JWT]')
+      .replace(/apiKey[=:]\s*['"]?[A-Za-z0-9]+['"]?/gi, 'apiKey=[REDACTED]')
+      .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]')
+      .replace(/\b\d{16}\b/g, '[CARD]')
+      .replace(/(sk_live_|pk_live_|sk_test_|pk_test_)[A-Za-z0-9]+/g, '[STRIPE_KEY]')
+      .replace(/(\/Users\/|\/home\/|C:\\)[^\s:]+/g, '[PATH]')
   }
 
   private async sendToErrorService(errorReport: ErrorReport): Promise<void> {
@@ -157,20 +170,42 @@ class ErrorManager {
       
       const payload = {
         id: errorReport.id,
-        message: errorReport.error.message,
-        stack: errorReport.error.stack,
+        message: this.sanitizeForReporting(errorReport.error.message),
+        stack: this.sanitizeForReporting(errorReport.error.stack || ''),
         component: errorReport.component,
         route: errorReport.route,
         timestamp: errorReport.timestamp,
         userAgent: errorReport.userAgent,
         userId: errorReport.userId,
-        url: window.location.href,
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
         buildVersion: import.meta.env.VITE_APP_VERSION || 'unknown'
       }
 
-      // TODO: Replace with actual error reporting service
-      console.log('Error reported to service:', payload)
+      // Send to backend error reporting endpoint
+      const backendUrl = import.meta.env.VITE_BACKEND_API_URL
+      if (backendUrl && typeof window !== 'undefined') {
+        const response = await fetch(`${backendUrl}/errors`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          // Don't wait for response, fire and forget
+          keepalive: true
+        })
+
+        if (!response.ok) {
+          // Log to console only if backend request fails
+          console.warn('Failed to send error to backend:', response.status)
+        }
+      } else {
+        // In development or if no backend URL, log to console
+        if (import.meta.env.DEV) {
+          console.log('Error reported to service:', payload)
+        }
+      }
       
+      // TODO: Consider integrating Sentry for enhanced error tracking
       // Example: Sentry.captureException(errorReport.error, {
       //   tags: {
       //     component: errorReport.component,
@@ -180,7 +215,10 @@ class ErrorManager {
       // })
       
     } catch (err) {
-      console.error('Failed to send error to service:', err)
+      // Only log in development to avoid console spam in production
+      if (import.meta.env.DEV) {
+        console.error('Failed to send error to service:', err)
+      }
     }
   }
 

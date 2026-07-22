@@ -72,14 +72,17 @@
     </div>
     
     <!-- Show normal content when no error -->
-    <slot v-else :key="retryKey" />
+    <div v-else :key="retryKey">
+      <slot />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
-import { ref, computed, onErrorCaptured, onUnmounted } from 'vue'
+import { ref, computed, onErrorCaptured, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/composables/useToast'
 
 interface ErrorBoundaryProps {
   fallbackMessage?: string
@@ -110,6 +113,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const toast = useToast()
 const error = ref<Error | null>(null)
 const errorInfo = ref<any>(null)
 const retryKey = ref(0)
@@ -119,6 +123,7 @@ const autoRetryCountdown = ref(0)
 const retryHistory = ref<Array<{ timestamp: string; result: string }>>([])
 let autoRetryTimer: ReturnType<typeof setTimeout> | null = null
 let countdownTimer: ReturnType<typeof setInterval> | null = null
+let retryResetTimer: ReturnType<typeof setTimeout> | null = null
 
 const isDevelopment = computed(() => import.meta.env.DEV)
 
@@ -214,6 +219,12 @@ onErrorCaptured((err: Error, instance: any, info: string) => {
   
   emit('error', err, { instance, info })
   
+  // Cancel any pending retry reset so the counter stays accurate
+  if (retryResetTimer) {
+    clearTimeout(retryResetTimer)
+    retryResetTimer = null
+  }
+
   // Auto-retry for transient errors
   if (props.enableAutoRetry && isTransientError.value && retryCount.value < props.maxRetries) {
     startAutoRetry()
@@ -264,18 +275,22 @@ async function retry() {
     errorInfo.value = null
     retryKey.value += 1
     retryCount.value += 1
-    
+
     // Log successful retry
     retryHistory.value.push({
       timestamp: startTime,
       result: 'Success - Component reloaded'
     })
-    
+
     emit('retry', retryCount.value)
+
+    // Wait for Vue to flush the DOM update before telling parents we've recovered
+    await nextTick()
     emit('recovered')
-    
+
     // Reset retry count after successful recovery
-    setTimeout(() => {
+    if (retryResetTimer) clearTimeout(retryResetTimer)
+    retryResetTimer = setTimeout(() => {
       retryCount.value = 0
       retryHistory.value = []
     }, 5000)
@@ -291,13 +306,16 @@ async function retry() {
   }
 }
 
-function reloadComponent() {
+async function reloadComponent() {
   // Partial recovery: just reload the failed component
   error.value = null
   errorInfo.value = null
   retryKey.value += 1
   retryCount.value = 0
   retryHistory.value = []
+
+  // Wait for Vue to flush the DOM update before telling parents we've recovered
+  await nextTick()
   emit('recovered')
 }
 
@@ -318,7 +336,7 @@ function reportError() {
     // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
     logger.debug('Error reported:', errorData)
     
-    alert('Error has been reported. Thank you for your feedback!')
+    toast.success('Error has been reported. Thank you for your feedback!')
   }
 }
 
@@ -337,6 +355,9 @@ onUnmounted(() => {
   if (autoRetryTimer) {
     clearTimeout(autoRetryTimer)
   }
+  if (retryResetTimer) {
+    clearTimeout(retryResetTimer)
+  }
 })
 
 // Expose methods for parent components
@@ -351,6 +372,10 @@ defineExpose({
     retryCount.value = 0
     retryHistory.value = []
     cancelAutoRetry()
+    if (retryResetTimer) {
+      clearTimeout(retryResetTimer)
+      retryResetTimer = null
+    }
   }
 })
 </script>

@@ -253,6 +253,7 @@ describe('useTransactionManagement', () => {
         date: '2024-01-15',
         pending: false,
         transactionType: 'purchase',
+        matchedSubscriptionId: undefined,
         userId: 'user-123'
       })
       expect(callArgs[1]).toEqual({
@@ -263,6 +264,7 @@ describe('useTransactionManagement', () => {
         date: '2024-01-20',
         pending: false,
         transactionType: 'purchase',
+        matchedSubscriptionId: 'existing-subscription-1',
         userId: 'user-123'
       })
     })

@@ -25,7 +25,15 @@ let firestore: Firestore | null = null
  */
 export function initializeFirebase(): void {
   if (app) return // Already initialized
-  
+
+  // Validate required Firebase configuration
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    throw new Error(
+      'Firebase configuration is incomplete. Check environment variables. ' +
+      'Required: VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID'
+    )
+  }
+
   app = initializeApp(firebaseConfig)
   auth = getAuth(app)
   firestore = getFirestore(app)

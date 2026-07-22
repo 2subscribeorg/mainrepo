@@ -64,18 +64,20 @@
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="flex flex-col items-center justify-center gap-1.5 rounded-xl text-xs font-medium transition-fast touch-target mx-1" 
+          class="flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition-fast touch-target mx-1 relative"
           style="padding: var(--space-2) var(--space-1.5); min-height: 52px;"
           :class="
             isActive(link.path)
               ? 'bg-primary text-white shadow-lg'
               : 'text-text-secondary hover:bg-interactive-hover'
           "
+          @click="impactLight()"
         >
+          <component :is="link.icon" :size="22" class="shrink-0" />
           <span class="text-center leading-none truncate w-full px-1">{{ link.label }}</span>
           <span
             v-if="link.badge"
-            class="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+            class="absolute top-1 right-2 rounded-full bg-error text-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
           >
             {{ link.badge }}
           </span>
@@ -94,16 +96,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Home, ArrowLeftRight, LayoutGrid, Settings } from 'lucide-vue-next'
 import UserProfile from '@/components/settings/UserProfile.vue'
 import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
 import RenewalWarningModal from '@/components/RenewalWarningModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
-import { useAuthStore } from '@/stores/auth'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
+import { useHaptics } from '@/composables/useHaptics'
 
 interface NavLink {
   path: string
   label: string
+  icon: any
   badge?: string
 }
 
@@ -128,8 +132,8 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
+const { impactLight } = useHaptics()
 
 // Renewal warnings
 const { warningCount, hasCriticalWarnings } = useRenewalWarnings()
@@ -138,10 +142,10 @@ const showWarningsModal = ref(false)
 
 const navLinks = computed(() => {
   const links: NavLink[] = [
-    { path: '/', label: 'Home' },
-    { path: '/transactions', label: 'Transactions' },
-    { path: '/categories', label: 'Categories' },
-    { path: '/settings', label: 'Settings' },
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+    { path: '/categories', label: 'Categories', icon: LayoutGrid },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ]
 
   return links
@@ -154,7 +158,18 @@ const unreadNotifications = computed(() =>
 )
 
 function isActive(path: string) {
-  return route.path === path || route.path.startsWith(`${path}/`)
+  if (route.path === path) return true
+  
+  // Special case for dashboard (Home)
+  if (path === '/') {
+    // Only active if it's exactly '/' or no other nav link matches
+    return route.path === '/' || !navLinks.value.some(
+      (l) => l.path !== '/' && (route.path === l.path || route.path.startsWith(`${l.path}/`))
+    )
+  }
+  
+  // Active if path matches or if it's a sub-route
+  return route.path.startsWith(`${path}/`) || route.path === path
 }
 
 function handleBack() {
@@ -164,12 +179,6 @@ function handleBack() {
 </script>
 
 <style scoped>
-/* Ensure touch targets meet accessibility guidelines (44px minimum) */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-}
-
 /* Mobile bottom navigation enhancements */
 .mobile-bottom-nav {
   /* Ensure proper spacing for safe areas */

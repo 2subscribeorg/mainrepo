@@ -13,7 +13,8 @@
       <button @click="initialize" class="btn-retry">Retry</button>
     </div>
 
-    <div v-if="isPro" class="pro-badge-banner">
+    <!-- Pro User Badge -->
+    <div v-if="hasActiveSubscription" class="pro-badge-banner">
       <div class="pro-badge">
         <span class="pro-icon">👑</span>
         <span class="pro-text">Pro User</span>
@@ -21,7 +22,8 @@
       <p>You have access to all premium features!</p>
     </div>
 
-    <div v-if="!isPro" class="no-subscription">
+    <!-- No subscription (Free plan) -->
+    <div v-if="!hasActiveSubscription" class="no-subscription">
       <div class="current-plan-card">
         <h3>Current Plan: Free</h3>
         <p class="plan-description">You're currently on the free plan with limited features.</p>
@@ -175,6 +177,13 @@ const showHistory = ref(false)
 
 const isPro = billingService.isProReactive
 const currentPlan = billingService.activePlan
+
+// Guard against data inconsistency: isPro may be true while activeSubscriptions is empty.
+// Only show the active-subscription UI (with cancel button) when a real paid subscription exists.
+const hasActiveSubscription = computed(() => {
+  const customerInfo = billingService.customerInfo.value
+  return isPro.value && (customerInfo?.activeSubscriptions.length ?? 0) > 0
+})
 
 const alternatePlan = computed(() => {
   const active = currentPlan.value
@@ -583,6 +592,73 @@ async function cancelSubscription(): Promise<void> {
   background: var(--color-income);
   color: #fff;
   white-space: nowrap;
+}
+
+.btn-upgrade:hover:not(:disabled) {
+  background: #0d9665;
+}
+
+.btn-cancel:disabled,
+.btn-reactivate:disabled,
+.btn-upgrade:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.modal-content {
+  background: var(--color-bg-primary);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+}
+
+.modal-content h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.modal-content p {
+  margin-bottom: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.savings {
+  color: var(--color-income);
+  font-weight: 600;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: var(--color-income);
+  color: #fff;
 }
 
 .btn-upgrade:hover:not(:disabled) { background: #0d9665; }

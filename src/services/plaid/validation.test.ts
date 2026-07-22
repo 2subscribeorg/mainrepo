@@ -78,20 +78,24 @@ describe('Plaid Input Validation', () => {
 
   describe('validateLinkTokenResponse', () => {
     test('accepts valid response', () => {
-      const response = { linkToken: 'link-sandbox-abc123' }
+      const response = { linkToken: 'link-sandbox-abc123', state: 'state-token-abc123' }
       expect(validateLinkTokenResponse(response)).toEqual(response)
     })
 
     test('rejects missing linkToken', () => {
-      expect(() => validateLinkTokenResponse({})).toThrow(PlaidValidationError)
+      expect(() => validateLinkTokenResponse({ state: 'state-token-abc123' })).toThrow(PlaidValidationError)
+    })
+
+    test('rejects missing state', () => {
+      expect(() => validateLinkTokenResponse({ linkToken: 'link-sandbox-abc123' })).toThrow(PlaidValidationError)
     })
 
     test('rejects empty linkToken', () => {
-      expect(() => validateLinkTokenResponse({ linkToken: '' })).toThrow(PlaidValidationError)
+      expect(() => validateLinkTokenResponse({ linkToken: '', state: 'state-token-abc123' })).toThrow(PlaidValidationError)
     })
 
     test('rejects invalid type', () => {
-      expect(() => validateLinkTokenResponse({ linkToken: 123 })).toThrow(PlaidValidationError)
+      expect(() => validateLinkTokenResponse({ linkToken: 123, state: 'state-token-abc123' })).toThrow(PlaidValidationError)
     })
   })
 

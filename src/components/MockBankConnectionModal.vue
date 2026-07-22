@@ -1,6 +1,6 @@
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+    class="fixed inset-0 z-modal flex items-center justify-center bg-black bg-opacity-50 p-4"
     @click.self="handleCancel"
   >
     <div class="w-full max-w-md max-h-[90vh] flex flex-col rounded-lg bg-white shadow-xl overflow-hidden">
@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 
 const emit = defineEmits<{
   complete: [publicToken: string]
@@ -77,19 +77,25 @@ const mockBanks = [
 
 const connecting = ref(false)
 const selectedBank = ref<typeof mockBanks[0] | null>(null)
+let connectionTimeout: ReturnType<typeof setTimeout> | null = null
 
 async function handleSelectBank(bank: typeof mockBanks[0]) {
   selectedBank.value = bank
   connecting.value = true
 
   // Simulate connection delay
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  // Generate mock public token
-  const publicToken = `public-mock-${bank.id}-${crypto.randomUUID()}`
-  
-  emit('complete', publicToken)
-  connecting.value = false
+  connectionTimeout = setTimeout(() => {
+    // Generate mock public token
+    const uuid = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2, 15)
+      
+    const publicToken = `public-mock-${bank.id}-${uuid}`
+    
+    emit('complete', publicToken)
+    connecting.value = false
+    connectionTimeout = null
+  }, 1500)
 }
 
 function handleCancel() {
@@ -97,4 +103,10 @@ function handleCancel() {
     emit('cancel')
   }
 }
+
+onUnmounted(() => {
+  if (connectionTimeout) {
+    clearTimeout(connectionTimeout)
+  }
+})
 </script>

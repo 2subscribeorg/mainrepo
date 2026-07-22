@@ -3,7 +3,7 @@
     Virtual Scrolling Wrapper - 100% backward compatible
     Falls back to normal rendering if virtual scrolling disabled
   -->
-  <div v-if="!enableVirtual || items.length < threshold">
+  <div v-if="!shouldVirtualize">
     <!-- Normal rendering (existing behavior) -->
     <slot :items="items" :virtual="false" />
   </div>
@@ -57,7 +57,9 @@ const shouldVirtualize = computed(() => {
 
 <style scoped>
 .virtual-scroller-container {
-  height: 600px; /* Fixed height for virtual container */
+  height: 100%;
+  min-height: 400px;
+  max-height: calc(100vh - var(--mobile-header-height, 56px) - var(--mobile-nav-height, 64px) - 100px);
   overflow: auto;
 }
 

@@ -51,7 +51,12 @@ export async function bootstrapApp(): Promise<void> {
     isBootstrapped = true
   })()
 
-  return bootstrapPromise
+  try {
+    await bootstrapPromise
+  } finally {
+    // Reset promise to allow retry on failure
+    bootstrapPromise = null
+  }
 }
 
 /**

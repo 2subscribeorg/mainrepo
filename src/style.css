@@ -21,6 +21,22 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   min-height: 100vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Disable hover states on touch devices (mobile/tablet) */
+@media (hover: none) and (pointer: coarse) {
+  /* Only remove transform and box-shadow on hover for known interactive elements
+     to prevent "sticky" hover effects after a tap, without breaking focus rings,
+     accessibility outlines, or third-party component styles. */
+  .btn:hover,
+  .btn-animated:hover,
+  .interactive:hover,
+  .touch-target:hover,
+  .mobile-bottom-nav a:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
 }
 
 #app {

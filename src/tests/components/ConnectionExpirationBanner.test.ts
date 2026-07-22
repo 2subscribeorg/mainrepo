@@ -16,10 +16,13 @@ describe('ConnectionExpirationBanner', () => {
     setActivePinia(pinia)
     bankAccountsStore = useBankAccountsStore()
     transactionsStore = useTransactionsStore()
-    
+
     // Mock store methods
     vi.spyOn(bankAccountsStore, 'fetchConnections').mockResolvedValue(undefined)
     vi.spyOn(transactionsStore, 'fetchTransactions').mockResolvedValue(undefined)
+
+    // Reset store state
+    bankAccountsStore.connections = []
   })
 
   describe('Visibility', () => {
@@ -37,6 +40,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -61,6 +65,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -85,6 +90,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -110,6 +116,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -136,6 +143,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -161,6 +169,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -190,6 +199,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -220,6 +230,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -246,6 +257,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -270,6 +282,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -294,6 +307,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -324,6 +338,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -348,6 +363,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -373,6 +389,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -399,6 +416,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -430,6 +448,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -454,7 +473,11 @@ describe('ConnectionExpirationBanner', () => {
         } as any,
       ]
 
-      const wrapper = mount(ConnectionExpirationBanner)
+      const wrapper = mount(ConnectionExpirationBanner, {
+        global: {
+          plugins: [pinia],
+        },
+      })
 
       // Act
       await wrapper.find('button').trigger('click')
@@ -482,7 +505,11 @@ describe('ConnectionExpirationBanner', () => {
         } as any,
       ]
 
-      const wrapper = mount(ConnectionExpirationBanner)
+      const wrapper = mount(ConnectionExpirationBanner, {
+        global: {
+          plugins: [pinia],
+        },
+      })
 
       // Act
       await wrapper.find('button').trigger('click')
@@ -502,7 +529,11 @@ describe('ConnectionExpirationBanner', () => {
         } as any,
       ]
 
-      const wrapper = mount(ConnectionExpirationBanner)
+      const wrapper = mount(ConnectionExpirationBanner, {
+        global: {
+          plugins: [pinia],
+        },
+      })
 
       await wrapper.find('button').trigger('click')
 
@@ -525,7 +556,11 @@ describe('ConnectionExpirationBanner', () => {
         } as any,
       ]
 
-      const wrapper = mount(ConnectionExpirationBanner)
+      const wrapper = mount(ConnectionExpirationBanner, {
+        global: {
+          plugins: [pinia],
+        },
+      })
 
       await wrapper.find('button').trigger('click')
 
@@ -554,6 +589,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -577,6 +613,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -602,6 +639,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -623,6 +661,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -657,6 +696,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },
@@ -681,6 +721,7 @@ describe('ConnectionExpirationBanner', () => {
       // Act
       const wrapper = mount(ConnectionExpirationBanner, {
         global: {
+          plugins: [pinia],
           stubs: {
             BankReconnectionWizard: true,
           },

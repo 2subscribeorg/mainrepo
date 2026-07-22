@@ -1,10 +1,10 @@
 <template>
-  <div class="auth-page min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="auth-page min-h-screen bg-surface flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <!-- Logo/Header -->
       <div class="text-center">
-        <h1 class="text-4xl font-bold text-indigo-600">2Subscribe</h1>
-        <p class="mt-2 text-gray-600">Manage your subscriptions effortlessly</p>
+        <h1 class="text-4xl font-bold text-primary">2Subscribe</h1>
+        <p class="mt-2 text-text-secondary">Manage your subscriptions effortlessly</p>
       </div>
 
       <!-- Login, Signup, or Forgot Password Form -->
@@ -27,7 +27,7 @@
       </ErrorBoundary>
 
       <!-- Mode Toggle (Alternative) -->
-      <div class="text-center text-sm text-gray-500">
+      <div class="text-center text-sm text-text-muted">
         <p v-if="isFirebaseMode">
           Using Firebase Authentication
         </p>
@@ -52,6 +52,6 @@ const mode = ref<'login' | 'signup' | 'forgot'>('login')
 
 <style scoped>
 .auth-page {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #4f46e5) 100%);
 }
 </style>

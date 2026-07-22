@@ -2,6 +2,11 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renewalWarningService } from '@/services/RenewalWarningService'
 import * as authHelpers from '@/utils/authHelpers'
 
+// Stub env var before module evaluation so API_BASE_URL uses the test URL
+vi.hoisted(() => {
+  vi.stubEnv('VITE_BACKEND_API_URL', 'http://localhost:3002/api')
+})
+
 // Mock auth helpers
 vi.mock('@/utils/authHelpers', () => ({
   getFirebaseAuthToken: vi.fn(),
@@ -14,7 +19,7 @@ describe('RenewalWarningService', () => {
   const mockToken = 'mock-auth-token-123'
   const mockUserId = 'user-123'
   const mockWarningId = 'warning-456'
-  const API_BASE_URL = 'http://localhost:3002'
+  const API_BASE_URL = 'http://localhost:3002/api'
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -52,7 +57,7 @@ describe('RenewalWarningService', () => {
       // Assert
       expect(authHelpers.getFirebaseAuthToken).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/warnings/${mockUserId}`,
+        `${API_BASE_URL}/warnings/${mockUserId}`,
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': `Bearer ${mockToken}`,
@@ -123,7 +128,7 @@ describe('RenewalWarningService', () => {
       // Assert
       expect(authHelpers.getFirebaseAuthToken).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/warnings/calculate/${mockUserId}`,
+        `${API_BASE_URL}/warnings/calculate/${mockUserId}`,
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -161,7 +166,7 @@ describe('RenewalWarningService', () => {
       // Assert
       expect(authHelpers.getFirebaseAuthToken).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/warnings/${mockWarningId}/dismiss`,
+        `${API_BASE_URL}/warnings/${mockWarningId}/dismiss`,
         expect.objectContaining({
           method: 'PATCH',
           headers: expect.objectContaining({

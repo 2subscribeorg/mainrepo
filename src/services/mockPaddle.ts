@@ -35,8 +35,8 @@ class MockPaddleService {
   ): void {
     // Create modal backdrop
     const backdrop = document.createElement('div')
-    backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
-    backdrop.style.zIndex = '9999'
+    backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-modal'
+    backdrop.style.zIndex = 'var(--z-modal)'
 
     // Create modal content
     const modal = document.createElement('div')

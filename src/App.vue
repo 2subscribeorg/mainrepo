@@ -13,22 +13,41 @@
       <!-- Skip to main content link for keyboard users -->
       <a 
         href="#main-content" 
-        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-50 focus:outline-none focus:ring-2 focus:ring-white"
+        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded-md z-maximum focus:outline-none focus:ring-2 focus:ring-white"
       >
         Skip to main content
       </a>
       
+      <!-- Offline banner -->
+      <div
+        v-if="showOfflineBanner"
+        class="fixed top-0 left-0 right-0 z-sticky bg-warning-bg border-b border-warning-border text-warning-text-emphasis text-sm font-medium text-center"
+        style="padding: 0.5rem 1rem;"
+        role="alert"
+        aria-live="assertive"
+      >
+        You're offline — some data may be outdated
+      </div>
+
       <RouteErrorBoundary>
         <MobileLayout>
           <main id="main-content">
-            <router-view />
+            <router-view v-slot="{ Component, route }">
+              <transition :name="(route.meta.transition as string) || 'fade'" mode="out-in">
+                <component :is="Component" :key="route.path" />
+              </transition>
+            </router-view>
           </main>
         </MobileLayout>
       </RouteErrorBoundary>
       
+      <!-- Consent banner (web) or modal (native mobile) -->
+      <ConsentBanner v-if="!isNativePlatform" />
+      <ConsentModal v-else />
+
       <!-- Global toast notifications -->
       <ToastContainer />
-      
+
       <!-- Global error notification (for development) -->
       <div v-if="globalError && isDevelopment" class="global-error-toast">
         <div class="error-content">
@@ -51,37 +70,53 @@
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
+import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics'
 import { seedDatabase } from '@/data/repo/mock/seedData'
 import MobileLayout from '@/components/layout/MobileLayout.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
+import ConsentBanner from '@/components/ConsentBanner.vue'
+import ConsentModal from '@/components/ConsentModal.vue'
 import ErrorBoundaryWithRecovery from '@/components/ui/ErrorBoundaryWithRecovery.vue'
 import RouteErrorBoundary from '@/components/ui/RouteErrorBoundary.vue'
 import { useErrorManager } from '@/utils/errorManager'
-import { App } from '@capacitor/app'
+import { useOnlineStatus } from '@/composables/useOnlineStatus'
 import { revenueCat } from '@/services/revenueCat'
 import { notificationScheduler } from '@/services/NotificationScheduler'
 import { initFCM } from '@/services/FCMService'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const { reportError, onError } = useErrorManager()
+const router = useRouter()
 
 const globalError = ref<Error | null>(null)
 const isDevelopment = computed(() => import.meta.env.DEV)
+const isNativePlatform = computed(() => Capacitor.isNativePlatform())
 const showRecoveryNotification = ref(false)
+const { isOnline } = useOnlineStatus()
+const showOfflineBanner = computed(() => !isOnline.value)
+
+let errorTimeout: ReturnType<typeof setTimeout> | null = null
+let recoveryTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Listen for global errors
 onError((errorReport) => {
   if (isDevelopment.value) {
     globalError.value = errorReport.error
+    // Clear any existing timeout before setting a new one
+    if (errorTimeout) clearTimeout(errorTimeout)
     // Auto-clear after 5 seconds
-    setTimeout(() => {
+    errorTimeout = setTimeout(() => {
       globalError.value = null
     }, 5000)
   }
 })
 
 function handleGlobalError(error: Error, errorInfo: any) {
-  reportError(error, 'Global', window.location.pathname)
+  const route = typeof window !== 'undefined' ? window.location.pathname : ''
+  reportError(error, 'Global', route)
 }
 
 function handleRetry(retryCount: number) {
@@ -92,8 +127,10 @@ function handleRecovery() {
   logger.debug('Application recovered successfully')
   showRecoveryNotification.value = true
   
+  // Clear any existing timeout before setting a new one
+  if (recoveryTimeout) clearTimeout(recoveryTimeout)
   // Auto-hide recovery notification after 5 seconds
-  setTimeout(() => {
+  recoveryTimeout = setTimeout(() => {
     showRecoveryNotification.value = false
   }, 5000)
 }
@@ -105,6 +142,14 @@ function clearGlobalError() {
 let appStateListener: { remove: () => void } | null = null
 
 onMounted(async () => {
+  // Initialize Crashlytics
+  try {
+    await FirebaseCrashlytics.setEnabled({ enabled: true })
+    logger.debug('Crashlytics initialized')
+  } catch (error) {
+    logger.warn('Failed to initialize Crashlytics:', { error })
+  }
+
   // In Firebase mode, auth listener is initialized in bootstrap
   // In Mock mode, seed database on first launch
   if (!isFirebaseMode) {
@@ -114,6 +159,32 @@ onMounted(async () => {
       reportError(error as Error, 'AppBootstrap', '/')
     }
   }
+
+  // Handle Android hardware back button
+  App.addListener('backButton', ({ canGoBack }) => {
+    if (!canGoBack) {
+      App.exitApp()
+    } else {
+      router.back()
+    }
+  })
+
+  // Handle deep links (e.g., from Google Play Store subscription management)
+  App.addListener('appUrlOpen', (data) => {
+    logger.debug('Deep link opened:', { url: data.url })
+
+    try {
+      const url = new URL(data.url)
+      if (url.protocol === 'twosubscribe:') {
+        const path = url.pathname || url.host
+        if (path === 'manage-subscriptions' || path === '/manage-subscriptions') {
+          router.push('/platform-subscription')
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to parse deep link URL:', { url: data.url, error: e })
+    }
+  })
 
   await notificationScheduler.requestPermission()
 
@@ -131,7 +202,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  App.removeAllListeners()
   appStateListener?.remove()
+  if (errorTimeout) clearTimeout(errorTimeout)
+  if (recoveryTimeout) clearTimeout(recoveryTimeout)
 })
 </script>
 
@@ -140,7 +214,7 @@ onUnmounted(() => {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999;
+  z-index: var(--z-maximum);
   max-width: 400px;
 }
 
@@ -176,7 +250,7 @@ onUnmounted(() => {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999;
+  z-index: var(--z-maximum);
   max-width: 400px;
   animation: slideIn 0.3s ease-out;
 }
@@ -204,5 +278,32 @@ onUnmounted(() => {
   color: #166534;
   font-size: 0.875rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Native-style page transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide transition for iOS-like navigation */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateX(-20%);
+  opacity: 0;
 }
 </style>

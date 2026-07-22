@@ -1,8 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { requireAuth, redirectIfAuthenticated } from '@/composables/useAuthGuard'
+import { useBankAccountsStore } from '@/stores/bankAccounts'
+import { useBankTransactionsStore } from '@/stores/bankTransactions'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0 }
+  },
   routes: [
     // Auth Routes (public)
     {
@@ -15,6 +23,12 @@ const router = createRouter({
       path: '/verify-email',
       name: 'verify-email',
       component: () => import('@/pages/VerifyEmail.vue'),
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/Onboarding.vue'),
+      beforeEnter: requireAuth,
     },
     // Protected Routes (require authentication)
     {
@@ -47,6 +61,12 @@ const router = createRouter({
       component: () => import('@/views/PlatformSubscription.vue'),
       beforeEnter: requireAuth,
     },
+    {
+      path: '/subscriptions/:id',
+      name: 'subscription-details',
+      component: () => import('@/views/SubscriptionDetails.vue'),
+      beforeEnter: requireAuth,
+    },
     // Catch-all route - must be last
     {
       path: '/:pathMatch(.*)*',
@@ -54,6 +74,21 @@ const router = createRouter({
       redirect: '/',
     },
   ],
+})
+
+// Navigation-Aware Resets: clear sensitive bank data when leaving bank-related routes
+const BANK_SENSITIVE_ROUTE_NAMES = ['dashboard', 'settings', 'transactions']
+
+router.afterEach((to, from) => {
+  const leavingBankContext = BANK_SENSITIVE_ROUTE_NAMES.includes(from.name as string)
+  const enteringBankContext = BANK_SENSITIVE_ROUTE_NAMES.includes(to.name as string)
+
+  if (leavingBankContext && !enteringBankContext) {
+    const bankAccounts = useBankAccountsStore()
+    const bankTransactions = useBankTransactionsStore()
+    bankAccounts.reset()
+    bankTransactions.reset()
+  }
 })
 
 // Global error handler for route loading

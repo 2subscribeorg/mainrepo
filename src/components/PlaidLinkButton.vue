@@ -17,6 +17,15 @@
       </span>
     </button>
     
+    <div v-if="!consentGranted && consentUndecided" class="consent-prompt">
+      <p class="consent-prompt__text">
+        Connecting your bank requires privacy consent.
+      </p>
+      <button class="consent-prompt__btn" @click="grantConsent">
+        Grant Consent
+      </button>
+    </div>
+
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
@@ -26,11 +35,13 @@
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
 import { ref, onMounted } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAuthStore } from '@/stores/auth'
 import { useAnimations } from '@/utils/useAnimations'
 import { useTransactionManagement } from '@/composables/useTransactionManagement'
+import { useConsent } from '@/composables/useConsent'
 
 // TypeScript declarations for global window properties
 declare global {
@@ -48,26 +59,36 @@ const emit = defineEmits<{
 const loading = ref(false)
 const connectingBank = ref(false)
 const error = ref('')
+const state = ref('')
 const bankStore = useBankAccountsStore()
 const transactionStore = useTransactionsStore()
 const authStore = useAuthStore()
 const { detectPatterns } = useTransactionManagement()
+const { granted: consentGranted, undecided: consentUndecided, grant: grantConsent } = useConsent()
 
 // Use animation utilities
 const { createRipple, prefersReducedMotion } = useAnimations()
 const buttonRef = ref<HTMLElement>()
 
-// Load Plaid Link script (singleton pattern)
+// Load Plaid Link script (singleton pattern, gated by consent)
+// Plaid is web-only; skip on native mobile builds
 onMounted(() => {
-  loadPlaidScript()
+  if (consentGranted.value && !Capacitor.isNativePlatform()) {
+    loadPlaidScript()
+  }
 })
 
 // Global function to ensure Plaid script is loaded only once
 function loadPlaidScript() {
-  if (!window.Plaid && !window.plaidScriptLoading) {
+  if (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    !window.Plaid &&
+    !window.plaidScriptLoading
+  ) {
     window.plaidScriptLoading = true
     const script = document.createElement('script')
-    script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js'
+    script.src = '/plaid-link-initialize.js'
     script.async = true
     script.onload = () => {
       window.plaidScriptLoading = false
@@ -85,28 +106,34 @@ async function openPlaidLink(event: MouseEvent) {
   if (buttonRef.value && !prefersReducedMotion.value) {
     createRipple(event, buttonRef.value)
   }
-  
+
   loading.value = true
   error.value = ''
-  
+
   try {
+    // Block if consent is not granted
+    if (!consentGranted.value) {
+      throw new Error('Bank linking requires privacy consent. Please grant consent to continue.')
+    }
+
     logger.debug('🔗 Initializing Plaid Link...')
     logger.debug('Environment:', import.meta.env.VITE_PLAID_ENV)
-    logger.debug('Client ID:', import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...')
-    
+    logger.debug('Client ID:', { id: import.meta.env.VITE_PLAID_CLIENT_ID?.substring(0, 10) + '...' })
+
     // Check authentication
     if (!authStore.user) {
       throw new Error('You must be logged in to connect a bank account')
     }
-    logger.success('User authenticated:', authStore.user.email)
+    logger.success('User authenticated:', { email: authStore.user.email })
     
     // Get link token from backend
     logger.debug('📝 Requesting link token...')
-    const { linkToken } = await bankStore.connectBank()
-    logger.success('Link token received:', linkToken.substring(0, 20) + '...')
+    const { linkToken, state: stateValue } = await bankStore.connectBank()
+    state.value = stateValue
+    logger.success('Link token received:', { token: linkToken.substring(0, 20) + '...' })
     
     // Check if Plaid SDK is loaded
-    if (!window.Plaid) {
+    if (typeof window === 'undefined' || !window.Plaid) {
       throw new Error('Plaid SDK not loaded. Please refresh the page.')
     }
     
@@ -146,15 +173,15 @@ async function handleSuccess(publicToken: string, metadata: any) {
   try {
     logger.success('Plaid Link success:', metadata?.institution?.name || 'Bank connected')
     
-    // Complete the connection (exchange token)
-    await bankStore.completeConnection(publicToken)
+    // Complete the connection (exchange token) — pass state for CSRF verification
+    await bankStore.completeConnection(publicToken, state.value)
     
     // Get the newly created connection
     const connections = bankStore.connections
     const newConnection = connections[connections.length - 1]
     
     if (newConnection) {
-      logger.debug('🔄 Syncing transactions for', newConnection.institutionName)
+      logger.debug('🔄 Syncing transactions for', { institution: newConnection.institutionName })
       
       // Sync transactions immediately
       await bankStore.syncTransactions(newConnection.id)
@@ -190,7 +217,7 @@ function handleExit(err: any, _metadata: any) {
 }
 
 function handleEvent(eventName: string, _metadata: any) {
-  logger.debug('📊 Plaid event:', eventName)
+  logger.debug('📊 Plaid event:', { event: eventName })
 }
 
 // Declare Plaid on window
@@ -239,6 +266,38 @@ declare global {
 .connect-bank-button svg {
   width: 20px;
   height: 20px;
+}
+
+.consent-prompt {
+  padding: 0.75rem 1rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.consent-prompt__text {
+  font-size: 0.875rem;
+  color: #0369a1;
+}
+
+.consent-prompt__btn {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background: #0284c7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.consent-prompt__btn:hover {
+  background: #0369a1;
 }
 
 .error-message {

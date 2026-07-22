@@ -195,11 +195,15 @@ const handleClickOutside = (e: Event) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', handleClickOutside)
+  }
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('click', handleClickOutside)
+  }
 })
 </script>
 
@@ -272,7 +276,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 9998;
+  z-index: var(--z-modal-backdrop);
 }
 
 .icon-selector__grid {
@@ -280,7 +284,7 @@ onUnmounted(() => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 9999;
+  z-index: var(--z-modal);
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
   background: var(--color-surface);

@@ -222,10 +222,23 @@
       @close="showReconnectionWizard = false"
       @success="handleReconnectionSuccess"
     />
+
+    <!-- Disconnect Confirmation -->
+    <ConfirmDialog
+      :is-open="showDisconnectConfirm"
+      :title="`Disconnect ${institutionToDisconnect}?`"
+      message="Are you sure you want to disconnect this bank account? This will stop transaction syncing. This action cannot be undone."
+      confirm-text="Disconnect"
+      cancel-text="Cancel"
+      variant="danger"
+      @confirm="executeDisconnect"
+      @cancel="cancelDisconnect"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { useToast } from '@/composables/useToast'
 import { logger } from '@/utils/logger'
 import { ref, onMounted, computed } from 'vue'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
@@ -236,12 +249,19 @@ import { formatMoney } from '@/utils/formatters'
 import MockBankConnectionModal from '@/components/MockBankConnectionModal.vue'
 import PlaidLinkButton from '@/components/PlaidLinkButton.vue'
 import BankReconnectionWizard from '@/components/BankReconnectionWizard.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const bankAccountsStore = useBankAccountsStore()
 const transactionsStore = useTransactionsStore()
+const toast = useToast()
 const showMockModal = ref(false)
 const showReconnectionWizard = ref(false)
 const reconnectionTarget = ref<any>(null)
+
+// Confirmation dialog state
+const showDisconnectConfirm = ref(false)
+const connectionToDisconnect = ref<string | null>(null)
+const institutionToDisconnect = ref<string>('')
 
 // Check if using Plaid backend
 const usePlaidBackend = import.meta.env.VITE_USE_PLAID_BACKEND === 'true'
@@ -299,7 +319,7 @@ async function handleConnectBank() {
 async function handleMockComplete(publicToken: string) {
   showMockModal.value = false
   try {
-    await bankAccountsStore.completeConnection(publicToken)
+    await bankAccountsStore.completeConnection(publicToken, '')
   } catch (e) {
     logger.error('Failed to complete connection:', e)
   }
@@ -337,18 +357,40 @@ async function handleSync(connectionId: string) {
     const { detectPatterns } = useTransactionManagement()
     await detectPatterns()
     
-    alert('✅ Transactions synced and patterns detected!')
+    toast.success('Transactions synced and patterns detected!')
   } catch (e) {
     logger.error('Failed to sync transactions:', e)
+    toast.error('Failed to sync transactions')
   }
 }
 
-async function handleDisconnect(connectionId: string) {
+function handleDisconnect(connectionId: string) {
+  const connection = connections.value.find(c => c.id === connectionId)
+  if (connection) {
+    institutionToDisconnect.value = connection.institutionName
+    connectionToDisconnect.value = connectionId
+    showDisconnectConfirm.value = true
+  }
+}
+
+async function executeDisconnect() {
+  if (!connectionToDisconnect.value) return
+  
   try {
-    await bankAccountsStore.disconnectBank(connectionId)
+    await bankAccountsStore.disconnectBank(connectionToDisconnect.value)
+    toast.success(`Disconnected from ${institutionToDisconnect.value}`)
   } catch (e) {
     logger.error('Failed to disconnect bank:', e)
+    toast.error('Failed to disconnect bank account')
+  } finally {
+    showDisconnectConfirm.value = false
+    connectionToDisconnect.value = null
   }
+}
+
+function cancelDisconnect() {
+  showDisconnectConfirm.value = false
+  connectionToDisconnect.value = null
 }
 
 onMounted(async () => {

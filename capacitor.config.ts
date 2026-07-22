@@ -5,7 +5,10 @@ const config: CapacitorConfig = {
   appName: '2Subscribe',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    iosScheme: 'https',
+    // Allow custom URL scheme for deep linking
+    allowNavigation: ['twosubscribe://*']
   }
 };
 

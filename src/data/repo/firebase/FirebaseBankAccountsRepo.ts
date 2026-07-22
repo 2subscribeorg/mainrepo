@@ -11,8 +11,7 @@ import type { ID, BankConnection, BankAccount } from '@/domain/models'
 import { logger } from '@/utils/logger'
 import type { IBankAccountsRepo } from '../interfaces/IBankAccountsRepo'
 import { PlaidBackendService } from '@/services/plaid/PlaidBackendService'
-import { PlaidTokenService } from '@/services/plaid/PlaidTokenService'
-import { getFirebaseDb } from '@/config/firebase'
+import { getFirebaseDb, getFirebaseAuth } from '@/config/firebase'
 
 /**
  * Firebase implementation of bank accounts repository
@@ -23,14 +22,21 @@ import { getFirebaseDb } from '@/config/firebase'
  */
 export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
   private plaid = new PlaidBackendService() // Uses backend API
-  private tokens = new PlaidTokenService()
+
+  private getUserId(): string {
+    const auth = getFirebaseAuth()
+    if (!auth.currentUser) {
+      throw new Error('User not authenticated')
+    }
+    return auth.currentUser.uid
+  }
 
   /**
    * List all bank connections for current user
    */
   async listConnections(): Promise<BankConnection[]> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const connectionsQuery = query(
@@ -57,7 +63,7 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
    */
   async getConnection(id: ID): Promise<BankConnection | null> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const connectionRef = doc(db, 'bankConnections', id)
@@ -85,17 +91,17 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
   /**
    * Initialize a new bank connection (get link token)
    */
-  async initializeConnection(): Promise<{ linkToken: string }> {
+  async initializeConnection(): Promise<{ linkToken: string; state: string }> {
     try {
       logger.debug('📝 Getting current user ID...')
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       logger.success('User ID:', userId)
       
       logger.debug('🔑 Creating Plaid link token...')
-      const linkToken = await this.plaid.createLinkToken(userId)
+      const { linkToken, state } = await this.plaid.createLinkToken(userId)
       
       logger.success('Link token created for user')
-      return { linkToken }
+      return { linkToken, state }
     } catch (error) {
       logger.error('❌ Failed to initialize connection:', error)
       // Re-throw the original error with more context
@@ -109,13 +115,13 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
   /**
    * Complete connection after user authenticates with Plaid Link
    */
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(publicToken: string, state: string): Promise<BankConnection> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       // Exchange public token via backend (backend handles all the details)
-      const { itemId } = await this.plaid.exchangePublicToken(publicToken, userId)
+      const { itemId } = await this.plaid.exchangePublicToken(publicToken, userId, state)
       
       // Backend has already stored everything, just fetch the connection from Firestore
       const connectionRef = doc(db, 'bankConnections', itemId)
@@ -139,20 +145,12 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
    */
   async disconnect(connectionId: ID): Promise<void> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
-      // Get access token
-      const accessToken = await this.tokens.getAccessToken(userId, connectionId)
-      
-      if (accessToken) {
-        // Remove item from Plaid
-        await this.plaid.removeItem(accessToken)
-      }
-      
-      // Delete access token from Firestore
-      await this.tokens.deleteAccessToken(userId, connectionId)
-      
+      // Backend handles Plaid item removal and Firestore cleanup
+      await this.plaid.disconnectBank(connectionId, userId)
+
       // Delete connection from Firestore
       const connectionRef = doc(db, 'bankConnections', connectionId)
       await deleteDoc(connectionRef)
@@ -172,7 +170,7 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
    */
   async syncTransactions(connectionId: ID): Promise<void> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       
       logger.debug(`🔄 Syncing transactions via backend for connection: ${connectionId}`)
       
@@ -191,7 +189,7 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
    */
   async listAccounts(): Promise<BankAccount[]> {
     try {
-      const userId = this.tokens.getCurrentUserId()
+      const userId = this.getUserId()
       const db = getFirebaseDb()
       
       const accountsQuery = query(

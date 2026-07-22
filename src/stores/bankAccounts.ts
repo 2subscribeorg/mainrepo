@@ -10,7 +10,7 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
   const connectingBank = ref(false)
   
   // Consolidated loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const loading = isLoading('bankAccounts')
 
   const repo = repoFactory.getBankAccountsRepo()
@@ -27,13 +27,13 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     })
   }
 
-  async function connectBank(): Promise<{ linkToken: string }> {
+  async function connectBank(): Promise<{ linkToken: string; state: string }> {
     return await withLoading('bankAccounts', async () => {
       connectingBank.value = true
       error.value = null
       try {
-        const { linkToken } = await repo.initializeConnection()
-        return { linkToken }
+        const { linkToken, state } = await repo.initializeConnection()
+        return { linkToken, state }
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to initialize bank connection'
         throw e
@@ -43,11 +43,11 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     })
   }
 
-  async function completeConnection(publicToken: string) {
+  async function completeConnection(publicToken: string, state: string) {
     return await withLoading('bankAccounts', async () => {
       error.value = null
       try {
-        const connection = await repo.completeConnection(publicToken)
+        const connection = await repo.completeConnection(publicToken, state)
         connections.value.push(connection)
         return connection
       } catch (e) {
@@ -63,10 +63,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
       throw new Error('Connection not found')
     }
     
-    if (!confirm(`Disconnect from ${connection.institutionName}? This will remove all linked accounts.`)) {
-      return
-    }
-
     return await withLoading('bankAccounts', async () => {
       error.value = null
       try {
@@ -86,9 +82,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
         await repo.syncTransactions(connectionId)
         
         // Show success message
-        const connection = connections.value.find(c => c.id === connectionId)
-        const institutionName = connection?.institutionName || 'Unknown Bank'
-        
         // Optionally refresh connections to get updated sync status
         await fetchConnections()
       } catch (e) {
@@ -120,6 +113,12 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     }
   }
 
+  function reset() {
+    connections.value = []
+    error.value = null
+    connectingBank.value = false
+  }
+
   return {
     connections,
     loading,
@@ -131,5 +130,6 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     disconnectBank,
     syncTransactions,
     getAllAccounts,
+    reset,
   }
 })
