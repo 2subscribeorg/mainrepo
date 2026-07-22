@@ -27,13 +27,13 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     })
   }
 
-  async function connectBank(): Promise<{ linkToken: string }> {
+  async function connectBank(): Promise<{ linkToken: string; state: string }> {
     return await withLoading('bankAccounts', async () => {
       connectingBank.value = true
       error.value = null
       try {
-        const { linkToken } = await repo.initializeConnection()
-        return { linkToken }
+        const { linkToken, state } = await repo.initializeConnection()
+        return { linkToken, state }
       } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to initialize bank connection'
         throw e
@@ -43,11 +43,11 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
     })
   }
 
-  async function completeConnection(publicToken: string) {
+  async function completeConnection(publicToken: string, state: string) {
     return await withLoading('bankAccounts', async () => {
       error.value = null
       try {
-        const connection = await repo.completeConnection(publicToken)
+        const connection = await repo.completeConnection(publicToken, state)
         connections.value.push(connection)
         return connection
       } catch (e) {

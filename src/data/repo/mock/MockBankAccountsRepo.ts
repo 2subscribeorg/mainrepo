@@ -23,15 +23,16 @@ export class MockBankAccountsRepo implements IBankAccountsRepo {
     return this.connections.find(c => c.id === id) || null
   }
   
-  async initializeConnection(): Promise<{ linkToken: string }> {
+  async initializeConnection(): Promise<{ linkToken: string; state: string }> {
     // Simulate getting a link token
     await new Promise(resolve => setTimeout(resolve, 500))
     return {
-      linkToken: 'mock-link-token-' + crypto.randomUUID()
+      linkToken: 'mock-link-token-' + crypto.randomUUID(),
+      state: 'mock-state-' + crypto.randomUUID()
     }
   }
   
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(publicToken: string, _state: string): Promise<BankConnection> {
     // Simulate exchanging public token for connection
     await new Promise(resolve => setTimeout(resolve, 800))
     

@@ -59,6 +59,7 @@ const emit = defineEmits<{
 const loading = ref(false)
 const connectingBank = ref(false)
 const error = ref('')
+const state = ref('')
 const bankStore = useBankAccountsStore()
 const transactionStore = useTransactionsStore()
 const authStore = useAuthStore()
@@ -127,7 +128,8 @@ async function openPlaidLink(event: MouseEvent) {
     
     // Get link token from backend
     logger.debug('📝 Requesting link token...')
-    const { linkToken } = await bankStore.connectBank()
+    const { linkToken, state: stateValue } = await bankStore.connectBank()
+    state.value = stateValue
     logger.success('Link token received:', { token: linkToken.substring(0, 20) + '...' })
     
     // Check if Plaid SDK is loaded
@@ -171,8 +173,8 @@ async function handleSuccess(publicToken: string, metadata: any) {
   try {
     logger.success('Plaid Link success:', metadata?.institution?.name || 'Bank connected')
     
-    // Complete the connection (exchange token)
-    await bankStore.completeConnection(publicToken)
+    // Complete the connection (exchange token) — pass state for CSRF verification
+    await bankStore.completeConnection(publicToken, state.value)
     
     // Get the newly created connection
     const connections = bankStore.connections

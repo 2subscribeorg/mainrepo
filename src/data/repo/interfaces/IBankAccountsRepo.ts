@@ -7,11 +7,11 @@ export interface IBankAccountsRepo {
   // Get a specific connection
   getConnection(id: ID): Promise<BankConnection | null>
   
-  // Connect a new bank account (returns link token for UI)
-  initializeConnection(): Promise<{ linkToken: string }>
+  // Connect a new bank account (returns link token and state for UI)
+  initializeConnection(): Promise<{ linkToken: string; state: string }>
   
   // Complete connection after user authenticates
-  completeConnection(publicToken: string): Promise<BankConnection>
+  completeConnection(publicToken: string, state: string): Promise<BankConnection>
   
   // Disconnect a bank connection
   disconnect(connectionId: ID): Promise<void>

@@ -13,6 +13,7 @@ import {
   validateUserId,
   validatePublicToken,
   validateConnectionId,
+  validateStateToken,
   validateLinkTokenResponse,
   validateExchangeTokenResponse,
   validateSyncTransactionsResponse,
@@ -43,7 +44,7 @@ export class PlaidBackendService {
   /**
    * Create a link token for Plaid Link
    */
-  async createLinkToken(userId: string): Promise<string> {
+  async createLinkToken(userId: string): Promise<{ linkToken: string; state: string }> {
     try {
       // Client-side rate limiting check
       const rateLimitKey = `plaid:create-link-token:${userId}`
@@ -78,7 +79,7 @@ export class PlaidBackendService {
       // Validate response
       const validatedResponse = validateLinkTokenResponse(data)
       
-      return validatedResponse.linkToken
+      return validatedResponse
     } catch (error: any) {
       if (error instanceof PlaidValidationError) {
         throw error
@@ -93,7 +94,7 @@ export class PlaidBackendService {
   /**
    * Exchange public token for access token
    */
-  async exchangePublicToken(publicToken: string, userId: string): Promise<{ itemId: string }> {
+  async exchangePublicToken(publicToken: string, userId: string, state: string): Promise<{ itemId: string }> {
     try {
       // Client-side rate limiting check
       const rateLimitKey = `plaid:exchange-token:${userId}`
@@ -104,6 +105,7 @@ export class PlaidBackendService {
       // Validate and sanitize inputs
       const validatedPublicToken = validatePublicToken(publicToken)
       const validatedUserId = validateUserId(userId)
+      const validatedState = validateStateToken(state)
       
       const token = await this.getAuthToken()
       
@@ -113,7 +115,7 @@ export class PlaidBackendService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ publicToken: validatedPublicToken, userId: validatedUserId }),
+        body: JSON.stringify({ publicToken: validatedPublicToken, userId: validatedUserId, state: validatedState }),
       })
       
       if (!response.ok) {

@@ -319,7 +319,7 @@ async function handleConnectBank() {
 async function handleMockComplete(publicToken: string) {
   showMockModal.value = false
   try {
-    await bankAccountsStore.completeConnection(publicToken)
+    await bankAccountsStore.completeConnection(publicToken, '')
   } catch (e) {
     logger.error('Failed to complete connection:', e)
   }

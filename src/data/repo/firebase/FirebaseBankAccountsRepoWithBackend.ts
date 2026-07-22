@@ -89,15 +89,15 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
   /**
    * Initialize a new bank connection (get link token from backend)
    */
-  async initializeConnection(): Promise<{ linkToken: string }> {
+  async initializeConnection(): Promise<{ linkToken: string; state: string }> {
     try {
       logger.debug('📝 Initializing connection via backend...')
       const userId = this.getUserId()
       
-      const linkToken = await this.backend.createLinkToken(userId)
+      const { linkToken, state } = await this.backend.createLinkToken(userId)
       
       logger.success('Link token created via backend')
-      return { linkToken }
+      return { linkToken, state }
     } catch (error) {
       logger.error('❌ Failed to initialize connection:', error)
       if (error instanceof Error) {
@@ -111,7 +111,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
    * Complete connection after user authenticates with Plaid Link
    * Backend handles: token exchange, fetching accounts, storing everything
    */
-  async completeConnection(publicToken: string): Promise<BankConnection> {
+  async completeConnection(publicToken: string, state: string): Promise<BankConnection> {
     try {
       const userId = this.getUserId()
       const db = getFirebaseDb()
@@ -119,7 +119,7 @@ export class FirebaseBankAccountsRepoWithBackend implements IBankAccountsRepo {
       logger.debug('🔄 Completing connection via backend...')
       
       // Backend does all the heavy lifting
-      const { itemId } = await this.backend.exchangePublicToken(publicToken, userId)
+      const { itemId } = await this.backend.exchangePublicToken(publicToken, userId, state)
       
       // Fetch the connection that backend created
       const connectionRef = doc(db, 'bankConnections', itemId)
