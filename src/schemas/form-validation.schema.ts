@@ -136,8 +136,8 @@ export const ISODateSchema = z
 /**
  * Recurrence validation schema
  */
-export const RecurrenceSchema = z.enum(['monthly', 'yearly', 'weekly', 'biweekly', 'quarterly', 'custom'], {
-  errorMap: () => ({ message: 'Invalid recurrence type' })
+export const RecurrenceSchema = z.enum(['monthly', 'yearly', 'weekly', 'biweekly', 'quarterly', 'custom'] as const, {
+  error: 'Invalid recurrence type'
 })
 
 /**

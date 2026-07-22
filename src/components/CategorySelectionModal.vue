@@ -155,17 +155,17 @@
         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
           <div class="flex justify-end space-x-3">
             <button 
-              @click="handleCancel"
               class="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors duration-150 btn-animated"
               aria-label="Cancel category selection"
+              @click="handleCancel"
             >
               Cancel
             </button>
             <button 
-              @click="handleConfirm"
               :disabled="!canConfirm"
               :aria-label="isCreatingNew ? 'Create new category and add merchant' : 'Add merchant to selected category'"
               class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 btn-animated"
+              @click="handleConfirm"
             >
               {{ isCreatingNew ? 'Create & Add' : 'Add to Category' }}
             </button>

@@ -664,7 +664,7 @@ describe('useSubscriptionCreation', () => {
       // Act
       try {
         await createSubscriptionFromTransaction(mockTransaction, 'entertainment-category')
-      } catch (e) {
+      } catch {
         // Expected to fail
       }
       

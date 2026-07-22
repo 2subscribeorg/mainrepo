@@ -14,8 +14,8 @@
         </span>
         <button
           v-if="activeFilterCount > 0"
-          @click="$emit('clear-all')"
           class="text-sm font-semibold text-gray-500 hover:text-blue-600 transition-colors duration-150 btn-animated"
+          @click="$emit('clear-all')"
         >
           Clear
         </button>
@@ -29,8 +29,8 @@
         <select 
           data-testid="account-filter"
           :value="filters.selectedAccount"
-          @change="$emit('update:selectedAccount', ($event.target as HTMLSelectElement).value)"
           class="filter-input input-animated"
+          @change="$emit('update:selectedAccount', ($event.target as HTMLSelectElement).value)"
         >
           <option value="">All Accounts</option>
           <option v-for="account in accounts" :key="account.id" :value="account.id">
@@ -45,8 +45,8 @@
         <select 
           data-testid="subscription-filter"
           :value="filters.subscriptionFilter"
-          @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value as 'all' | 'subscriptions')"
           class="filter-input input-animated"
+          @change="$emit('update:subscriptionFilter', ($event.target as HTMLSelectElement).value as 'all' | 'subscriptions')"
         >
           <option value="all">All Transactions</option>
           <option value="subscriptions">Subscription Transactions</option>
@@ -59,10 +59,10 @@
         <input
           data-testid="merchant-search"
           :value="filters.merchantSearch || ''"
-          @input="$emit('update:merchantSearch', sanitizeSearchQuery(($event.target as HTMLInputElement).value))"
           type="text"
           placeholder="Search merchants..."
           class="filter-input input-animated"
+          @input="$emit('update:merchantSearch', sanitizeSearchQuery(($event.target as HTMLInputElement).value))"
         />
       </div>
 
@@ -72,19 +72,21 @@
         <div class="flex gap-2">
           <input
             :value="filters.dateRange?.start || ''"
-            @input="updateDateRange('start', ($event.target as HTMLInputElement).value)"
             type="date"
-            :max="todayDate"
+            :max="filters.dateRange?.end || todayDate"
             class="filter-input flex-1 input-animated"
+            @input="updateDateRange('start', ($event.target as HTMLInputElement).value)"
           />
           <input
             :value="filters.dateRange?.end || ''"
-            @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
             type="date"
+            :min="filters.dateRange?.start || ''"
             :max="todayDate"
             class="filter-input flex-1 input-animated"
+            @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
           />
         </div>
+        <p v-if="dateRangeError" class="mt-1 text-xs text-red-600">{{ dateRangeError }}</p>
       </div>
 
       <!-- Amount Range -->
@@ -93,17 +95,17 @@
         <div class="flex flex-col gap-2 sm:flex-row">
           <input
             :value="filters.amountRange?.min || ''"
-            @input="updateAmountRange('min', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
             type="number"
             placeholder="Min"
             class="filter-input flex-1 min-w-0 input-animated"
+            @input="updateAmountRange('min', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
           />
           <input
             :value="filters.amountRange?.max || ''"
-            @input="updateAmountRange('max', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
             type="number"
             placeholder="Max"
             class="filter-input flex-1 min-w-0 input-animated"
+            @input="updateAmountRange('max', sanitizeAmount(($event.target as HTMLInputElement).value).toString())"
           />
         </div>
       </div>
@@ -162,15 +164,15 @@
         <div class="flex flex-1 gap-2">
           <button
             data-testid="apply-filters-btn"
-            @click="$emit('apply-filters')"
             class="flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[color-mix(in_srgb,var(--color-primary)_30%,transparent)] transition hover:bg-primary/90"
+            @click="$emit('apply-filters')"
           >
             Apply Filters
           </button>
           <button
             data-testid="clear-all-btn"
-            @click="$emit('clear-all')"
             class="flex-1 rounded-2xl border border-[rgba(15,23,42,0.12)] bg-[var(--color-surface)] px-4 py-3 text-sm font-semibold text-text-primary hover:bg-[rgba(15,23,42,0.04)]"
+            @click="$emit('clear-all')"
           >
             Clear All
           </button>
@@ -191,8 +193,8 @@
         >
           {{ filter.label }}
           <button
-            @click="$emit('clear-filter', filter.key)"
             class="rounded-full p-0.5 text-text-secondary hover:bg-[rgba(15,23,42,0.1)]"
+            @click="$emit('clear-filter', filter.key)"
           >
             ×
           </button>
@@ -213,9 +215,9 @@
             <div class="flex items-center justify-between p-4 border-b border-border-light">
               <h3 class="text-lg font-semibold text-text-primary">All Categories</h3>
               <button
-                @click="showAllCategoriesModal = false"
                 class="rounded-full p-2 hover:bg-interactive-hover transition-colors"
                 aria-label="Close modal"
+                @click="showAllCategoriesModal = false"
               >
                 <span class="text-xl text-text-secondary">×</span>
               </button>
@@ -252,8 +254,8 @@
             <!-- Modal Footer -->
             <div class="p-4 border-t border-border-light">
               <button
-                @click="showAllCategoriesModal = false"
                 class="w-full bg-primary text-white rounded-full py-3 font-medium hover:bg-primary/90 transition-colors"
+                @click="showAllCategoriesModal = false"
               >
                 Done
               </button>
@@ -313,6 +315,8 @@ onMounted(() => {
 // Get today's date in YYYY-MM-DD format for max date validation
 const todayDate = new Date().toISOString().split('T')[0]
 
+const dateRangeError = ref<string | null>(null)
+
 const selectedCategories = computed(() => new Set(props.filters.categories || []))
 
 // Category filtering - KISS: show top 8, rest in modal
@@ -340,6 +344,13 @@ const containerClasses = computed(() => {
 function updateDateRange(type: 'start' | 'end', value: string) {
   const current = props.filters.dateRange || { start: '', end: '' }
   const updated = { ...current, [type]: value }
+
+  const { start, end } = updated
+  if (start && end && end < start) {
+    dateRangeError.value = 'End date must be on or after the start date'
+    return
+  }
+  dateRangeError.value = null
   emit('update:dateRange', updated)
 }
 

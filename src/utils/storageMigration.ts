@@ -81,7 +81,7 @@ async function migrateKey(key: string, userId: string): Promise<boolean> {
     if (!value) return true
 
     // Check if already encrypted
-    if (secureStorage.isEncrypted?.(value)) {
+    if (secureStorage.checkIfEncrypted(value)) {
       return true
     }
 
@@ -187,8 +187,8 @@ async function performMigration(userId: string): Promise<MigrationResult> {
 export async function initializeStorageMigration(): Promise<MigrationResult | null> {
   try {
     const { user } = useAuth()
-    
-    if (!user?.id) {
+
+    if (!user.value?.id) {
       logger.debug('No authenticated user, skipping migration')
       return null
     }
@@ -199,7 +199,7 @@ export async function initializeStorageMigration(): Promise<MigrationResult | nu
     }
 
     // Perform migration
-    const result = await performMigration(user.id)
+    const result = await performMigration(user.value.id)
     
     // Log summary
     if (result.success) {
@@ -242,7 +242,7 @@ export function getMigrationStatus(): {
     const allKeys = Object.keys(localStorage)
     const encryptedCount = allKeys.filter(key => {
       const value = localStorage.getItem(key)
-      return value && secureStorage.isEncrypted?.(value)
+      return value && secureStorage.checkIfEncrypted(value)
     }).length
 
     return {

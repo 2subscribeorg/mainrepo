@@ -10,8 +10,8 @@
       <button 
         class="touch-target interactive"
         style="min-height: var(--touch-target-min);"
-        @click="handleDelete"
         aria-label="Delete category"
+        @click="handleDelete"
       >
         🗑️ Delete
       </button>
@@ -36,8 +36,8 @@
         <button 
           class="category-card__edit touch-target-comfortable interactive" 
           style="min-height: var(--touch-target-comfortable); min-width: var(--touch-target-comfortable);"
-          @click="$emit('edit', category)" 
-          aria-label="Edit category"
+          aria-label="Edit category" 
+          @click="$emit('edit', category)"
         >
           ✎
         </button>
@@ -54,7 +54,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { Category } from '@/domain/models'
-import { formatMoney } from '@/utils/formatters'
 import { useAnimations } from '@/utils/useAnimations'
 import CategoryIcon from '@/components/ui/CategoryIcon.vue'
 

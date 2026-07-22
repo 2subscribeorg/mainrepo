@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { requireAuth, redirectIfAuthenticated } from '@/composables/useAuthGuard'
+import { requireAuth, redirectIfAuthenticated, requireVerifyEmailRoute } from '@/composables/useAuthGuard'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +15,27 @@ const router = createRouter({
       path: '/verify-email',
       name: 'verify-email',
       component: () => import('@/pages/VerifyEmail.vue'),
+      beforeEnter: requireVerifyEmailRoute,
+    },
+    {
+      path: '/verify-email/confirm',
+      name: 'verify-email-confirm',
+      component: () => import('@/pages/AuthAction.vue'),
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/pages/AuthAction.vue'),
+    },
+    {
+      path: '/delete-account-request',
+      name: 'delete-account-request',
+      component: () => import('@/pages/DeleteAccountRequest.vue'),
+    },
+    {
+      path: '/delete-account-confirm',
+      name: 'delete-account-confirm',
+      component: () => import('@/pages/DeleteAccountConfirm.vue'),
     },
     // Protected Routes (require authentication)
     {

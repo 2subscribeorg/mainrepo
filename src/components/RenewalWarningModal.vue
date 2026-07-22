@@ -195,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 import RenewalWarningCard from './RenewalWarningCard.vue'

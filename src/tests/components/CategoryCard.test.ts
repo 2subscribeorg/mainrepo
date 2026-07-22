@@ -60,7 +60,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
 
       // Ensure the mock was called and get the handler
       expect(mockSwipeGesture).toHaveBeenCalled()
-      const swipeLeftHandler = mockSwipeGesture.mock.calls[0]?.[1]
+      const swipeLeftHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!swipeLeftHandler) {
         throw new Error('Swipe left handler not found')
@@ -94,8 +94,8 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
       })
 
       // First trigger swipe left to show delete action
-      const swipeLeftHandler = mockSwipeGesture.mock.calls[0]?.[1]
-      const swipeRightHandler = mockSwipeGesture.mock.calls[0]?.[2]
+      const swipeLeftHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
+      const swipeRightHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[2]
       
       if (!swipeLeftHandler || !swipeRightHandler) {
         throw new Error('Swipe handlers not found')
@@ -179,7 +179,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
       })
 
       // Get the long press handler passed to the mock
-      const longPressHandler = mockLongPress.mock.calls[0]?.[1]
+      const longPressHandler = ((mockLongPress.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!longPressHandler) {
         throw new Error('Long press handler not found')
@@ -213,7 +213,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
         }
       })
 
-      const longPressHandler = mockLongPress.mock.calls[0]?.[1]
+      const longPressHandler = ((mockLongPress.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!longPressHandler) {
         throw new Error('Long press handler not found')
@@ -249,7 +249,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
       })
 
       // First reveal the delete action
-      const swipeLeftHandler = mockSwipeGesture.mock.calls[0]?.[1]
+      const swipeLeftHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!swipeLeftHandler) {
         throw new Error('Swipe left handler not found')
@@ -296,7 +296,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
     })
 
     it('sets up gesture hooks with correct parameters', () => {
-      const wrapper = mount(CategoryCard, {
+      mount(CategoryCard, {
         props: { category: mockCategory },
         global: {
           stubs: {
@@ -336,8 +336,8 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
         }
       })
 
-      const swipeLeftHandler = mockSwipeGesture.mock.calls[0]?.[1]
-      const swipeRightHandler = mockSwipeGesture.mock.calls[0]?.[2]
+      const swipeLeftHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
+      const swipeRightHandler = ((mockSwipeGesture.mock.calls[0] ?? []) as ((() => void) | undefined)[])[2]
       
       if (!swipeLeftHandler || !swipeRightHandler) {
         throw new Error('Swipe handlers not found')
@@ -374,7 +374,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
         }
       })
 
-      const longPressHandler = mockLongPress.mock.calls[0]?.[1]
+      const longPressHandler = ((mockLongPress.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!longPressHandler) {
         throw new Error('Long press handler not found')
@@ -404,7 +404,7 @@ describe('CategoryCard.vue - High-Risk Gesture Testing', () => {
         }
       })
 
-      const longPressHandler = mockLongPress.mock.calls[0]?.[1]
+      const longPressHandler = ((mockLongPress.mock.calls[0] ?? []) as ((() => void) | undefined)[])[1]
       
       if (!longPressHandler) {
         throw new Error('Long press handler not found')

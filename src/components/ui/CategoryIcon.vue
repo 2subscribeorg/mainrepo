@@ -5,8 +5,8 @@
     :style="{ backgroundColor: fallbackColor || '#CBD5F5' }"
   >
     <component 
-      v-if="icon && showIcon && iconComponent" 
       :is="iconComponent" 
+      v-if="icon && showIcon && iconComponent" 
       :size="iconSize" 
       class="category-icon__svg"
     />

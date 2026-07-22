@@ -6,7 +6,10 @@ import './style.css'
 import { bootstrapApp } from './config/bootstrap'
 import { initializeStorageMigration } from './utils/storageMigration'
 import { App as CapacitorApp } from '@capacitor/app'
-import { revenueCat } from './services/revenueCat'
+import { billingService } from './services/billingService'
+import { installApiFetchLogger } from './utils/apiFetchLogger'
+
+installApiFetchLogger()
 
 const app = createApp(App)
 
@@ -27,7 +30,7 @@ app.use(router)
 
   CapacitorApp.addListener('appStateChange', async ({ isActive }: { isActive: boolean }) => {
     if (isActive) {
-      await revenueCat.refreshSubscriptionStatus()
+      await billingService.refreshSubscriptionStatus()
     }
   })
   

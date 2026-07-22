@@ -7,8 +7,8 @@
       class="swatch"
       :class="{ 'swatch--selected': modelValue === color }"
       :style="{ backgroundColor: color }"
-      @click="$emit('update:modelValue', color)"
       aria-label="Select color"
+      @click="$emit('update:modelValue', color)"
     />
   </div>
 </template>

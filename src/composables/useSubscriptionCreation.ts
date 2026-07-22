@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useHybridValidation } from './useHybridValidation'
 import { logger } from '@/utils/logger'
 import type { Transaction, Subscription } from '@/domain/models'
-import type { SubscriptionRecurrence, SubscriptionCreationParams } from '@/types/subscriptions'
+import type { SubscriptionRecurrence } from '@/types/subscriptions'
 import { calculateNextPaymentDate, getDefaultRecurrenceForMerchant, generateSubscriptionNotes } from '@/utils/subscriptionUtils'
 
 export function useSubscriptionCreation() {

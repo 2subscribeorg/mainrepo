@@ -22,7 +22,7 @@
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="handleSubmit">
       <!-- Email Input -->
       <div>
         <label for="signup-email" class="block text-sm font-medium text-text-secondary mb-1">
@@ -72,10 +72,15 @@
           required
           autocomplete="new-password"
           placeholder="••••••••"
-          class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+          :class="confirmPasswordError ? 'border-error-border' : 'border-border-light'"
           :disabled="loading"
-          @input="validateConfirmPassword"
+          @input="onConfirmPasswordInput"
+          @blur="onConfirmPasswordInput"
         />
+        <p v-if="confirmPasswordError" class="mt-1 text-xs text-error-text">
+          {{ confirmPasswordError }}
+        </p>
       </div>
 
       <!-- Submit Button -->
@@ -93,9 +98,9 @@
     <div class="mt-4 text-center text-sm text-text-secondary">
       Already have an account?
       <button
-        @click="$emit('switch-to-login')"
         class="text-primary hover:text-primary/90 font-medium"
         type="button"
+        @click="$emit('switch-to-login')"
       >
         Sign in
       </button>
@@ -111,6 +116,8 @@ import { useRouter } from 'vue-router'
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
 import { validatePassword as validatePasswordStrength, isPasswordValid } from '@/utils/passwordValidation'
 import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
+import { isEmailVerificationRequired } from '@/config/authFlow'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 // Emits
 defineEmits<{
@@ -121,12 +128,43 @@ defineEmits<{
 const { signUp, loading } = useAuth()
 const router = useRouter()
 
+async function checkEmailAllowed(email: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      buildBackendApiUrl('/auth/check-email'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }
+    )
+    if (res.ok) return null
+    let body: { error?: { code?: string } } = {}
+    try { body = await res.json() } catch { /* ignore */ }
+    const code = body.error?.code
+    if (res.status === 403 && code === 'EMAIL_BANNED') {
+      return 'This email address cannot be used to create an account. Please contact support.'
+    }
+    if (res.status === 409 && code === 'EMAIL_TAKEN') {
+      return 'An account with this email already exists. Please sign in instead.'
+    }
+    if (res.status === 429) {
+      return 'Too many requests. Please wait a moment and try again.'
+    }
+    return null
+  } catch {
+    // Network error or backend unavailable — allow signup to proceed
+    return null
+  }
+}
+
 // Form state
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const errorMessage = ref<string | null>(null)
 const validationErrors = ref<string[]>([])
+const confirmPasswordError = ref<string | null>(null)
 
 // Validation
 function validateEmail() {
@@ -146,6 +184,10 @@ function validateConfirmPassword() {
     return 'Passwords do not match'
   }
   return null
+}
+
+function onConfirmPasswordInput() {
+  confirmPasswordError.value = validateConfirmPassword()
 }
 
 function validateForm(): boolean {
@@ -181,9 +223,16 @@ async function handleSubmit() {
     return
   }
 
+  // Pre-registration backend check (banned email, already taken, etc.)
+  const emailBlockReason = await checkEmailAllowed(email.value)
+  if (emailBlockReason) {
+    errorMessage.value = emailBlockReason
+    return
+  }
+
   // Check if email verification is required
-  const requireVerification = import.meta.env.VITE_REQUIRE_EMAIL_VERIFICATION === 'true'
-  
+  const requireVerification = isEmailVerificationRequired()
+
   const result = await signUp(email.value, password.value, requireVerification)
 
   if (result?.success) {

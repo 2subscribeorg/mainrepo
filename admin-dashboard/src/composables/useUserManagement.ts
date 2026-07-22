@@ -32,7 +32,7 @@ export function useUserManagement() {
     } catch (err: any) {
       console.error('❌ Error fetching users:', err)
       error.value = err.message || 'Failed to fetch users'
-      message.error(error.value)
+      message.error(error.value ?? 'Failed to fetch users')
     } finally {
       loading.value = false
     }

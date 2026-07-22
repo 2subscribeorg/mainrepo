@@ -12,7 +12,7 @@
           {{ errorMessage }}
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label for="email" class="block text-sm font-medium text-text-secondary mb-1">Email</label>
             <input
@@ -35,7 +35,7 @@
               type="password"
               required
               autocomplete="current-password"
-              placeholder="••••••••"
+              placeholder="Password"
               class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
               :disabled="loading"
             />
@@ -52,14 +52,14 @@
         </form>
 
         <div class="mt-4 text-center text-sm text-text-secondary">
-          <button @click="$emit('forgot-password')" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="$emit('forgot-password')">
             Forgot password?
           </button>
         </div>
 
         <div class="mt-2 text-center text-sm text-text-secondary">
           Don't have an account?
-          <button @click="$emit('switch-to-signup')" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="$emit('switch-to-signup')">
             Sign up
           </button>
         </div>
@@ -69,7 +69,8 @@
         <h2 class="text-2xl font-bold mb-2 text-text-primary">Verify your identity</h2>
         <p class="text-sm text-text-secondary mb-6">
           <span v-if="mfaSending">Sending code to your phone...</span>
-          <span v-else>Enter the verification code sent to your phone.</span>
+          <span v-else-if="mfaCodeSent">Enter the verification code sent to your phone.</span>
+          <span v-else>Send a verification code to continue.</span>
         </p>
 
         <div
@@ -79,7 +80,7 @@
           {{ errorMessage }}
         </div>
 
-        <form @submit.prevent="handleMfaSubmit" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleMfaSubmit">
           <div>
             <label for="otp" class="block text-sm font-medium text-text-secondary mb-1">Verification code</label>
             <input
@@ -92,13 +93,13 @@
               autocomplete="one-time-code"
               placeholder="123456"
               class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary tracking-widest text-center text-lg"
-              :disabled="loading || mfaSending"
+              :disabled="loading || mfaSending || !mfaCodeSent"
             />
           </div>
 
           <button
             type="submit"
-            :disabled="loading || mfaSending || otp.length < 6"
+            :disabled="loading || mfaSending || !mfaCodeSent || otp.length < 6"
             class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             <span v-if="loading">Verifying...</span>
@@ -106,8 +107,16 @@
           </button>
         </form>
 
-        <div class="mt-4 text-center text-sm text-text-secondary">
-          <button @click="resetToCredentials" class="text-primary hover:text-primary/90 font-medium transition-colors" type="button">
+        <div class="mt-4 text-center text-sm text-text-secondary space-y-2">
+          <button
+            class="text-primary hover:text-primary/90 font-medium transition-colors block w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            :disabled="loading || mfaSending"
+            @click="sendSmsChallenge"
+          >
+            {{ mfaCodeSent ? 'Resend code' : 'Send verification code' }}
+          </button>
+          <button class="text-primary hover:text-primary/90 font-medium transition-colors" type="button" @click="resetToCredentials">
             Back to sign in
           </button>
         </div>
@@ -141,8 +150,34 @@ const password = ref('')
 const otp = ref('')
 const errorMessage = ref<string | null>(null)
 const mfaSending = ref(false)
+const mfaCodeSent = ref(false)
 const recaptchaContainer = ref<HTMLElement | null>(null)
 let recaptchaVerifier: RecaptchaVerifier | null = null
+
+function getSignInErrorMessage(code: string): string {
+  switch (code.toUpperCase()) {
+    case 'ACCOUNT_BANNED':
+    case 'ACCOUNT_DISABLED':
+      return 'Your account has been deactivated. Please contact support.'
+    case 'ACCOUNT_DEACTIVATED':
+      return 'Your account has been deactivated by an administrator. Please contact support.'
+    case 'ACCOUNT_DELETED_BANNED':
+      return 'This account no longer exists and this email address cannot be reused. Please contact support.'
+    case 'ACCOUNT_NOT_FOUND':
+      return 'No account found with this email address.'
+    case 'WRONG_PASSWORD':
+      return 'Incorrect email or password.'
+    case 'TOO_MANY_REQUESTS':
+      return 'Too many sign-in attempts. Please wait a few minutes and try again.'
+    case 'NETWORK_ERROR':
+      return 'Network error. Please check your connection and try again.'
+    case 'SESSION_EXPIRED':
+      return 'Your session has expired. Please sign in again.'
+    case 'SIGN_IN_FAILED':
+    default:
+      return code.length > 30 ? code : 'Sign in failed. Please try again.'
+  }
+}
 
 async function handleSubmit() {
   errorMessage.value = null
@@ -152,22 +187,36 @@ async function handleSubmit() {
     router.push('/')
   } else if (result.mfaRequired) {
     step.value = 'mfa'
+    mfaCodeSent.value = false
     await sendSmsChallenge()
   } else {
-    errorMessage.value = result.error || 'Failed to sign in'
+    errorMessage.value = getSignInErrorMessage(result.error || 'SIGN_IN_FAILED')
   }
+}
+
+function clearRecaptcha() {
+  recaptchaVerifier?.clear()
+  recaptchaVerifier = null
 }
 
 async function sendSmsChallenge() {
   mfaSending.value = true
   errorMessage.value = null
+  mfaCodeSent.value = false
   try {
     if (!recaptchaContainer.value) throw new Error('reCAPTCHA container not ready')
+    clearRecaptcha()
     recaptchaVerifier = createRecaptchaVerifier(recaptchaContainer.value)
     const { success, error } = await sendMfaChallengeCode(recaptchaVerifier)
-    if (!success) errorMessage.value = error
+    if (success) {
+      mfaCodeSent.value = true
+    } else {
+      errorMessage.value = error
+      clearRecaptcha()
+    }
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to send verification code'
+    clearRecaptcha()
   } finally {
     mfaSending.value = false
   }
@@ -188,13 +237,11 @@ function resetToCredentials() {
   step.value = 'credentials'
   otp.value = ''
   errorMessage.value = null
-  recaptchaVerifier?.clear()
-  recaptchaVerifier = null
+  mfaCodeSent.value = false
+  clearRecaptcha()
 }
 
-onUnmounted(() => {
-  recaptchaVerifier?.clear()
-})
+onUnmounted(clearRecaptcha)
 </script>
 
 <style scoped>

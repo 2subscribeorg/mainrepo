@@ -16,31 +16,31 @@
         <!-- Auto-retry countdown -->
         <div v-if="autoRetryCountdown > 0 && !isRetrying" class="auto-retry-countdown">
           <p>Automatically retrying in {{ autoRetryCountdown }}s...</p>
-          <button @click="cancelAutoRetry" class="cancel-button">Cancel</button>
+          <button class="cancel-button" @click="cancelAutoRetry">Cancel</button>
         </div>
         
         <div v-if="!isRetrying && autoRetryCountdown === 0" class="error-actions">
           <button 
-            @click="retry" 
-            class="retry-button"
+            class="retry-button" 
             :disabled="retryCount >= maxRetries"
+            @click="retry"
           >
             {{ retryCount >= maxRetries ? 'Max Retries Reached' : 'Try Again' }}
           </button>
           
           <button 
             v-if="enablePartialRecovery && component"
-            @click="reloadComponent" 
-            class="reload-button"
+            class="reload-button" 
+            @click="reloadComponent"
           >
             Reload {{ component }}
           </button>
           
-          <button @click="reportError" class="report-button">
+          <button class="report-button" @click="reportError">
             Report Issue
           </button>
           
-          <button @click="goHome" class="home-button">
+          <button class="home-button" @click="goHome">
             Go Home
           </button>
         </div>

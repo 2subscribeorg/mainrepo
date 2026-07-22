@@ -89,7 +89,7 @@ export class FirebaseBankAccountsRepo implements IBankAccountsRepo {
     try {
       logger.debug('📝 Getting current user ID...')
       const userId = this.tokens.getCurrentUserId()
-      logger.success('User ID:', userId)
+      logger.success(`User ID: ${userId}`)
       
       logger.debug('🔑 Creating Plaid link token...')
       const linkToken = await this.plaid.createLinkToken(userId)

@@ -38,11 +38,11 @@ export class FirebaseCategoriesRepo implements ICategoriesRepo {
     )
     
     const snapshot = await getDocs(q)
-    logger.debug('🔥 Firestore query returned:', snapshot.docs.length, 'categories')
+    logger.debug(`🔥 Firestore query returned: ${snapshot.docs.length} categories`)
     
     const categories = snapshot.docs.map(doc => {
       const data = doc.data()
-      logger.debug('  📄 Category:', doc.id, data.name, 'userId:', data.userId)
+      logger.debug(`  📄 Category: ${doc.id} ${data.name} userId: ${data.userId}`)
       return {
         id: doc.id,
         ...data,

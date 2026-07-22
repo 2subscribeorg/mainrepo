@@ -17,10 +17,10 @@
         </div>
         
         <div class="form-error-actions">
-          <button @click="retry" class="retry-button">
+          <button class="retry-button" @click="retry">
             🔄 Try Again
           </button>
-          <button @click="clearForm" class="clear-button">
+          <button class="clear-button" @click="clearForm">
             🗑️ Clear Form
           </button>
         </div>

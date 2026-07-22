@@ -17,13 +17,12 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
         displayName: user.displayName || null,
         photoURL: user.photoURL || null,
         lastLogin: new Date().toISOString(),
-        isActive: true,
-        // Don't overwrite these fields if they already exist
+        // isActive is admin-controlled — never overwrite it here
       },
       { merge: true }
     )
 
-  } catch (error) {
+  } catch {
     // Don't throw - we don't want to block login if Firestore sync fails
   }
 }
@@ -32,29 +31,24 @@ export async function syncUserToFirestore(user: FirebaseUser): Promise<void> {
  * Creates a new user profile in Firestore on signup
  */
 export async function createUserProfile(user: FirebaseUser): Promise<void> {
-  try {
-    const db = getFirebaseDb()
-    const userRef = doc(db, 'users', user.uid)
+  const db = getFirebaseDb()
+  const userRef = doc(db, 'users', user.uid)
 
-    await setDoc(userRef, {
-      id: user.uid,
-      email: user.email,
-      displayName: user.displayName || null,
-      photoURL: user.photoURL || null,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      subscriptionCount: 0,
-      bankConnectionCount: 0,
-      transactionCount: 0,
-      isActive: true,
-      preferences: {
-        theme: 'light',
-        notifications: true,
-        currency: 'GBP',
-      },
-    })
-
-  } catch (error) {
-    throw error
-  }
+  await setDoc(userRef, {
+    id: user.uid,
+    email: user.email,
+    displayName: user.displayName || null,
+    photoURL: user.photoURL || null,
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    subscriptionCount: 0,
+    bankConnectionCount: 0,
+    transactionCount: 0,
+    isActive: true,
+    preferences: {
+      theme: 'light',
+      notifications: true,
+      currency: 'GBP',
+    },
+  })
 }

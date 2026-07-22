@@ -3,10 +3,9 @@
  * Business logic helpers for subscription operations
  */
 
-import type { 
-  SubscriptionRecurrence, 
-  DateCalculationConfig, 
-  SubscriptionConfig
+import type {
+  SubscriptionRecurrence,
+  DateCalculationConfig,
 } from '@/types/subscriptions'
 import { DEFAULT_SUBSCRIPTION_CONFIG } from '@/types/subscriptions'
 

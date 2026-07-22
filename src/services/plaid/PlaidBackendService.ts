@@ -19,8 +19,10 @@ import {
   PlaidValidationError
 } from './validation'
 import { rateLimiter, RATE_LIMITS } from '@/utils/rateLimiter'
+import { BACKEND_API_BASE_URL } from '@/config/backendApi'
+import { apiFetch } from '@/utils/apiFetch'
 
-const API_URL = import.meta.env.VITE_BACKEND_API_URL
+const API_URL = BACKEND_API_BASE_URL
 
 export class PlaidBackendService {
   /**
@@ -36,7 +38,7 @@ export class PlaidBackendService {
     
     try {
       return await user.getIdToken()
-    } catch (error) {
+    } catch {
       throw new Error('Failed to get authentication token')
     }
   }
@@ -56,7 +58,7 @@ export class PlaidBackendService {
       
       const token = await this.getAuthToken()
       
-      const response = await fetch(`${API_URL}/plaid/create-link-token`, {
+      const response = await apiFetch(`${API_URL}/plaid/create-link-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +109,7 @@ export class PlaidBackendService {
       
       const token = await this.getAuthToken()
       
-      const response = await fetch(`${API_URL}/plaid/exchange-token`, {
+      const response = await apiFetch(`${API_URL}/plaid/exchange-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +160,7 @@ export class PlaidBackendService {
       
       const token = await this.getAuthToken()
       
-      const response = await fetch(`${API_URL}/plaid/sync-transactions`, {
+      const response = await apiFetch(`${API_URL}/plaid/sync-transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +205,7 @@ export class PlaidBackendService {
       
       const token = await this.getAuthToken()
       
-      const response = await fetch(`${API_URL}/plaid/disconnect`, {
+      const response = await apiFetch(`${API_URL}/plaid/disconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

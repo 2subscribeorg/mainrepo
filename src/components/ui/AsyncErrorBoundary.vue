@@ -14,11 +14,11 @@
         <p>{{ errorMessage }}</p>
         
         <div class="async-error-actions">
-          <button @click="retry" class="retry-button" :disabled="isRetrying">
+          <button class="retry-button" :disabled="isRetrying" @click="retry">
             <span v-if="isRetrying">Retrying...</span>
             <span v-else>🔄 Retry</span>
           </button>
-          <button @click="dismiss" class="dismiss-button">
+          <button class="dismiss-button" @click="dismiss">
             ✕ Dismiss
           </button>
         </div>

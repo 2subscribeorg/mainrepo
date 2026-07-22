@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { buildBackendApiUrl } from '@/config/backendApi'
 import { rateLimiter, RATE_LIMITS, getRateLimitMessage } from '@/utils/rateLimiter'
 import { authRateLimiter } from '@/utils/authRateLimiter'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  sendPasswordResetEmail,
-  updateEmail as firebaseUpdateEmail,
+  verifyBeforeUpdateEmail,
   updatePassword as firebaseUpdatePassword,
   onAuthStateChanged,
   reauthenticateWithCredential,
@@ -25,61 +25,82 @@ import {
 import { getFirebaseAuth, getFirebaseDb } from '@/config/firebase'
 import { syncUserToFirestore, createUserProfile } from '@/services/UserSyncService'
 import { emailVerificationService } from '@/services/EmailVerificationService'
+import { passwordResetService } from '@/services/PasswordResetService'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { logger } from '@/utils/logger'
 import { revenueCat } from '@/services/revenueCat'
 
 /**
- * SECURITY: Secure error message handler for authentication
- * Prevents information disclosure about user existence
+ * Calls the backend to get the exact reason a sign-in failed (banned, deleted,
+ * deactivated, or simply wrong password). Returns an internal error code string
+ * that LoginForm translates into a user-facing message.
+ * Falls back to 'WRONG_PASSWORD' if the backend is unreachable.
+ */
+async function diagnoseLoginFailure(email: string): Promise<string> {
+  try {
+    const res = await fetch(buildBackendApiUrl('/auth/diagnose-login-failure'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (!res.ok) return 'WRONG_PASSWORD'
+    const body = await res.json()
+    return (body?.data?.reason as string | undefined) ?? 'WRONG_PASSWORD'
+  } catch {
+    return 'WRONG_PASSWORD'
+  }
+}
+
+/**
+ * Maps Firebase auth error codes + internal sign-in error codes to safe,
+ * user-facing messages. All paths that reach this are from the signIn catch block.
  */
 function getSecureAuthMessage(error: unknown): string {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase()
-    
-    // Firebase auth error codes that reveal user existence
-    const userExistenceErrors = [
-      'auth/user-not-found',
-      'auth/wrong-password', 
-      'auth/email-already-in-use',
-      'auth/user-disabled',
-      'auth/invalid-credential'
-    ]
-    
-    // Check if error reveals user existence
-    const revealsUserExistence = userExistenceErrors.some(errCode => 
-      message.includes(errCode.toLowerCase())
-    )
-    
-    if (revealsUserExistence) {
-      // Return generic message that doesn't reveal if user exists
-      return 'Invalid email or password. Please try again.'
-    }
-    
-    // Handle other Firebase auth errors generically
-    if (message.includes('auth/invalid-email')) {
-      return 'Invalid email address. Please check and try again.'
-    }
-    
-    if (message.includes('auth/weak-password')) {
-      return 'Password does not meet security requirements.'
-    }
-    
-    if (message.includes('auth/too-many-requests')) {
-      return 'Too many attempts. Please try again later.'
-    }
-    
-    if (message.includes('auth/network-request-failed')) {
-      return 'Network error. Please check your connection and try again.'
-    }
-    
-    if (message.includes('timeout')) {
-      return 'Request timed out. Please try again.'
-    }
+  const code = ((error as any)?.code as string | undefined) ?? ''
+  const message = (error instanceof Error ? error.message : String((error as any)?.message ?? '')).toLowerCase()
+
+  // Pass-through internal codes already translated by signIn()
+  const internalCodes = [
+    'ACCOUNT_BANNED', 'ACCOUNT_DISABLED', 'ACCOUNT_DEACTIVATED',
+    'ACCOUNT_DELETED_BANNED', 'ACCOUNT_NOT_FOUND',
+    'WRONG_PASSWORD', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR',
+    'SESSION_EXPIRED', 'SIGN_IN_FAILED',
+  ]
+  if (internalCodes.includes(message.toUpperCase())) {
+    return message // will be translated by LoginForm's getSignInErrorMessage
   }
-  
-  // Fallback for any other errors
-  return 'Authentication failed. Please try again.'
+
+  if (code === 'auth/user-disabled' || message.includes('auth/user-disabled') || message.includes('user_disabled')) {
+    return 'ACCOUNT_BANNED'
+  }
+
+  if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' ||
+      message.includes('auth/user-not-found') || message.includes('auth/wrong-password') ||
+      message.includes('auth/invalid-credential') || message.includes('invalid_login_credentials')) {
+    return 'WRONG_PASSWORD'
+  }
+
+  if (code === 'auth/email-already-in-use' || message.includes('auth/email-already-in-use')) {
+    return 'An account with this email already exists. Please sign in instead.'
+  }
+
+  if (code === 'auth/invalid-email' || message.includes('auth/invalid-email')) {
+    return 'Invalid email address. Please check and try again.'
+  }
+  if (code === 'auth/weak-password' || message.includes('auth/weak-password')) {
+    return 'Password is too weak. Please choose a stronger password.'
+  }
+  if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
+    return 'TOO_MANY_REQUESTS'
+  }
+  if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
+    return 'NETWORK_ERROR'
+  }
+  if (message.includes('timeout')) {
+    return 'Request timed out. Please try again.'
+  }
+
+  return 'SIGN_IN_FAILED'
 }
 
 export interface User {
@@ -108,7 +129,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
   
   // Consolidated loading states
-  const { setLoading, withLoading, isLoading } = useLoadingStates()
+  const { withLoading, isLoading } = useLoadingStates()
   const loading = isLoading('auth')
 
   const isAuthenticated = computed(() => user.value !== null)
@@ -164,7 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     const auth = getFirebaseAuth()
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       try {
-        logger.debug('Auth state changed, firebaseUser:', firebaseUser ? firebaseUser.uid : 'null')
+        logger.debug(`Auth state changed, firebaseUser: ${firebaseUser ? firebaseUser.uid : 'null'}`)
         
         if (firebaseUser) {
           try {
@@ -216,7 +237,7 @@ export const useAuthStore = defineStore('auth', () => {
           
           // Resolve any pending promises waiting for this user
           // This MUST happen even if custom claims failed
-          logger.debug('Looking for resolver for user:', firebaseUser.uid)
+          logger.debug(`Looking for resolver for user: ${firebaseUser.uid}`)
           const resolver = authStateResolvers.get(firebaseUser.uid)
           if (resolver && user.value) {
             logger.debug('Resolver found, calling it with user data')
@@ -237,9 +258,12 @@ export const useAuthStore = defineStore('auth', () => {
           syncUserToFirestore(firebaseUser).catch((err) => {
             logger.error('Failed to sync user to Firestore:', err)
           })
+
+          startAccountStatusPolling()
         } else {
           user.value = null
-          
+          stopAccountStatusPolling()
+
           // Resolve any pending promises waiting for sign out
           const resolver = authStateResolvers.get('null')
           if (resolver) {
@@ -329,7 +353,42 @@ export const useAuthStore = defineStore('auth', () => {
         logger.debug('Attempting sign in with Firebase...')
         const userCredential = await signInWithEmailAndPassword(auth, email, password)
         logger.debug('Firebase sign in successful, waiting for auth state update...')
-        
+
+        // Check isActive before the auth state listener fires (and before syncUserToFirestore runs).
+        // The admin sets isActive=false in Firestore; Firebase Auth itself doesn't know about it.
+        try {
+          const { doc: fsDoc, getDoc } = await import('firebase/firestore')
+          const snap = await getDoc(fsDoc(getFirebaseDb(), 'users', userCredential.user.uid))
+          if (snap.exists() && snap.data()?.isActive === false) {
+            await signOut(auth)
+            const msg = 'Your account has been deactivated. Please contact support.'
+            error.value = msg
+            throw new Error(msg)
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.includes('deactivated')) throw e
+          // Firestore read failure — allow login to proceed
+        }
+
+        // Backend status check — catches banned accounts and token revocations.
+        try {
+          const token = await userCredential.user.getIdToken()
+          const statusRes = await fetch(buildBackendApiUrl('/auth/account-status'), {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (statusRes.status === 403 || statusRes.status === 401) {
+            let statusBody: { code?: string; error?: { message?: string } } = {}
+            try { statusBody = await statusRes.clone().json() } catch { /* ignore */ }
+            await signOut(auth)
+            const msg = 'Your account has been deactivated. Please contact support.'
+            error.value = msg
+            throw new Error(msg)
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.length > 0 && !e.message.includes('fetch')) throw e
+          // Network error or backend unavailable — allow login to proceed
+        }
+
         // Return promise that resolves when onAuthStateChanged fires
         return new Promise<User>((resolve, reject) => {
           // Set up resolver FIRST, before any async operations
@@ -381,7 +440,25 @@ export const useAuthStore = defineStore('auth', () => {
         // Record failed login attempt
         authRateLimiter.recordLoginAttempt(email, false)
 
-        // SECURITY: Never expose Firebase error messages that reveal user existence
+        const firebaseCode = (e as any)?.code as string | undefined
+
+        // For errors where Firebase has no fine-grained info (disabled account,
+        // invalid credentials), ask the backend for the exact reason so we can
+        // show "banned" vs "deactivated" vs "deleted+banned" vs "wrong password".
+        if (
+          firebaseCode === 'auth/user-disabled' ||
+          firebaseCode === 'auth/invalid-credential' ||
+          firebaseCode === 'auth/wrong-password' ||
+          firebaseCode === 'auth/user-not-found' ||
+          (e instanceof Error && e.message?.includes('INVALID_LOGIN_CREDENTIALS'))
+        ) {
+          const diagnosedCode = await diagnoseLoginFailure(email)
+          error.value = diagnosedCode
+          logger.error('Sign in failed (diagnosed):', diagnosedCode)
+          throw new Error(diagnosedCode)
+        }
+
+        // All other Firebase errors — map to safe internal code
         const secureMessage = getSecureAuthMessage(e)
         error.value = secureMessage
         logger.error('Sign in failed:', e)
@@ -425,17 +502,22 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const auth = getFirebaseAuth()
         const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        
-        // Create user profile in Firestore
-        await createUserProfile(userCredential.user)
-        
-        // Send verification email if requested
+
         if (sendVerification) {
-          await emailVerificationService.sendVerificationEmail(userCredential.user)
-          // Sign out user until they verify
-          await signOut(auth)
+          // Fire profile creation without awaiting — the Firestore write can be slow
+          // (up to 15s in some environments). The user profile will be created in the
+          // background; onAuthStateChanged will pick it up when the user next loads.
+          createUserProfile(userCredential.user).catch(() => { /* best-effort */ })
+
+          const verificationResult = await emailVerificationService.sendVerificationEmail(userCredential.user)
+          if (!verificationResult.success) {
+            throw new Error(verificationResult.error || 'Failed to send verification email')
+          }
           return { success: true, needsVerification: true }
         }
+
+        // Create user profile in Firestore (non-verification path)
+        await createUserProfile(userCredential.user)
         
         // onAuthStateChanged fires immediately after createUserWithEmailAndPassword,
         // which means it may have already run BEFORE we get here (after awaiting
@@ -490,6 +572,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const auth = getFirebaseAuth()
         await signOut(auth)
+        await revenueCat.logOut()
         user.value = null
       } catch (e) {
         // SECURITY: Never expose Firebase error messages
@@ -518,14 +601,15 @@ export const useAuthStore = defineStore('auth', () => {
     return await withLoading('auth', async () => {
       error.value = null
       try {
-        const auth = getFirebaseAuth()
-        await sendPasswordResetEmail(auth, email)
-        return { success: true, message: 'Password reset email sent' }
+        const result = await passwordResetService.sendPasswordResetEmail(email)
+        if (!result.success) {
+          error.value = result.message
+        }
+        return result
       } catch (e) {
-        // SECURITY: Never expose Firebase error messages that reveal user existence
-        const secureMessage = getSecureAuthMessage(e)
-        error.value = secureMessage
-        return { success: false, message: secureMessage }
+        const message = e instanceof Error ? e.message : 'Failed to send password reset email'
+        error.value = message
+        return { success: false, message }
       }
     })
   }
@@ -579,15 +663,11 @@ export const useAuthStore = defineStore('auth', () => {
         const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
         await reauthenticateWithCredential(currentUser, credential)
         
-        // Update email
-        await firebaseUpdateEmail(currentUser, newEmail)
-        
-        // Update user state
-        if (user.value) {
-          user.value.email = newEmail
-        }
-        
-        return { success: true, message: 'Email updated successfully' }
+        // Send verification to new email — the change only takes effect after the user
+        // clicks the link in that email (Firebase verifyBeforeUpdateEmail).
+        await verifyBeforeUpdateEmail(currentUser, newEmail)
+
+        return { success: true, message: 'Verification email sent to your new address. Your email will be updated once you click the link.' }
       } catch (e) {
         // SECURITY: Never expose Firebase error messages
         const secureMessage = getSecureAuthMessage(e)
@@ -706,6 +786,7 @@ export const useAuthStore = defineStore('auth', () => {
       await deleteUser(currentUser)
       
       // Clear local state
+      await revenueCat.logOut()
       user.value = null
       
         return { success: true, message: 'Account deleted successfully' }
@@ -753,6 +834,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function sendMfaChallengeCode(appVerifier: ApplicationVerifier): Promise<void> {
     if (!pendingMfaResolver.value) throw new Error('No pending MFA challenge')
+    pendingMfaVerificationId.value = null
     const auth = getFirebaseAuth()
     const phoneAuthProvider = new PhoneAuthProvider(auth)
     const verificationId = await phoneAuthProvider.verifyPhoneNumber(
@@ -795,6 +877,7 @@ export const useAuthStore = defineStore('auth', () => {
     const auth = getFirebaseAuth()
     const currentUser = auth.currentUser
     if (!currentUser) throw new Error('No authenticated user')
+    pendingEnrollVerificationId.value = null
 
     const multiFactorUser = multiFactor(currentUser)
     const session = await multiFactorUser.getSession()
@@ -836,6 +919,92 @@ export const useAuthStore = defineStore('auth', () => {
     return multiFactor(currentUser).enrolledFactors
   }
 
+  // --- Account status polling ---
+  // Polls /api/auth/account-status on tab focus and every 2 minutes while active.
+  // Forces sign-out when the backend signals ACCOUNT_DEACTIVATED or TOKEN_REVOKED.
+  let _statusPollInterval: ReturnType<typeof setInterval> | null = null
+  let _visibilityHandler: (() => void) | null = null
+
+  async function _checkAccountStatus(): Promise<void> {
+    if (!isFirebaseMode) return
+    const auth = getFirebaseAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) return
+
+    let token: string
+    try {
+      token = await currentUser.getIdToken()
+    } catch {
+      // Token fetch failed — the Firebase SDK will eventually force sign-out
+      return
+    }
+
+    let res: Response
+    try {
+      res = await fetch(buildBackendApiUrl('/auth/account-status'), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch {
+      // Network error — don't sign out on transient failures
+      return
+    }
+
+    if (res.status === 403 || res.status === 401) {
+      let body: { code?: string; message?: string } = {}
+      try { body = await res.clone().json() } catch { /* ignore */ }
+
+      const code = body.code
+      let reason: string | null = null
+
+      if (code === 'ACCOUNT_BANNED') {
+        reason = 'banned'
+      } else if (
+        code === 'ACCOUNT_DEACTIVATED' ||
+        body.message?.toLowerCase().includes('deactivated')
+      ) {
+        reason = 'deactivated'
+      } else if (
+        code === 'TOKEN_REVOKED' ||
+        code === 'TOKEN_EXPIRED' ||
+        code === 'UNAUTHORIZED'
+      ) {
+        reason = 'session_expired'
+      }
+
+      if (reason) {
+        stopAccountStatusPolling()
+        await logout()
+        const { default: router } = await import('@/router')
+        await router.push({ path: '/login', query: { reason } })
+      }
+    }
+  }
+
+  function startAccountStatusPolling(): void {
+    if (!isFirebaseMode) return
+    stopAccountStatusPolling()
+
+    _statusPollInterval = setInterval(_checkAccountStatus, 2 * 60 * 1000)
+
+    _visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        _checkAccountStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', _visibilityHandler)
+  }
+
+  function stopAccountStatusPolling(): void {
+    if (_statusPollInterval !== null) {
+      clearInterval(_statusPollInterval)
+      _statusPollInterval = null
+    }
+    if (_visibilityHandler !== null) {
+      document.removeEventListener('visibilitychange', _visibilityHandler)
+      _visibilityHandler = null
+    }
+  }
+
   return {
     user,
     loading,
@@ -849,6 +1018,7 @@ export const useAuthStore = defineStore('auth', () => {
     signIn,
     signUp,
     logout,
+    reauthenticate,
     sendPasswordReset,
     changeEmail,
     changePassword,
@@ -860,5 +1030,7 @@ export const useAuthStore = defineStore('auth', () => {
     completeMfaEnrollment,
     unenrollMfa,
     getMfaEnrolledFactors,
+    startAccountStatusPolling,
+    stopAccountStatusPolling,
   }
 })

@@ -15,8 +15,8 @@
       <h2 class="text-3xl font-bold text-gray-900">Categories</h2>
       <button
         ref="addButtonRef"
-        @click="handleAddCategoryClick"
         class="rounded-lg bg-primary px-4 py-2 text-white transition-all duration-150 btn-animated gpu-accelerated add-category-btn"
+        @click="handleAddCategoryClick"
       >
         Add Category
       </button>
@@ -49,7 +49,7 @@
         @close="closeModal"
         @delete="deleteCategory"
         @save="saveCategory"
-        @update:formData="(value) => (formData = value)"
+        @update:form-data="(value) => (formData = value)"
       />
     </ErrorBoundary>
   </div>
@@ -61,7 +61,6 @@ import { useCategoriesStore } from '@/stores/categories'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Category } from '@/domain/models'
 import { DEFAULT_COLORS } from '@/utils/colors'
-import { sanitizeAmount } from '@/utils/sanitize'
 import { checkRateLimit, RATE_LIMITS, getRateLimitMessage } from '@/utils/rateLimiter'
 import CategoryCard from '@/components/categories/CategoryCard.vue'
 import CategoryFormModal from '@/components/categories/CategoryFormModal.vue'

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, vi } from 'vitest'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SubscriptionCard from '@/components/SubscriptionCard.vue'
@@ -14,6 +14,7 @@ describe('SubscriptionCard', () => {
     recurrence: 'monthly',
     nextPaymentDate: '2024-04-15',
     status: 'active',
+    source: 'manual',
     categoryId: 'cat-entertainment',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',

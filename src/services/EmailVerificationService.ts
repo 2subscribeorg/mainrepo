@@ -1,4 +1,5 @@
-import { sendEmailVerification, type User } from 'firebase/auth'
+import type { User } from 'firebase/auth'
+import { buildBackendApiUrl } from '@/config/backendApi'
 
 export interface EmailVerificationConfig {
   continueUrl?: string
@@ -11,37 +12,37 @@ export interface EmailVerificationResult {
 }
 
 export class EmailVerificationService {
-  private getDefaultContinueUrl(): string {
-    // Guard against SSR/test environments where window is undefined
-    if (typeof window !== 'undefined' && window.location) {
-      return `${window.location.origin}/login`
-    }
-    // Fallback for SSR/test environments
-    return 'http://localhost:5173/login'
-  }
-
-  private readonly defaultConfig: EmailVerificationConfig = {
-    continueUrl: undefined, // Will be set lazily via getDefaultContinueUrl()
-    handleCodeInApp: false,
-  }
-
   async sendVerificationEmail(
     user: User,
     config?: EmailVerificationConfig
   ): Promise<EmailVerificationResult> {
     try {
-      const actionCodeSettings = {
-        url: config?.continueUrl || this.getDefaultContinueUrl(),
-        handleCodeInApp: config?.handleCodeInApp ?? this.defaultConfig.handleCodeInApp!,
+      const token = await user.getIdToken()
+
+      const response = await fetch(buildBackendApiUrl('/auth/email-verification'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          continueUrl: config?.continueUrl,
+          handleCodeInApp: config?.handleCodeInApp,
+        }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error?.message || 'Failed to send verification email')
       }
 
-      await sendEmailVerification(user, actionCodeSettings)
-
       return { success: true }
-    } catch (error: any) {
+    } catch (error) {
       return {
         success: false,
-        error: error.message || 'Failed to send verification email',
+        error: error instanceof Error && error.message
+          ? error.message
+          : 'Failed to send verification email',
       }
     }
   }
@@ -54,7 +55,7 @@ export class EmailVerificationService {
     try {
       await user.reload()
       return user.emailVerified
-    } catch (error) {
+    } catch {
       return false
     }
   }

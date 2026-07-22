@@ -39,23 +39,23 @@
 
         <div class="space-y-3">
           <button
-            @click="handleAddToExisting"
             v-if="duplicateResult.existingSubscription"
             class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            @click="handleAddToExisting"
           >
             Add to Existing Subscription
           </button>
           
           <button
-            @click="handleCreateSeparate"
-            class="w-full rounded-2xl border border-border-light bg-surface text-sm font-semibold text-text-primary hover:bg-interactive-hover transition-colors" style="padding: var(--space-3) var(--space-4);"
+            class="w-full rounded-2xl border border-border-light bg-surface text-sm font-semibold text-text-primary hover:bg-interactive-hover transition-colors"
+            style="padding: var(--space-3) var(--space-4);" @click="handleCreateSeparate"
           >
             Create Separate Subscription
           </button>
           
           <button
-            @click="handleCancel"
             class="w-full rounded-2xl px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            @click="handleCancel"
           >
             Cancel
           </button>

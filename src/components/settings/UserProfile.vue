@@ -19,10 +19,10 @@
 
       <!-- Logout Button -->
       <button
-        @click="handleLogout"
         :disabled="loading"
         class="sign-out-button"
         title="Sign out"
+        @click="handleLogout"
       >
         <span v-if="loading">...</span>
         <span v-else>Sign Out</span>
@@ -30,9 +30,10 @@
     </div>
 
     <!-- Not Authenticated -->
-    <div v-else>
+    <!-- Hide on the login screen (already there); show on signup/forgot/other pages -->
+    <div v-else-if="!isOnLoginScreen">
       <router-link
-        to="/login"
+        :to="isOnSignupScreen ? { path: '/login' } : '/login'"
         class="sign-in-button"
       >
         Sign In
@@ -43,9 +44,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const { user, isAuthenticated, signOut, loading } = useAuth()
+const route = useRoute()
+
+// On /login with login mode → already on the sign-in screen, hide the button
+// On /login with ?mode=signup → on signup screen, show Sign In button to go back to login
+const isOnLoginScreen = computed(() => route.path === '/login' && !route.query.mode)
+const isOnSignupScreen = computed(() => route.path === '/login' && route.query.mode === 'signup')
 
 const userInitials = computed(() => {
   if (!user.value) return '?'

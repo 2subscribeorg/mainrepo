@@ -112,16 +112,10 @@ export const useTransactionsStore = defineStore('transactions', () => {
   const filteredTransactions = computed(() => {
     const memoKey = filterMemoKey.value
     
-    // Performance monitoring (safe - no behavior changes)
-    const startTime = performance.now()
     const cacheHit = filterCache.has(memoKey)
     
-    // Return cached result if available
     if (cacheHit) {
-      const result = filterCache.get(memoKey)
-      const endTime = performance.now()
-      console.debug(`[PERF] Cache hit: ${(endTime - startTime).toFixed(2)}ms, key: ${memoKey.substring(0, 50)}...`)
-      return result
+      return filterCache.get(memoKey)
     }
 
     let filtered = rawTransactions.value
@@ -188,15 +182,8 @@ export const useTransactionsStore = defineStore('transactions', () => {
       })
     }
 
-    // Cache the result
     filterCache.set(memoKey, filtered)
-    
-    // Performance monitoring (safe - no behavior changes)
-    const endTime = performance.now()
-    console.debug(`[PERF] Cache miss: ${(endTime - startTime).toFixed(2)}ms, filtered ${filtered.length}/${rawTransactions.value.length} items`)
-    console.debug(`[PERF] Cache size: ${filterCache.size}/20, key: ${memoKey.substring(0, 50)}...`)
-    
-    // Clean up old cache entries (keep last 20)
+
     if (filterCache.size > 20) {
       const oldestKey = filterCache.keys().next().value
       if (oldestKey) {

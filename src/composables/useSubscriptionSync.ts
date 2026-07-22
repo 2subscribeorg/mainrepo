@@ -1,8 +1,6 @@
 import { watch } from 'vue'
 import { logger } from '@/utils/logger'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
-import { useTransactionsStore } from '@/stores/transactions'
-import { useBankTransactionsStore } from '@/stores/bankTransactions'
 import { useTransactionManagement } from '@/composables/useTransactionManagement'
 import type { Subscription } from '@/domain/models'
 
@@ -11,8 +9,6 @@ import type { Subscription } from '@/domain/models'
  */
 export function useSubscriptionSync() {
   const subscriptionsStore = useSubscriptionsStore()
-  const transactionsStore = useTransactionsStore()
-  const bankTransactionsStore = useBankTransactionsStore()
   const transactionManagement = useTransactionManagement()
 
   /**
@@ -20,7 +16,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionCreation(subscription: Subscription): Promise<boolean> {
     try {
-      logger.debug('🔄 Syncing subscription creation:', subscription.merchantName)
+      logger.debug(`🔄 Syncing subscription creation: ${subscription.merchantName}`)
       
       // Save to subscriptions store
       await subscriptionsStore.save(subscription)
@@ -44,7 +40,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionUpdate(subscriptionId: string, updates: Partial<Subscription>): Promise<boolean> {
     try {
-      logger.debug('🔄 Syncing subscription update:', subscriptionId)
+      logger.debug(`🔄 Syncing subscription update: ${subscriptionId}`)
       
       // Update in subscriptions store
       const existingSubscription = subscriptionsStore.subscriptions.find(s => s.id === subscriptionId)
@@ -69,7 +65,7 @@ export function useSubscriptionSync() {
    */
   async function syncSubscriptionDeletion(subscriptionId: string): Promise<boolean> {
     try {
-      logger.debug('🔄 Syncing subscription deletion:', subscriptionId)
+      logger.debug(`🔄 Syncing subscription deletion: ${subscriptionId}`)
       
       // Remove from subscriptions store
       // Note: Actual deletion method depends on store implementation

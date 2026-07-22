@@ -1,7 +1,13 @@
 <template>
   <div class="min-h-screen bg-background flex items-center justify-center p-4">
     <div class="w-full max-w-md">
-      <div class="bg-surface rounded-2xl shadow-xl p-8">
+      <!-- Loading state while Firebase auth restores -->
+      <div v-if="isLoading" class="flex flex-col items-center gap-4">
+        <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p class="text-text-secondary text-sm">Loading...</p>
+      </div>
+
+      <div v-else class="bg-surface rounded-2xl shadow-xl p-8">
         <div class="text-center mb-6">
           <div class="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,24 +31,24 @@
           </p>
 
           <button
-            @click="checkVerification"
             :disabled="isChecking"
             class="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            @click="checkVerification"
           >
             {{ isChecking ? 'Checking...' : "I've Verified My Email" }}
           </button>
 
           <button
-            @click="resendEmail"
             :disabled="isResending || cooldownSeconds > 0"
             class="w-full bg-surface-elevated text-text-primary py-3 rounded-xl font-semibold hover:bg-surface-elevated/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            @click="resendEmail"
           >
             {{ resendButtonText }}
           </button>
 
           <button
-            @click="signOut"
             class="w-full text-text-secondary py-2 text-sm hover:text-text-primary transition-colors"
+            @click="signOut"
           >
             Sign Out
           </button>
@@ -56,13 +62,14 @@
       </div>
     </div>
   </div>
+
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
-import { signOut as firebaseSignOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
 import { emailVerificationService } from '@/services/EmailVerificationService'
 
 const router = useRouter()
@@ -73,9 +80,30 @@ const message = ref('')
 const messageType = ref<'success' | 'error' | ''>('')
 const isChecking = ref(false)
 const isResending = ref(false)
+const isLoading = ref(true)
 const cooldownSeconds = ref(0)
 
 let cooldownInterval: number | null = null
+let unsubscribeAuth: (() => void) | null = null
+let pollInterval: number | null = null
+
+async function pollVerificationStatus() {
+  const user = auth.currentUser
+  if (!user) return
+  try {
+    await user.reload()
+    if (user.emailVerified) {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+        pollInterval = null
+      }
+      showMessage('Email verified successfully!', 'success')
+      setTimeout(() => router.push('/'), 1500)
+    }
+  } catch {
+    // Ignore transient errors — keep polling
+  }
+}
 
 const messageClass = computed(() => {
   if (messageType.value === 'success') {
@@ -107,9 +135,13 @@ async function checkVerification() {
   const isVerified = await emailVerificationService.reloadAndCheckVerification(user)
 
   if (isVerified) {
+    if (pollInterval) {
+      clearInterval(pollInterval)
+      pollInterval = null
+    }
     showMessage('Email verified successfully!', 'success')
     setTimeout(() => {
-      router.push('/dashboard')
+      router.push('/')
     }, 1500)
   } else {
     showMessage('Email not verified yet. Please check your inbox.', 'error')
@@ -145,7 +177,7 @@ async function signOut() {
   try {
     await firebaseSignOut(auth)
     router.push('/login')
-  } catch (error) {
+  } catch {
     // Sign out error
   }
 }
@@ -167,22 +199,32 @@ function startCooldown() {
 }
 
 onMounted(() => {
-  const user = auth.currentUser
-  if (!user) {
-    router.push('/login')
-    return
-  }
+  // Use onAuthStateChanged so this works on hard refresh too
+  unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    isLoading.value = false
 
-  userEmail.value = user.email || ''
+    if (!user) {
+      router.push('/login')
+      return
+    }
 
-  if (user.emailVerified) {
-    router.push('/dashboard')
-  }
+    userEmail.value = user.email || ''
+
+    if (user.emailVerified) {
+      router.push('/')
+      return
+    }
+
+    // Start automatic polling — page updates without user needing to press the button
+    if (!pollInterval) {
+      pollInterval = window.setInterval(pollVerificationStatus, 4000)
+    }
+  })
 })
 
 onUnmounted(() => {
-  if (cooldownInterval) {
-    clearInterval(cooldownInterval)
-  }
+  if (cooldownInterval) clearInterval(cooldownInterval)
+  if (pollInterval) clearInterval(pollInterval)
+  if (unsubscribeAuth) unsubscribeAuth()
 })
 </script>

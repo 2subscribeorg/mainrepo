@@ -1,15 +1,17 @@
-import { 
-  AdminUserListResponse, 
-  UserActivity, 
+import {
+  AdminUserListResponse,
+  UserActivity,
   CreateUserRequest,
-  AdminApiResponse 
+  AdminApiResponse
 } from '@/types/admin'
 import { MockAdminService } from './MockAdminService'
+import { BACKEND_API_BASE_URL } from '@/config/backendApi'
+import { apiFetch } from '@/utils/apiFetch'
 
 class AdminService {
   private mockService = new MockAdminService()
   private isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
-  private baseUrl = import.meta.env.VITE_BACKEND_API_URL
+  private baseUrl = BACKEND_API_BASE_URL
 
   /**
    * Get authorization headers with current user's token
@@ -66,7 +68,7 @@ class AdminService {
       params.append('search', searchQuery)
     }
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users?${params}`,
       { headers }
     )
@@ -85,7 +87,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users/${userId}/activities?limit=${limit}`,
       { headers }
     )
@@ -104,7 +106,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users`,
       {
         method: 'POST',
@@ -127,7 +129,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users/${userId}`,
       {
         method: 'DELETE',
@@ -148,7 +150,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users/${userId}/password-reset`,
       {
         method: 'POST',
@@ -169,7 +171,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/users/password-reset-by-email`,
       {
         method: 'POST',
@@ -191,7 +193,7 @@ class AdminService {
 
     const headers = await this.getAuthHeaders()
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/admin/me`,
       { headers }
     )

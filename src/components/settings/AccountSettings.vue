@@ -54,7 +54,7 @@
       <!-- Change Email Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Email</h4>
-        <form @submit.prevent="handleChangeEmail" class="space-y-3" novalidate>
+        <form class="space-y-3" novalidate @submit.prevent="handleChangeEmail">
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               New Email
@@ -95,7 +95,7 @@
       <!-- Change Password Section -->
       <div class="border border-border-light rounded-lg p-4">
         <h4 class="font-medium text-text-primary mb-3">Change Password</h4>
-        <form @submit.prevent="handleChangePassword" class="space-y-3" novalidate>
+        <form class="space-y-3" novalidate @submit.prevent="handleChangePassword">
           <div>
             <label class="block text-sm font-medium text-text-secondary mb-1">
               Current Password
@@ -135,9 +135,15 @@
               type="password"
               required
               placeholder="••••••••"
-              class="w-full px-3 py-2 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+              class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+              :class="passwordMismatchError ? 'border-error-border' : 'border-border-light'"
               :disabled="loading"
+              @input="onConfirmNewPasswordInput"
+              @blur="onConfirmNewPasswordInput"
             />
+            <p v-if="passwordMismatchError" class="mt-1 text-xs text-error-text">
+              New Password and Confirm New Password must be the same
+            </p>
           </div>
           <button
             type="submit"
@@ -152,41 +158,81 @@
 
       <TwoFactorSettings />
 
+      <!-- Export Data Section (GDPR) -->
+      <div class="border border-border-light rounded-lg p-4">
+        <h4 class="font-medium text-text-primary mb-2">Export My Data</h4>
+        <p class="text-sm text-text-secondary mb-4">
+          Download a copy of all your personal data — subscriptions, transactions, categories, and bank connections — as a CSV file. This is your right under GDPR.
+        </p>
+        <div
+          v-if="exportError"
+          class="mb-3 p-3 bg-error-bg border border-error-border text-error-text rounded-lg text-sm"
+        >
+          {{ exportError }}
+        </div>
+
+        <!-- Saved confirmation -->
+        <div
+          v-if="exportStatus === 'saved'"
+          class="mb-3 p-3 bg-success-bg border border-success-border text-success-text rounded-lg text-sm"
+        >
+          <p class="font-medium">File saved successfully.</p>
+          <p class="mt-1 text-xs opacity-80">Check the location you selected in the save dialog.</p>
+        </div>
+
+        <!-- Prepare button -->
+        <button
+          v-if="exportStatus !== 'ready' && exportStatus !== 'saved'"
+          type="button"
+          :disabled="exportStatus === 'loading'"
+          class="w-full bg-surface-elevated border border-border-light text-text-primary py-2 px-4 rounded-md hover:bg-surface-elevated/80 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+          @click="prepareExport"
+        >
+          <span v-if="exportStatus === 'loading'">Preparing your data...</span>
+          <span v-else>Export My Data (CSV)</span>
+        </button>
+
+        <!-- Save button -->
+        <button
+          v-if="exportStatus === 'ready'"
+          type="button"
+          class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 font-medium transition-colors"
+          @click="triggerDownload"
+        >
+          Save File
+        </button>
+        <p v-if="exportStatus === 'ready'" class="mt-2 text-xs text-text-muted text-center">
+          Your data is ready — tap Save File.
+        </p>
+      </div>
+
       <!-- Delete Account Section -->
       <div class="border border-error-border rounded-lg p-4 bg-error-bg/30">
         <h4 class="font-medium text-error-text mb-2">Danger Zone</h4>
         <p class="text-sm text-text-secondary mb-4">
           Once you delete your account, there is no going back. Please be certain.
         </p>
-        <button
-          type="button"
-          class="w-full bg-error text-white py-2 px-4 rounded-md hover:bg-error/90 font-medium transition-colors"
-          @click="showDeleteModal = true"
+        <router-link
+          to="/delete-account-request"
+          class="block w-full text-center bg-error text-white py-2 px-4 rounded-md hover:bg-error/90 font-medium transition-colors"
         >
           Delete Account
-        </button>
+        </router-link>
       </div>
     </div>
 
-    <!-- Delete Account Modal -->
-    <DeleteAccountModal
-      :is-open="showDeleteModal"
-      :is-deleting="isDeleting"
-      :error-message="deleteErrorMessage"
-      @confirm="(password) => handleDeleteAccount(password)"
-      @cancel="handleCancelDelete"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import DeleteAccountModal from './DeleteAccountModal.vue'
 import TwoFactorSettings from './TwoFactorSettings.vue'
 import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'
+import { useDataExport } from '@/composables/useDataExport'
 
-const { userEmail, updateEmail, updatePassword, deleteAccount, loading } = useAuth()
+const { userEmail, updateEmail, updatePassword, loading } = useAuth()
+const { prepareExport, triggerDownload, status: exportStatus, error: exportError } = useDataExport()
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 
@@ -198,15 +244,15 @@ const emailCurrentPassword = ref('')
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmNewPassword = ref('')
-
-// Delete Account
-const showDeleteModal = ref(false)
-const isDeleting = ref(false)
-const deleteErrorMessage = ref('')
+const passwordMismatchError = ref(false)
 
 // Messages
 const successMessage = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
+
+function onConfirmNewPasswordInput() {
+  passwordMismatchError.value = !!(newPassword.value && confirmNewPassword.value && newPassword.value !== confirmNewPassword.value)
+}
 
 async function handleChangeEmail() {
   successMessage.value = null
@@ -262,26 +308,7 @@ async function handleChangePassword() {
   }
 }
 
-async function handleDeleteAccount(password: string) {
-  deleteErrorMessage.value = ''
-  isDeleting.value = true
 
-  const { success, message } = await deleteAccount(password)
-
-  if (success) {
-    // Account deleted, user will be redirected to login by useAuth
-    showDeleteModal.value = false
-  } else {
-    deleteErrorMessage.value = message || 'Failed to delete account'
-  }
-  
-  isDeleting.value = false
-}
-
-function handleCancelDelete() {
-  showDeleteModal.value = false
-  deleteErrorMessage.value = ''
-}
 </script>
 
 <style scoped>

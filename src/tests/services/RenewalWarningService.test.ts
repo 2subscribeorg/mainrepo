@@ -2,6 +2,18 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renewalWarningService } from '@/services/RenewalWarningService'
 import * as authHelpers from '@/utils/authHelpers'
 
+// Mock the centralized backend API config so service uses test URL
+vi.mock('@/config/backendApi', () => ({
+  BACKEND_API_BASE_URL: 'http://localhost:3002',
+  buildBackendApiUrl: (path: string) => {
+    const p = path.startsWith('/') ? path : '/' + path
+    const withApi = p.startsWith('/api') ? p : `/api${p}`
+    return `http://localhost:3002${withApi}`
+  },
+}))
+
+const TEST_API_BASE_URL = 'http://localhost:3002'
+
 // Mock auth helpers
 vi.mock('@/utils/authHelpers', () => ({
   getFirebaseAuthToken: vi.fn(),
@@ -14,7 +26,7 @@ describe('RenewalWarningService', () => {
   const mockToken = 'mock-auth-token-123'
   const mockUserId = 'user-123'
   const mockWarningId = 'warning-456'
-  const API_BASE_URL = 'http://localhost:3002'
+  const API_BASE_URL = TEST_API_BASE_URL
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -236,7 +248,7 @@ describe('RenewalWarningService', () => {
         json: async () => {
           throw new Error('Invalid JSON')
         },
-      } as Response)
+      } as unknown as Response)
 
       // Act & Assert
       await expect(renewalWarningService.getWarnings(mockUserId)).rejects.toThrow(

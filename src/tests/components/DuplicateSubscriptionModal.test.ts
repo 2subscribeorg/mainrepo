@@ -142,7 +142,6 @@ describe('DuplicateSubscriptionModal', () => {
 
     it('limits transaction display to 3 items', () => {
       const wrapper = createWrapper()
-      const transactionItems = wrapper.findAll('[data-testid="transaction-item"]')
       // Should show only 3 transactions even though we have 4
       expect(wrapper.text()).toContain('+1 more')
     })
@@ -347,9 +346,9 @@ describe('DuplicateSubscriptionModal', () => {
 
     it('handles transactions with different amounts', () => {
       const transactionsWithDifferentAmounts = [
-        { ...mockTransactions[0], amount: { amount: 15.99, currency: 'GBP' } },
-        { ...mockTransactions[1], amount: { amount: 12.99, currency: 'GBP' } },
-        { ...mockTransactions[2], amount: { amount: 19.99, currency: 'GBP' } }
+        { ...mockTransactions[0], amount: { amount: 15.99, currency: 'GBP' as const } },
+        { ...mockTransactions[1], amount: { amount: 12.99, currency: 'GBP' as const } },
+        { ...mockTransactions[2], amount: { amount: 19.99, currency: 'GBP' as const } }
       ]
       
       const result = createMockResult({ existingTransactions: transactionsWithDifferentAmounts })

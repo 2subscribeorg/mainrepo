@@ -11,15 +11,58 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'Users',
-      component: () => import('@/views/Users.vue'),
+      component: () => import('@/components/AppLayout.vue'),
       meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'Dashboard',
+          component: () => import('@/views/Dashboard.vue'),
+        },
+        {
+          path: 'users',
+          name: 'Users',
+          component: () => import('@/views/Users.vue'),
+        },
+        {
+          path: 'users/:userId',
+          name: 'UserEdit',
+          component: () => import('@/views/UserEdit.vue'),
+        },
+        {
+          path: 'subscriptions',
+          name: 'Subscriptions',
+          component: () => import('@/views/Subscriptions.vue'),
+        },
+        {
+          path: 'subscriptions/:userId',
+          name: 'SubscriptionDetail',
+          component: () => import('@/views/SubscriptionDetail.vue'),
+        },
+        {
+          path: 'admin-users',
+          name: 'AdminUsers',
+          component: () => import('@/views/AdminUsers.vue'),
+        },
+        {
+          path: 'admin-users/:adminId',
+          name: 'AdminDetail',
+          component: () => import('@/views/AdminDetail.vue'),
+        },
+        {
+          path: 'settings',
+          name: 'Settings',
+          component: () => import('@/views/Settings.vue'),
+        },
+      ],
     },
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+
+  await authStore.waitForAuth()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')

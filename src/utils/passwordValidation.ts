@@ -50,7 +50,7 @@ export const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
   {
     id: 'special',
     label: 'One special character (!@#$%^&*)',
-    test: (password) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    test: (password) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     errorMessage: 'Password must contain at least one special character'
   }
 ]

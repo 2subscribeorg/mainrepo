@@ -10,8 +10,7 @@ import {
   getFieldErrors,
   getErrorMessages,
   LoginFormSchema,
-  SignupFormSchema,
-  SubscriptionFormSchema
+  SignupFormSchema
 } from '@/schemas/form-validation.schema'
 
 describe('Form Validation Schemas', () => {
