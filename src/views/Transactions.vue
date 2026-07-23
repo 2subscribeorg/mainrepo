@@ -2,13 +2,6 @@
   <div class="max-w-full overflow-x-hidden">
     <!-- Page Header -->
     <div class="mb-6 space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Transactions</p>
-          <h2 class="text-3xl font-bold text-gray-900">Overview</h2>
-        </div>
-      </div>
-
       <ErrorBoundary component="TransactionFilterPanel">
         <TransactionFilterPanel
           :filters="filters"

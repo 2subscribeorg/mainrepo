@@ -12,7 +12,7 @@
             <div :class="iconClasses(toast.type)">
               <component :is="getIcon(toast.type)" :size="20" />
             </div>
-            <p class="text-sm font-medium text-gray-900">{{ toast.message }}</p>
+            <p class="text-sm font-medium text-text-primary">{{ toast.message }}</p>
           </div>
           
           <div class="flex items-center gap-2">
@@ -26,10 +26,11 @@
             </button>
             
             <button
-              class="p-1 rounded-lg hover:bg-gray-100 transition-colors duration-150"
+              class="p-1 rounded-lg hover:bg-interactive-hover transition-colors duration-150"
+              aria-label="Dismiss notification"
               @click="dismiss(toast.id)"
             >
-              <X :size="16" class="text-gray-500" />
+              <X :size="16" class="text-text-secondary" />
             </button>
           </div>
         </div>
@@ -47,30 +48,30 @@ const { toasts, dismiss } = useToast()
 function toastClasses(type: Toast['type']) {
   const base = 'border-2'
   const variants = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
-    warning: 'bg-yellow-50 border-yellow-200'
+    success: 'bg-success-bg border-success-border',
+    error: 'bg-error-bg border-error-border',
+    info: 'bg-info-bg border-info-border',
+    warning: 'bg-warning-bg border-warning-border'
   }
   return `${base} ${variants[type]}`
 }
 
 function iconClasses(type: Toast['type']) {
   const variants = {
-    success: 'text-green-600',
-    error: 'text-red-600',
-    info: 'text-blue-600',
-    warning: 'text-yellow-600'
+    success: 'text-success-text-emphasis',
+    error: 'text-error-text-emphasis',
+    info: 'text-info-text-emphasis',
+    warning: 'text-warning-text-emphasis'
   }
   return variants[type]
 }
 
 function actionButtonClasses(type: Toast['type']) {
   const variants = {
-    success: 'bg-green-600 text-white hover:bg-green-700',
-    error: 'bg-red-600 text-white hover:bg-red-700',
-    info: 'bg-blue-600 text-white hover:bg-blue-700',
-    warning: 'bg-yellow-600 text-white hover:bg-yellow-700'
+    success: 'bg-success-text-emphasis text-white hover:bg-success-text-emphasis/90',
+    error: 'bg-error-text-emphasis text-white hover:bg-error-text-emphasis/90',
+    info: 'bg-info-text-emphasis text-white hover:bg-info-text-emphasis/90',
+    warning: 'bg-warning-text-emphasis text-white hover:bg-warning-text-emphasis/90'
   }
   return variants[type]
 }

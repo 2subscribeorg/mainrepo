@@ -583,10 +583,9 @@ describe('ConnectionExpirationBanner', () => {
         },
       })
 
-      // Assert
-      const emoji = wrapper.find('[aria-hidden="true"]')
-      expect(emoji.exists()).toBe(true)
-      expect(emoji.text()).toBe('⚠️')
+      // Assert - icon is hidden from screen readers via aria-hidden
+      const icon = wrapper.find('[aria-hidden="true"]')
+      expect(icon.exists()).toBe(true)
     })
 
     test('reconnect button is keyboard accessible', () => {

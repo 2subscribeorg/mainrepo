@@ -5,14 +5,13 @@
       v-if="showSuccess" 
       role="status" 
       aria-live="polite"
-      class="fixed top-4 right-4 z-50 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 fade-in"
+      class="fixed top-4 right-4 z-50 bg-success-bg border border-success-border text-success-text px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 fade-in"
     >
-      <span aria-hidden="true" class="text-green-600">✓</span>
+      <Check :size="16" aria-hidden="true" class="text-success-text-emphasis" />
       <span class="font-medium">{{ successMessage }}</span>
     </div>
 
     <div class="flex items-center justify-between">
-      <h2 class="text-3xl font-bold text-gray-900">Categories</h2>
       <button
         ref="addButtonRef"
         class="rounded-lg bg-primary px-4 py-2 text-white transition-all duration-150 btn-animated gpu-accelerated add-category-btn"
@@ -57,6 +56,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { Check } from 'lucide-vue-next'
 import { useCategoriesStore } from '@/stores/categories'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Category } from '@/domain/models'

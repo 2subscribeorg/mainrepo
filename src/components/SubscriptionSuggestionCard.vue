@@ -1,7 +1,7 @@
 <template>
   <div
     ref="cardRef"
-    class="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 shadow-sm hover:shadow-md transition-all duration-200 ease-out card-animated gpu-accelerated"
+    class="rounded-lg border border-primary/20 bg-primary/5 shadow-sm hover:shadow-md transition-all duration-200 ease-out card-animated gpu-accelerated"
     :style="cardStyle"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
@@ -9,7 +9,7 @@
   >
     <!-- Progress Indicator -->
     <div v-if="showProgress" class="mb-4 flex items-center justify-between">
-      <span class="text-sm text-gray-500">Suggestion {{ currentIndex }} of {{ totalCount }}</span>
+      <span class="text-sm text-text-secondary">Suggestion {{ currentIndex }} of {{ totalCount }}</span>
       <button
         v-if="onReviewLater"
         class="text-sm font-medium text-primary hover:text-primary-dark transition-colors duration-150"
@@ -23,9 +23,7 @@
       <div class="flex-1">
         <div class="flex items-center gap-2">
           <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Info :size="20" class="text-primary" />
           </div>
           <div>
             <h3 class="font-semibold text-text-primary">{{ pattern.merchant }}</h3>
@@ -40,9 +38,7 @@
     </div>
 
     <div class="mt-3 flex items-center gap-2 text-sm text-text-secondary cursor-pointer" @click="showTransactions = !showTransactions">
-      <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'transform rotate-90': showTransactions }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-      </svg>
+      <ChevronRight :size="16" class="transition-transform duration-200" :class="{ 'transform rotate-90': showTransactions }" />
       <span>{{ pattern.transactions.length }} matching transactions</span>
       <span class="mx-1">•</span>
       <span>{{ Math.round(pattern.confidence * 100) }}% confidence</span>
@@ -52,13 +48,13 @@
     <div v-if="showTransactions" class="mt-3 border-t border-border-light pt-3">
       <h4 class="text-xs font-medium text-text-secondary mb-2">Matching Transactions:</h4>
       <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
-        <div v-for="tx in pattern.transactions" :key="tx.id" class="flex items-center justify-between text-sm p-2 rounded hover:bg-gray-50">
+        <div v-for="tx in pattern.transactions" :key="tx.id" class="flex items-center justify-between text-sm p-2 rounded hover:bg-surface-elevated">
           <div>
             <p class="font-medium text-text-primary">{{ new Date(tx.date).toLocaleDateString() }}</p>
             <p class="text-xs text-text-secondary">{{ tx.merchantName || 'Unknown Merchant' }}</p>
           </div>
           <div class="text-right">
-            <p :class="tx.amount.amount < 0 ? 'text-red-600' : 'text-green-600'" class="font-medium">
+            <p :class="tx.amount.amount < 0 ? 'text-error-text-emphasis' : 'text-success-text-emphasis'" class="font-medium">
               {{ formatMoney({ amount: Math.abs(tx.amount.amount), currency: tx.amount.currency }) }}
             </p>
             <p v-if="tx.category && tx.category.length > 0" class="text-xs text-text-secondary">{{ tx.category[0] }}</p>
@@ -75,7 +71,7 @@
         style="min-height: 48px"
         @click="handleConfirm"
       >
-        <span v-if="!loading">✓ Yes, it's a subscription</span>
+        <span v-if="!loading" class="flex items-center justify-center gap-2"><Check :size="18" /> Yes, it's a subscription</span>
         <span v-else>Processing...</span>
       </button>
       <button
@@ -84,17 +80,17 @@
         style="min-height: 44px"
         @click="handleReject"
       >
-        <span v-if="!loading">✗ Not a subscription</span>
+        <span v-if="!loading" class="flex items-center justify-center gap-2"><X :size="18" /> Not a subscription</span>
         <span v-else>Processing...</span>
       </button>
     </div>
 
     <!-- Swipe hint (shows on first card only) -->
-    <p v-if="showSwipeHint" class="mt-3 text-center text-xs text-gray-400">
+    <p v-if="showSwipeHint" class="mt-3 text-center text-xs text-text-muted">
       Or swipe left to dismiss
     </p>
 
-    <div v-if="error" class="mt-2 text-xs text-red-600">
+    <div v-if="error" class="mt-2 text-xs text-error-text">
       {{ error }}
     </div>
 
@@ -113,6 +109,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Info, ChevronRight, Check, X } from 'lucide-vue-next'
 import type { RecurringPattern } from '@/services/PatternDetector'
 import { formatMoney, formatRecurrence } from '@/utils/formatters'
 import { useSubscriptionFeedback } from '@/composables/useSubscriptionFeedback'

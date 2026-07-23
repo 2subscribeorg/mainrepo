@@ -2,19 +2,19 @@
   <div ref="containerRef" :class="containerClasses">
     <div class="flex items-center justify-between gap-3 slide-down">
       <div>
-        <p class="text-[11px] uppercase tracking-[0.3em] text-gray-500">Filters</p>
-        <h3 class="text-lg font-semibold text-gray-900">Transactions</h3>
+        <p class="text-[11px] uppercase tracking-[0.3em] text-text-muted">Filters</p>
+        <h3 class="text-lg font-semibold text-text-primary">Transactions</h3>
       </div>
       <div class="flex items-center gap-2">
         <span
           v-if="activeFilterCount > 0"
-          class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 fade-in"
+          class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary fade-in"
         >
           {{ activeFilterCount }} active
         </span>
         <button
           v-if="activeFilterCount > 0"
-          class="text-sm font-semibold text-gray-500 hover:text-blue-600 transition-colors duration-150 btn-animated"
+          class="text-sm font-semibold text-text-secondary hover:text-primary transition-colors duration-150 btn-animated"
           @click="$emit('clear-all')"
         >
           Clear
@@ -86,7 +86,7 @@
             @input="updateDateRange('end', ($event.target as HTMLInputElement).value)"
           />
         </div>
-        <p v-if="dateRangeError" class="mt-1 text-xs text-red-600">{{ dateRangeError }}</p>
+        <p v-if="dateRangeError" class="mt-1 text-xs text-error-text">{{ dateRangeError }}</p>
       </div>
 
       <!-- Amount Range -->
@@ -333,7 +333,7 @@ const hasMoreCategories = computed(() => props.categories.length > MAX_VISIBLE_C
 const containerClasses = computed(() => {
   if (props.variant === 'sheet') {
     return [
-      'rounded-t-3xl bg-white shadow-[0_-20px_60px_rgba(15,23,42,0.15)]',
+      'rounded-t-3xl bg-surface shadow-[0_-20px_60px_rgba(15,23,42,0.15)]',
       'p-6 space-y-6',
     ].join(' ')
   }
@@ -461,11 +461,11 @@ const activeFilters = computed(() => {
 }
 
 .filter-label {
-  @apply block text-sm font-medium text-gray-900;
+  @apply block text-sm font-medium text-text-primary;
 }
 
 .filter-input {
-  @apply w-full rounded-2xl px-3 py-2 text-sm border border-gray-200 bg-white text-gray-900;
+  @apply w-full rounded-2xl px-3 py-2 text-sm border border-border-light bg-surface text-text-primary;
   transition: border-color var(--duration-micro) var(--ease-out),
               box-shadow var(--duration-micro) var(--ease-out),
               transform var(--duration-micro) var(--ease-out);
@@ -473,12 +473,12 @@ const activeFilters = computed(() => {
 }
 
 .filter-input:focus {
-  @apply outline-none border-blue-500 ring-2 ring-blue-500/20;
+  @apply outline-none border-primary ring-2 ring-primary/20;
   transform: scale(1.02);
 }
 
 .filter-input:hover {
-  border-color: rgba(59, 130, 246, 0.5);
+  border-color: rgba(93, 63, 211, 0.5);
 }
 
 /* Category button animations */
@@ -490,7 +490,7 @@ const activeFilters = computed(() => {
 .category-btn--default:hover {
   transform: translateY(-1px) scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: rgba(93, 63, 211, 0.3);
 }
 
 .category-btn--default:active {
@@ -499,12 +499,12 @@ const activeFilters = computed(() => {
 
 .category-btn--active {
   transform: scale(1.05);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 2px rgba(93, 63, 211, 0.3);
 }
 
 .category-btn--active:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 0 3px rgba(93, 63, 211, 0.4);
 }
 
 /* Action button animations */

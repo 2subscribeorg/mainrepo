@@ -41,7 +41,7 @@ describe('TwoFactorSettings', () => {
     const wrapper = mount(TwoFactorSettings)
 
     await wrapper.find('#enroll-password').setValue('Current123')
-    await wrapper.find('#phone').setValue('+919103888488')
+    await wrapper.find('#phone').setValue('919103888488')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 

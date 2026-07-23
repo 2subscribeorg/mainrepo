@@ -2,9 +2,7 @@
   <div>
     <div class="flex items-center gap-3 mb-6">
       <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-elevated">
-        <svg class="h-5 w-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
+        <Building2 :size="20" class="text-text-secondary" />
       </div>
       <h3 class="text-lg font-semibold text-text-primary">Bank Accounts</h3>
     </div>
@@ -22,9 +20,7 @@
     <!-- Empty State -->
     <div v-else-if="connections.length === 0" class="text-center py-12">
       <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-surface-elevated mx-auto">
-        <svg class="h-8 w-8 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
+        <Building2 :size="32" class="text-text-secondary" />
       </div>
       <h4 class="mt-4 text-base font-semibold text-text-primary">No bank accounts connected</h4>
       <p class="mt-2 text-sm text-text-secondary max-w-sm mx-auto">
@@ -81,9 +77,7 @@
           <div class="flex items-center gap-3">
             <!-- Bank Icon -->
             <div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg class="h-6 w-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-              </svg>
+              <Landmark :size="24" class="text-primary" />
             </div>
             
             <div>
@@ -133,7 +127,7 @@
           class="mt-3 rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 flex items-center gap-2 text-sm text-warning"
           role="alert"
         >
-          <span aria-hidden="true">⏰</span>
+          <Clock :size="16" aria-hidden="true" />
           <span>
             Connection expires {{ formatExpiry(connection.expiresAt) }}. Reconnect to keep syncing.
           </span>
@@ -145,7 +139,7 @@
           class="mt-3 rounded-lg bg-danger/10 border border-danger/30 px-3 py-2 flex items-center gap-2 text-sm text-danger"
           role="alert"
         >
-          <span aria-hidden="true">🔌</span>
+          <PlugZap :size="16" aria-hidden="true" />
           <span>Connection lost. Reconnect to resume transaction sync.</span>
         </div>
 
@@ -157,7 +151,7 @@
             class="flex-1 rounded bg-warning/10 px-3 py-1.5 text-sm text-warning hover:bg-warning/20 transition-colors font-medium"
             @click="openReconnectionWizard(connection)"
           >
-            🔗 Reconnect
+            <Link :size="16" class="inline-block mr-1" /> Reconnect
           </button>
 
           <button
@@ -165,7 +159,7 @@
             class="flex-1 rounded bg-primary/10 px-3 py-1.5 text-sm text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
             @click="handleSync(connection.id)"
           >
-            🔄 Sync Transactions
+            <RefreshCw :size="16" class="inline-block mr-1" /> Sync Transactions
           </button>
           
           <button
@@ -174,7 +168,7 @@
             aria-label="Disconnect bank account - This action cannot be undone"
             @click="handleDisconnect(connection.id)"
           >
-            <span aria-hidden="true">🗑️</span>
+            <Trash2 :size="16" aria-hidden="true" />
             Disconnect
           </button>
         </div>
@@ -186,7 +180,7 @@
           role="alert"
           aria-live="polite"
         >
-          <span aria-hidden="true">⚠️</span>
+          <AlertTriangle :size="16" aria-hidden="true" />
           <span>
             <strong>Error:</strong> {{ connection.error }}
           </span>
@@ -201,7 +195,7 @@
       role="alert"
       aria-live="polite"
     >
-      <span aria-hidden="true" class="text-danger text-lg">⚠️</span>
+      <AlertTriangle :size="18" aria-hidden="true" class="text-danger" />
       <div>
         <strong class="text-danger">Error:</strong>
         <p class="text-danger mt-1">{{ error }}</p>
@@ -228,6 +222,7 @@
 <script setup lang="ts">
 import { logger } from '@/utils/logger'
 import { ref, onMounted, computed } from 'vue'
+import { Clock, PlugZap, Link, RefreshCw, Trash2, AlertTriangle, Building2, Landmark } from 'lucide-vue-next'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import ConnectionExpirationBanner from '@/components/ConnectionExpirationBanner.vue'
 import { useTransactionsStore } from '@/stores/transactions'

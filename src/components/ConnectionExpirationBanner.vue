@@ -6,7 +6,7 @@
     role="alert"
   >
     <div class="flex items-center gap-2 text-sm font-medium" :class="hasDisconnected ? 'text-danger' : 'text-warning'">
-      <span aria-hidden="true">⚠️</span>
+      <AlertTriangle :size="16" aria-hidden="true" />
       <span v-if="hasDisconnected">
         {{ expiringConnections.length }} bank connection{{ expiringConnections.length !== 1 ? 's' : '' }} lost — transaction sync paused.
       </span>
@@ -34,6 +34,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { AlertTriangle } from 'lucide-vue-next'
 import { useBankAccountsStore } from '@/stores/bankAccounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import BankReconnectionWizard from './BankReconnectionWizard.vue'

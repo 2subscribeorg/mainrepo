@@ -2,9 +2,7 @@
   <div class="account-settings">
     <div class="flex items-center gap-3 mb-6">
       <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-elevated">
-        <svg class="h-5 w-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
+        <User :size="20" class="text-text-secondary" />
       </div>
       <h3 class="text-lg font-semibold text-text-primary">Account Settings</h3>
     </div>
@@ -13,9 +11,7 @@
     <div v-if="!isFirebaseMode" class="mb-4 p-4 bg-surface-elevated border border-border-light rounded-2xl">
       <div class="flex items-start gap-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-info-bg">
-          <svg class="h-4 w-4 text-info-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Info :size="16" class="text-info-text" />
         </div>
         <div>
           <p class="text-sm font-medium text-text-primary">Development Mode</p>
@@ -40,7 +36,7 @@
         v-if="successMessage"
         class="p-3 bg-success-bg border border-success-border text-success-text rounded-lg text-sm"
       >
-        ✅ {{ successMessage }}
+        <CheckCircle :size="16" class="inline-block mr-1" /> {{ successMessage }}
       </div>
 
       <!-- Error Message -->
@@ -226,6 +222,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { CheckCircle, User, Info } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import TwoFactorSettings from './TwoFactorSettings.vue'
 import { validateChangeEmailForm, validateChangePasswordForm } from '@/schemas/form-validation.schema'

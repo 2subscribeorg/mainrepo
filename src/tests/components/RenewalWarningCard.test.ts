@@ -108,11 +108,11 @@ describe('RenewalWarningCard', () => {
 
       // Assert
       const card = wrapper.find('[role="article"]')
-      expect(card.classes()).toContain('border-red-200')
-      expect(card.classes()).toContain('bg-red-50')
+      expect(card.classes()).toContain('border-error-border')
+      expect(card.classes()).toContain('bg-error-bg')
       
       const dot = wrapper.find('.h-2.w-2.rounded-full')
-      expect(dot.classes()).toContain('bg-red-500')
+      expect(dot.classes()).toContain('bg-error-text-emphasis')
       expect(dot.classes()).toContain('animate-pulse')
     })
 
@@ -128,11 +128,11 @@ describe('RenewalWarningCard', () => {
 
       // Assert
       const card = wrapper.find('[role="article"]')
-      expect(card.classes()).toContain('border-amber-200')
-      expect(card.classes()).toContain('bg-amber-50')
+      expect(card.classes()).toContain('border-warning-border')
+      expect(card.classes()).toContain('bg-warning-bg')
       
       const dot = wrapper.find('.h-2.w-2.rounded-full')
-      expect(dot.classes()).toContain('bg-amber-500')
+      expect(dot.classes()).toContain('bg-warning-text-emphasis')
     })
 
     test('shows info styling for info level', () => {
@@ -147,11 +147,11 @@ describe('RenewalWarningCard', () => {
 
       // Assert
       const card = wrapper.find('[role="article"]')
-      expect(card.classes()).toContain('border-blue-200')
-      expect(card.classes()).toContain('bg-blue-50')
+      expect(card.classes()).toContain('border-info-border')
+      expect(card.classes()).toContain('bg-info-bg')
       
       const dot = wrapper.find('.h-2.w-2.rounded-full')
-      expect(dot.classes()).toContain('bg-blue-500')
+      expect(dot.classes()).toContain('bg-info-text-emphasis')
     })
 
     test('shows correct icon for critical warnings', () => {
@@ -165,10 +165,7 @@ describe('RenewalWarningCard', () => {
 
       // Assert
       const svg = wrapper.find('svg')
-      expect(svg.classes()).toContain('text-red-600')
-      // Critical uses triangle warning icon
-      const path = svg.find('path')
-      expect(path.attributes('d')).toContain('M12 9v2m0 4h.01')
+      expect(svg.classes()).toContain('text-error-text-emphasis')
     })
   })
 

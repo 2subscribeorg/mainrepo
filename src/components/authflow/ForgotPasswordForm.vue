@@ -8,7 +8,7 @@
         v-if="successMessage"
         class="mb-4 p-3 bg-success-bg border border-success-border text-success-text rounded-lg text-sm"
       >
-        ✅ {{ successMessage }}
+        <CheckCircle :size="16" class="inline-block mr-1" /> {{ successMessage }}
       </div>
 
       <!-- Error Message -->
@@ -59,7 +59,7 @@
         type="button"
         @click="$emit('back-to-login')"
       >
-        ← Back to Sign In
+        <ArrowLeft :size="16" class="inline-block mr-1" /> Back to Sign In
       </button>
     </div>
     </div>
@@ -68,6 +68,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ArrowLeft, CheckCircle } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import FormErrorBoundary from '@/components/ui/FormErrorBoundary.vue'
 
@@ -100,6 +101,6 @@ async function handleSubmit() {
 
 <style scoped>
 .forgot-password-form {
-  @apply max-w-md mx-auto p-6 bg-white rounded-lg shadow-md;
+  @apply max-w-md mx-auto p-6 bg-surface rounded-lg shadow-lg;
 }
 </style>

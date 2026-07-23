@@ -315,7 +315,7 @@ describe('SubscriptionSuggestionCard', () => {
       })
 
       expect(wrapper.text()).toContain('Failed to process subscription')
-      expect(wrapper.find('.text-red-600').exists()).toBe(true)
+      expect(wrapper.find('.text-error-text').exists()).toBe(true)
     })
 
     it('does not emit events when operations fail', async () => {

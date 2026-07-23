@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col gap-2 p-4 border-t border-gray-200">
-    <p class="text-xs text-gray-500 flex items-center gap-1">
+  <div class="flex flex-col gap-2 p-4 border-t border-border-light">
+    <p class="text-xs text-text-secondary flex items-center gap-1">
       {{ startItem }}–{{ endItem }}
       <span class="opacity-40">•</span>
       {{ totalItems }} total
@@ -8,20 +8,22 @@
     <div class="flex items-center justify-center gap-3">
       <button
         :disabled="currentPage <= 1"
-        class="w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label="Previous page"
+        class="w-11 h-11 rounded-full border border-border-light bg-surface text-text-primary transition-all hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
         @click="$emit('goToPage', currentPage - 1)"
       >
-        ‹
+        <ChevronLeft :size="20" />
       </button>
-      <span class="min-w-18 text-center px-2 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold">
+      <span class="min-w-18 text-center px-2 py-1 rounded-full bg-surface-elevated border border-border-light text-text-primary font-semibold">
         {{ currentPage }} / {{ totalPages }}
       </span>
       <button
         :disabled="currentPage >= totalPages"
-        class="w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-900 text-base font-semibold transition-all hover:border-blue-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label="Next page"
+        class="w-11 h-11 rounded-full border border-border-light bg-surface text-text-primary transition-all hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
         @click="$emit('goToPage', currentPage + 1)"
       >
-        ›
+        <ChevronRight :size="20" />
       </button>
     </div>
   </div>
@@ -29,6 +31,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 interface Props {
   currentPage: number

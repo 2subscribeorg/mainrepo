@@ -9,11 +9,11 @@
             @click="handleBack"
           >
             <span class="sr-only">Go back</span>
-            ←
+            <ArrowLeft :size="20" />
           </button>
           <div>
-            <p class="text-xs uppercase tracking-wide text-text-muted">{{ subtitle }}</p>
-            <h1 class="text-2xl font-semibold text-text-primary">{{ title }}</h1>
+            <p class="text-xs uppercase tracking-wide text-text-muted">{{ currentSubtitle }}</p>
+            <h1 class="text-2xl font-semibold text-text-primary">{{ currentTitle }}</h1>
           </div>
         </div>
         <div class="flex items-center" style="gap: var(--space-3);">
@@ -42,9 +42,10 @@
             </div>
             <button
               class="text-warning-text hover:text-warning-text-emphasis"
+              aria-label="Dismiss notification"
               @click="notificationsStore.markAsRead(notification.id)"
             >
-              ✕
+              <X :size="16" />
             </button>
           </div>
         </div>
@@ -72,6 +73,7 @@
               : 'text-text-secondary hover:bg-interactive-hover'
           "
         >
+          <component :is="link.icon" :size="20" />
           <span class="text-center leading-none truncate w-full px-1">{{ link.label }}</span>
           <span
             v-if="link.badge"
@@ -93,6 +95,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ArrowLeft, X, Home, Receipt, Tags, Settings } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import UserProfile from '@/components/settings/UserProfile.vue'
 import RenewalWarningBadge from '@/components/RenewalWarningBadge.vue'
@@ -103,6 +106,7 @@ import { useRenewalWarnings } from '@/composables/useRenewalWarnings'
 interface NavLink {
   path: string
   label: string
+  icon: any
   badge?: string
 }
 
@@ -138,12 +142,30 @@ const AUTH_ROUTES = ['/login', '/verify-email', '/delete-account-request', '/del
 
 const isAuthRoute = computed(() => AUTH_ROUTES.some(r => route.path === r || route.path.startsWith(r + '/')))
 
+const routeMeta = computed(() => {
+  switch (route.path) {
+    case '/':
+      return { title: 'Dashboard', subtitle: 'Overview' }
+    case '/transactions':
+      return { title: 'Transactions', subtitle: 'Overview' }
+    case '/categories':
+      return { title: 'Categories', subtitle: 'Organize' }
+    case '/settings':
+      return { title: 'Settings', subtitle: 'Account' }
+    default:
+      return { title: '2Subscribe', subtitle: 'Subscriptions' }
+  }
+})
+
+const currentTitle = computed(() => routeMeta.value.title)
+const currentSubtitle = computed(() => routeMeta.value.subtitle)
+
 const navLinks = computed(() => {
   const links: NavLink[] = [
-    { path: '/', label: 'Home' },
-    { path: '/transactions', label: 'Transactions' },
-    { path: '/categories', label: 'Categories' },
-    { path: '/settings', label: 'Settings' },
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/transactions', label: 'Transactions', icon: Receipt },
+    { path: '/categories', label: 'Categories', icon: Tags },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ]
 
   return links

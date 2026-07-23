@@ -1,9 +1,7 @@
 <template>
   <div>
-    <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
-
     <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
 
     <div v-else class="mt-6 space-y-6">
@@ -16,8 +14,8 @@
       <AsyncErrorBoundary loading-message="Loading renewal warnings...">
         <div v-if="activeWarnings.length > 0" class="space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">Upcoming Renewals</h3>
-            <span class="text-sm text-gray-500">{{ activeWarnings.length }} warning{{ activeWarnings.length !== 1 ? 's' : '' }}</span>
+            <h3 class="text-lg font-semibold text-text-primary">Upcoming Renewals</h3>
+            <span class="text-sm text-text-secondary">{{ activeWarnings.length }} warning{{ activeWarnings.length !== 1 ? 's' : '' }}</span>
           </div>
           <div class="space-y-3">
             <RenewalWarningCard
@@ -100,11 +98,11 @@
 
       <!-- Subscription Suggestions Section -->
       <ErrorBoundary component="SubscriptionSuggestions">
-        <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="bg-surface rounded-2xl shadow-sm p-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Subscription Insights</h3>
+            <h3 class="text-lg font-semibold text-text-primary">Subscription Insights</h3>
             <button 
-              class="text-sm text-blue-600 hover:underline focus:outline-none"
+              class="text-sm text-primary hover:underline focus:outline-none"
               @click="showAllSuggestions = !showAllSuggestions"
             >
               {{ showAllSuggestions ? 'Show Less' : 'View All' }}
@@ -113,14 +111,14 @@
           
           <AsyncErrorBoundary loading-message="Loading suggestions...">
             <div v-if="suggestionsLoading" class="flex justify-center py-4">
-              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
             
-            <div v-else-if="suggestionsError" class="text-red-500 text-sm py-2">
+            <div v-else-if="suggestionsError" class="text-error-text text-sm py-2">
               {{ suggestionsError }}
             </div>
             
-            <div v-else-if="filteredSuggestions.length === 0" class="text-center py-6 text-gray-500">
+            <div v-else-if="filteredSuggestions.length === 0" class="text-center py-6 text-text-secondary">
               <p>No subscription suggestions at the moment.</p>
             </div>
             
@@ -137,7 +135,7 @@
                     <div v-for="suggestion in items" :key="suggestion.merchant">
                       <SubscriptionSuggestionCard 
                         :pattern="suggestion"
-                        :class="virtual ? 'border border-gray-100 rounded-xl p-4' : 'border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow'"
+                        :class="virtual ? 'border border-border-light rounded-xl p-4' : 'border border-border-light rounded-xl p-4 hover:shadow-md transition-shadow'"
                         @confirmed="handleSuggestionConfirmed"
                         @rejected="handleSuggestionRejected"
                       />

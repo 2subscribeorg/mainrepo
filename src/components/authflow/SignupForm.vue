@@ -46,17 +46,29 @@
         <label for="signup-password" class="block text-sm font-medium text-text-secondary mb-1">
           Password
         </label>
-        <input
-          id="signup-password"
-          v-model="password"
-          type="password"
-          required
-          autocomplete="new-password"
-          placeholder="••••••••"
-          class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-          :disabled="loading"
-          @input="validatePassword"
-        />
+        <div class="relative">
+          <input
+            id="signup-password"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••"
+            class="w-full px-4 py-2 pr-10 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+            :disabled="loading"
+            @input="validatePassword"
+          />
+          <button
+            type="button"
+            @click="showPassword = !showPassword"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+            :disabled="loading"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+          >
+            <EyeOff v-if="showPassword" :size="20" />
+            <Eye v-else :size="20" />
+          </button>
+        </div>
         <PasswordStrengthIndicator :password="password" />
       </div>
 
@@ -65,19 +77,31 @@
         <label for="confirm-password" class="block text-sm font-medium text-text-secondary mb-1">
           Confirm Password
         </label>
-        <input
-          id="confirm-password"
-          v-model="confirmPassword"
-          type="password"
-          required
-          autocomplete="new-password"
-          placeholder="••••••••"
-          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-          :class="confirmPasswordError ? 'border-error-border' : 'border-border-light'"
-          :disabled="loading"
-          @input="onConfirmPasswordInput"
-          @blur="onConfirmPasswordInput"
-        />
+        <div class="relative">
+          <input
+            id="confirm-password"
+            v-model="confirmPassword"
+            :type="showConfirmPassword ? 'text' : 'password'"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••"
+            class="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+            :class="confirmPasswordError ? 'border-error-border' : 'border-border-light'"
+            :disabled="loading"
+            @input="onConfirmPasswordInput"
+            @blur="onConfirmPasswordInput"
+          />
+          <button
+            type="button"
+            @click="showConfirmPassword = !showConfirmPassword"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+            :disabled="loading"
+            :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+          >
+            <EyeOff v-if="showConfirmPassword" :size="20" />
+            <Eye v-else :size="20" />
+          </button>
+        </div>
         <p v-if="confirmPasswordError" class="mt-1 text-xs text-error-text">
           {{ confirmPasswordError }}
         </p>
@@ -111,6 +135,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
@@ -165,6 +190,8 @@ const confirmPassword = ref('')
 const errorMessage = ref<string | null>(null)
 const validationErrors = ref<string[]>([])
 const confirmPasswordError = ref<string | null>(null)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 // Validation
 function validateEmail() {
@@ -251,6 +278,6 @@ async function handleSubmit() {
 
 <style scoped>
 .signup-form {
-  @apply max-w-md mx-auto p-6 bg-white rounded-lg shadow-md;
+  @apply max-w-md mx-auto p-6 bg-surface rounded-lg shadow-lg;
 }
 </style>

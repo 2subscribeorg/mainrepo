@@ -29,16 +29,28 @@
 
           <div>
             <label for="password" class="block text-sm font-medium text-text-secondary mb-1">Password</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              required
-              autocomplete="current-password"
-              placeholder="Password"
-              class="w-full px-4 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
-              :disabled="loading"
-            />
+            <div class="relative">
+              <input
+                id="password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                autocomplete="current-password"
+                placeholder="Password"
+                class="w-full px-4 py-2 pr-10 border border-border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface text-text-primary"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="loading"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                <EyeOff v-if="showPassword" :size="20" />
+                <Eye v-else :size="20" />
+              </button>
+            </div>
           </div>
 
           <button
@@ -130,6 +142,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import { createRecaptchaVerifier } from '@/config/firebase'
@@ -149,6 +162,7 @@ const email = ref('')
 const password = ref('')
 const otp = ref('')
 const errorMessage = ref<string | null>(null)
+const showPassword = ref(false)
 const mfaSending = ref(false)
 const mfaCodeSent = ref(false)
 const recaptchaContainer = ref<HTMLElement | null>(null)
@@ -249,8 +263,8 @@ onUnmounted(clearRecaptcha)
   max-width: 28rem;
   margin: 0 auto;
   padding: 1.5rem;
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 </style>

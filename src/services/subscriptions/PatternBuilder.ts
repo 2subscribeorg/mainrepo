@@ -2,6 +2,13 @@ import type { BankTransaction, Recurrence } from '@/domain/models'
 import type { RecurringPattern, DetectionConfig } from './types'
 import { ConfidenceScorer } from './ConfidenceScorer'
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 /**
  * Builds RecurringPattern objects from transaction clusters
  * Handles pattern creation and next payment prediction
@@ -55,7 +62,7 @@ export class PatternBuilder {
       frequency,
       confidence,
       lastDate: lastTx.date,
-      nextDate: nextDate.toISOString().split('T')[0],
+      nextDate: formatLocalDate(nextDate),
       transactions: sorted,
       detectionReason: 'amount_matching' as const,
       flags: []
@@ -100,7 +107,7 @@ export class PatternBuilder {
       frequency,
       confidence,
       lastDate: lastTx.date,
-      nextDate: nextDate.toISOString().split('T')[0],
+      nextDate: formatLocalDate(nextDate),
       transactions: sorted,
       detectionReason: 'amount_matching' as const,
       flags: []
@@ -144,6 +151,6 @@ export class PatternBuilder {
         break
     }
     
-    return date.toISOString().split('T')[0]
+    return formatLocalDate(date)
   }
 }
