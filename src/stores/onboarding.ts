@@ -4,14 +4,14 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { getFirebaseDb } from '@/config/firebase'
 import { useAuthStore } from '@/stores/auth'
 
-const CAROUSEL_SEEN_KEY = '2sub_welcome_carousel_seen'
-
 export type OnboardingStep = 'welcome' | 'notifications' | 'bank' | 'premium'
 
 export const ONBOARDING_STEPS: OnboardingStep[] = ['welcome', 'notifications', 'bank', 'premium']
 
 export const useOnboardingStore = defineStore('onboarding', () => {
-  const carouselSeen = ref(localStorage.getItem(CAROUSEL_SEEN_KEY) === 'true')
+  // Session-only flag — not persisted. Carousel shows every fresh launch
+  // until the user actually creates an account.
+  const carouselSeen = ref(false)
   const onboardingCompleted = ref(false)
   const currentStepIndex = ref(0)
   const loading = ref(false)
@@ -28,7 +28,6 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   function markCarouselSeen() {
     carouselSeen.value = true
-    localStorage.setItem(CAROUSEL_SEEN_KEY, 'true')
   }
 
   function nextStep() {

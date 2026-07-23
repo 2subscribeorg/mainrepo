@@ -72,7 +72,7 @@ describe('WelcomeCarousel', () => {
 
     test('shows first slide content on mount', () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
-      expect(wrapper.text()).toContain('Track Every Subscription')
+      expect(wrapper.text()).toContain('Give Yourself a Pay Rise')
     })
 
     test('does not show Back button on first slide', () => {
@@ -91,33 +91,33 @@ describe('WelcomeCarousel', () => {
   })
 
   describe('Slide content', () => {
-    test('first slide shows Track Every Subscription', () => {
+    test('first slide shows Give Yourself a Pay Rise', () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
-      expect(wrapper.text()).toContain('Track Every Subscription')
+      expect(wrapper.text()).toContain('Give Yourself a Pay Rise')
     })
 
-    test('second slide shows Never Miss a Renewal', async () => {
-      const wrapper = mount(WelcomeCarousel, mountOptions)
-      const nextBtn = wrapper.findAll('button').find(b => b.text() === 'Next')
-      await nextBtn?.trigger('click')
-      expect(wrapper.text()).toContain('Never Miss a Renewal')
-    })
-
-    test('third slide shows Auto-Detect from Your Bank', async () => {
+    test('second slide shows Sync Your Bank in Seconds', async () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       const nextBtn = wrapper.findAll('button').find(b => b.text() === 'Next')
       await nextBtn?.trigger('click')
-      await nextBtn?.trigger('click')
-      expect(wrapper.text()).toContain('Auto-Detect from Your Bank')
+      expect(wrapper.text()).toContain('Sync Your Bank in Seconds')
     })
 
-    test('fourth slide shows Save Money Effortlessly', async () => {
+    test('third slide shows Identify & Categorise', async () => {
+      const wrapper = mount(WelcomeCarousel, mountOptions)
+      const nextBtn = wrapper.findAll('button').find(b => b.text() === 'Next')
+      await nextBtn?.trigger('click')
+      await nextBtn?.trigger('click')
+      expect(wrapper.text()).toContain('Identify & Categorise')
+    })
+
+    test('fourth slide shows Optimise Your Spending', async () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       for (let i = 0; i < 3; i++) {
         const nextBtn = wrapper.findAll('button').find(b => b.text() === 'Next')
         await nextBtn?.trigger('click')
       }
-      expect(wrapper.text()).toContain('Save Money Effortlessly')
+      expect(wrapper.text()).toContain('Optimise Your Spending')
     })
   })
 
@@ -126,7 +126,7 @@ describe('WelcomeCarousel', () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       const nextBtn = wrapper.findAll('button').find(b => b.text() === 'Next')
       await nextBtn?.trigger('click')
-      expect(wrapper.text()).toContain('Never Miss a Renewal')
+      expect(wrapper.text()).toContain('Sync Your Bank in Seconds')
     })
 
     test('Back button returns to previous slide', async () => {
@@ -137,14 +137,14 @@ describe('WelcomeCarousel', () => {
       // Go back
       const backBtn = wrapper.findAll('button').find(b => b.text() === 'Back')
       await backBtn?.trigger('click')
-      expect(wrapper.text()).toContain('Track Every Subscription')
+      expect(wrapper.text()).toContain('Give Yourself a Pay Rise')
     })
 
     test('dot indicator click jumps to slide', async () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       const dots = wrapper.findAll('button[aria-label^="Go to slide"]')
       await dots[2]?.trigger('click')
-      expect(wrapper.text()).toContain('Auto-Detect from Your Bank')
+      expect(wrapper.text()).toContain('Identify & Categorise')
     })
   })
 
@@ -164,11 +164,11 @@ describe('WelcomeCarousel', () => {
       expect(mockRouterPush).toHaveBeenCalledWith('/login')
     })
 
-    test('persists carousel seen to localStorage', async () => {
+    test('does not persist carousel seen to localStorage', async () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       const skipBtn = wrapper.findAll('button').find(b => b.text() === 'Skip')
       await skipBtn?.trigger('click')
-      expect(localStorage.getItem('2sub_welcome_carousel_seen')).toBe('true')
+      expect(localStorage.getItem('2sub_welcome_carousel_seen')).toBeNull()
     })
   })
 

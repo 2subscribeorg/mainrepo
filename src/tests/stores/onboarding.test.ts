@@ -34,15 +34,15 @@ describe('useOnboardingStore', () => {
   })
 
   describe('Initial state', () => {
-    it('starts with carouselSeen false when localStorage is empty', () => {
+    it('starts with carouselSeen false (session-only, not persisted)', () => {
       const store = useOnboardingStore()
       expect(store.carouselSeen).toBe(false)
     })
 
-    it('reads carouselSeen from localStorage', () => {
+    it('does not read carouselSeen from localStorage', () => {
       localStorage.setItem('2sub_welcome_carousel_seen', 'true')
       const store = useOnboardingStore()
-      expect(store.carouselSeen).toBe(true)
+      expect(store.carouselSeen).toBe(false)
     })
 
     it('starts with onboardingCompleted false', () => {
@@ -118,10 +118,10 @@ describe('useOnboardingStore', () => {
       expect(store.carouselSeen).toBe(true)
     })
 
-    it('persists to localStorage', () => {
+    it('does not persist to localStorage', () => {
       const store = useOnboardingStore()
       store.markCarouselSeen()
-      expect(localStorage.getItem('2sub_welcome_carousel_seen')).toBe('true')
+      expect(localStorage.getItem('2sub_welcome_carousel_seen')).toBeNull()
     })
   })
 

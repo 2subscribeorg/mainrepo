@@ -3,8 +3,8 @@
     <div class="max-w-md w-full space-y-8">
       <!-- Logo/Header -->
       <div class="text-center">
-        <h1 class="text-4xl font-bold text-primary">2Subscribe</h1>
-        <p class="mt-2 text-text-secondary">Manage your subscriptions effortlessly</p>
+        <h1 class="text-4xl font-bold text-white">2Subscribe</h1>
+        <p class="mt-2 text-white/80">Manage your subscriptions effortlessly</p>
       </div>
 
       <!-- Force-logout reason banner -->

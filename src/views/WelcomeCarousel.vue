@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { CreditCard, BellRing, Building2, Sparkles } from 'lucide-vue-next'
+import { Wallet, Building2, Tags, TrendingUp } from 'lucide-vue-next'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useHaptics } from '@/composables/useHaptics'
 
@@ -82,24 +82,24 @@ const slideDirection = ref<'slide-left' | 'slide-right'>('slide-left')
 
 const slides = [
   {
-    icon: CreditCard,
-    title: 'Track Every Subscription',
-    description: 'See all your subscriptions in one place. Know exactly what you\'re paying for and when.',
-  },
-  {
-    icon: BellRing,
-    title: 'Never Miss a Renewal',
-    description: 'Get warned before subscriptions charge you. Cancel unwanted ones before it\'s too late.',
+    icon: Wallet,
+    title: 'Give Yourself a Pay Rise',
+    description: 'Stop letting forgotten subscription renewals quietly drain your bank account. Reclaim your income and keep more of what you earn.',
   },
   {
     icon: Building2,
-    title: 'Auto-Detect from Your Bank',
-    description: 'Connect your bank account and we\'ll automatically find subscriptions you forgot about.',
+    title: 'Sync Your Bank in Seconds',
+    description: 'Securely connect your UK bank account via FCA-authorised Open Banking. Read-only access — we can never move your money.',
   },
   {
-    icon: Sparkles,
-    title: 'Save Money Effortlessly',
-    description: 'Identify duplicate subscriptions, unused services, and hidden charges. Take control of your spending.',
+    icon: Tags,
+    title: 'Identify & Categorise',
+    description: 'Swipe through transactions to mark subscriptions. Organise them into categories and build your perfect budget breakdown.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Optimise Your Spending',
+    description: 'Our Pattern Detector flags price hikes and duplicate charges automatically — so you can cancel what you don\'t use and effectively increase your take-home pay.',
   },
 ]
 
