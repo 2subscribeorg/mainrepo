@@ -34,15 +34,6 @@
         </div>
       </ErrorBoundary>
 
-      <!-- Mode Toggle (Alternative) -->
-      <div class="text-center text-sm text-text-muted">
-        <p v-if="isFirebaseMode">
-          Using Firebase Authentication
-        </p>
-        <p v-else>
-          Using Mock Authentication (Development Mode)
-        </p>
-      </div>
     </div>
   </div>
 </template>
@@ -56,7 +47,6 @@ import ForgotPasswordForm from '@/components/authflow/ForgotPasswordForm.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import { useOnboardingStore } from '@/stores/onboarding'
 
-const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const route = useRoute()
 const router = useRouter()
 const onboardingStore = useOnboardingStore()
