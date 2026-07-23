@@ -45,6 +45,7 @@ export async function createUserProfile(user: FirebaseUser): Promise<void> {
     bankConnectionCount: 0,
     transactionCount: 0,
     isActive: true,
+    onboardingCompleted: false,
     preferences: {
       theme: 'light',
       notifications: true,

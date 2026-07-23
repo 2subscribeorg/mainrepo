@@ -138,7 +138,7 @@ const { warningCount, hasCriticalWarnings } = useRenewalWarnings()
 const showWarningsModal = ref(false)
 
 
-const AUTH_ROUTES = ['/login', '/verify-email', '/delete-account-request', '/delete-account-confirm']
+const AUTH_ROUTES = ['/login', '/verify-email', '/delete-account-request', '/delete-account-confirm', '/welcome', '/onboarding']
 
 const isAuthRoute = computed(() => AUTH_ROUTES.some(r => route.path === r || route.path.startsWith(r + '/')))
 

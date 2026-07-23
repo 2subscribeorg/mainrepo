@@ -48,20 +48,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LoginForm from '@/components/authflow/LoginForm.vue'
 import SignupForm from '@/components/authflow/SignupForm.vue'
 import ForgotPasswordForm from '@/components/authflow/ForgotPasswordForm.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
+import { useOnboardingStore } from '@/stores/onboarding'
 
 const isFirebaseMode = import.meta.env.VITE_DATA_BACKEND === 'FIREBASE'
 const route = useRoute()
 const router = useRouter()
+const onboardingStore = useOnboardingStore()
 
 const mode = ref<'login' | 'signup' | 'forgot'>(
   (route.query.mode as string) === 'signup' ? 'signup' : 'login'
 )
+
+onMounted(() => {
+  if (!onboardingStore.carouselSeen) {
+    router.replace('/welcome')
+  }
+})
 
 const forcedOutMessage = computed(() => {
   const reason = route.query.reason as string | undefined

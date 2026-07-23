@@ -1,9 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { requireAuth, redirectIfAuthenticated, requireVerifyEmailRoute } from '@/composables/useAuthGuard'
+import { requireAuth, redirectIfAuthenticated, requireVerifyEmailRoute, requireOnboarding } from '@/composables/useAuthGuard'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // Welcome carousel (pre-auth, first launch only)
+    {
+      path: '/welcome',
+      name: 'welcome',
+      component: () => import('@/views/WelcomeCarousel.vue'),
+    },
     // Auth Routes (public)
     {
       path: '/login',
@@ -42,30 +48,37 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: () => import('@/views/Dashboard.vue'),
-      beforeEnter: requireAuth,
+      beforeEnter: [requireAuth, requireOnboarding],
     },
     {
       path: '/categories',
       name: 'categories',
       component: () => import('@/views/Categories.vue'),
-      beforeEnter: requireAuth,
+      beforeEnter: [requireAuth, requireOnboarding],
     },
     {
       path: '/transactions',
       name: 'transactions',
       component: () => import('@/views/Transactions.vue'),
-      beforeEnter: requireAuth,
+      beforeEnter: [requireAuth, requireOnboarding],
     },
     {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/Settings.vue'),
-      beforeEnter: requireAuth,
+      beforeEnter: [requireAuth, requireOnboarding],
     },
     {
       path: '/platform-subscription',
       name: 'platform-subscription',
       component: () => import('@/views/PlatformSubscription.vue'),
+      beforeEnter: [requireAuth, requireOnboarding],
+    },
+    // Onboarding wizard (authenticated, not yet completed)
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/Onboarding.vue'),
       beforeEnter: requireAuth,
     },
     // Catch-all route - must be last

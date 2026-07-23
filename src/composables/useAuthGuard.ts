@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboardingStore } from '@/stores/onboarding'
 import { logger } from '@/utils/logger'
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { getFirebaseAuth } from '@/config/firebase'
@@ -175,8 +176,48 @@ export async function redirectIfAuthenticated(
       }
     }
 
+    // Check onboarding status for returning authenticated users
+    const onboardingStore = useOnboardingStore()
+    if (import.meta.env.VITE_DATA_BACKEND !== 'MOCK' && !onboardingStore.onboardingCompleted) {
+      await onboardingStore.checkOnboardingStatus()
+      if (!onboardingStore.onboardingCompleted) {
+        next('/onboarding')
+        return
+      }
+    }
+
     next('/')
   } else {
     next()
   }
+}
+
+/**
+ * Onboarding guard — redirects to /onboarding if the authenticated user
+ * hasn't completed the setup wizard yet. Must run AFTER requireAuth.
+ */
+export async function requireOnboarding(
+  _to: RouteLocationNormalized,
+  _from: RouteLocationNormalized,
+  next: NavigationGuardNext
+) {
+  // Skip onboarding enforcement in Mock mode
+  if (import.meta.env.VITE_DATA_BACKEND === 'MOCK') {
+    next()
+    return
+  }
+
+  const onboardingStore = useOnboardingStore()
+
+  // Check Firestore if we haven't loaded the status yet
+  if (!onboardingStore.onboardingCompleted) {
+    await onboardingStore.checkOnboardingStatus()
+  }
+
+  if (!onboardingStore.onboardingCompleted) {
+    next('/onboarding')
+    return
+  }
+
+  next()
 }

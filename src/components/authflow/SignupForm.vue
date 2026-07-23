@@ -267,8 +267,8 @@ async function handleSubmit() {
       // Redirect to verification page
       router.push('/verify-email')
     } else {
-      // Redirect to dashboard
-      router.push('/')
+      // Redirect to onboarding wizard for new users
+      router.push('/onboarding')
     }
   } else {
     errorMessage.value = result?.error || 'Failed to create account'
