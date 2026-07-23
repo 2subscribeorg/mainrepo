@@ -195,7 +195,7 @@ describe('WelcomeCarousel', () => {
       }
       const getStartedBtn = wrapper.findAll('button').find(b => b.text() === 'Get Started')
       await getStartedBtn?.trigger('click')
-      expect(mockRouterPush).toHaveBeenCalledWith('/login')
+      expect(mockRouterPush).toHaveBeenCalledWith('/login?mode=signup')
     })
   })
 

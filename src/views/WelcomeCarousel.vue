@@ -1,5 +1,5 @@
 <template>
-  <div class="welcome-carousel min-h-screen flex flex-col bg-gradient-to-br from-primary to-primary-dark">
+  <div class="welcome-carousel min-h-screen flex flex-col">
     <!-- Skip button -->
     <button
       class="absolute top-[calc(env(safe-area-inset-top)+16px)] right-4 text-white/70 text-sm font-medium z-10 touch-target"
@@ -122,7 +122,7 @@ function prevSlide() {
 function handleGetStarted() {
   impact('medium')
   onboardingStore.markCarouselSeen()
-  router.push('/login')
+  router.push('/login?mode=signup')
 }
 
 function handleSkip() {
@@ -135,7 +135,7 @@ function handleSkip() {
 <style scoped>
 .welcome-carousel {
   position: relative;
-  --color-primary-dark: #4A2FB0;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #4A2FB0 100%);
 }
 
 .slide-left-enter-active,

@@ -2,7 +2,7 @@
   <div class="onboarding-step">
     <!-- Icon -->
     <div class="flex justify-center mb-6">
-      <div class="flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary-dark">
+      <div class="flex items-center justify-center w-20 h-20 rounded-3xl premium-icon-gradient">
         <Sparkles :size="40" class="text-white" />
       </div>
     </div>
@@ -66,7 +66,7 @@
     <!-- Actions -->
     <div class="space-y-3">
       <button
-        class="w-full bg-gradient-to-r from-primary to-primary-dark text-white font-semibold py-3.5 rounded-2xl touch-target-comfortable transition-all active:scale-[0.98] disabled:opacity-50"
+        class="w-full premium-btn-gradient text-white font-semibold py-3.5 rounded-2xl touch-target-comfortable transition-all active:scale-[0.98] disabled:opacity-50"
         :disabled="loading"
         @click="handleUpgrade"
       >
@@ -139,6 +139,13 @@ async function handleUpgrade() {
 .onboarding-step {
   max-width: 28rem;
   margin: 0 auto;
-  --color-primary-dark: #4A2FB0;
+}
+
+.premium-icon-gradient {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #4A2FB0 100%);
+}
+
+.premium-btn-gradient {
+  background: linear-gradient(to right, var(--color-primary) 0%, #4A2FB0 100%);
 }
 </style>
