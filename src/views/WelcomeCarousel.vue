@@ -128,7 +128,7 @@ function handleGetStarted() {
 function handleSkip() {
   impact('light')
   onboardingStore.markCarouselSeen()
-  router.push('/login')
+  router.push('/login?mode=signup')
 }
 </script>
 

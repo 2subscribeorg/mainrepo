@@ -157,11 +157,11 @@ describe('WelcomeCarousel', () => {
       expect(store.carouselSeen).toBe(true)
     })
 
-    test('navigates to /login on skip', async () => {
+    test('navigates to signup on skip', async () => {
       const wrapper = mount(WelcomeCarousel, mountOptions)
       const skipBtn = wrapper.findAll('button').find(b => b.text() === 'Skip')
       await skipBtn?.trigger('click')
-      expect(mockRouterPush).toHaveBeenCalledWith('/login')
+      expect(mockRouterPush).toHaveBeenCalledWith('/login?mode=signup')
     })
 
     test('does not persist carousel seen to localStorage', async () => {
