@@ -3,8 +3,8 @@
     <div class="max-w-md w-full space-y-8">
       <!-- Logo/Header -->
       <div class="text-center">
-        <h1 class="text-4xl font-bold text-white">2Subscribe</h1>
-        <p class="mt-2 text-white/80">Manage your subscriptions effortlessly</p>
+        <h1 class="auth-brand-title text-4xl font-bold">2Subscribe</h1>
+        <p class="auth-brand-subtitle mt-2">Manage your subscriptions effortlessly</p>
       </div>
 
       <!-- Force-logout reason banner -->
@@ -84,6 +84,14 @@ watch(mode, (m) => {
 
 <style scoped>
 .auth-page {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #4A2FB0) 100%);
+  background: linear-gradient(135deg, #5D3FD3 0%, #4A2FB0 100%);
+}
+
+.auth-brand-title {
+  color: #FFFFFF;
+}
+
+.auth-brand-subtitle {
+  color: rgba(255, 255, 255, 0.85);
 }
 </style>

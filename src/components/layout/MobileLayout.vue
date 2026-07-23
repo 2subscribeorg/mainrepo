@@ -1,6 +1,6 @@
 <template>
   <div class="mobile-shell flex min-h-screen flex-col text-text-primary">
-    <header class="sticky top-0 z-sticky bg-surface-overlay backdrop-blur-md shadow-lg border-b border-border-light">
+    <header v-if="!isAuthRoute" class="sticky top-0 z-sticky bg-surface-overlay backdrop-blur-md shadow-lg border-b border-border-light">
       <div class="flex items-center justify-between gap-4" style="padding: var(--space-4) var(--space-5) var(--space-3) var(--space-5);">
         <div class="flex items-center" style="gap: var(--space-3);">
           <button
@@ -52,7 +52,7 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto" style="padding: var(--space-5) var(--space-4);">
+    <main class="flex-1 overflow-y-auto" :class="isAuthRoute ? 'auth-route-content' : ''" style="padding: var(--space-5) var(--space-4);">
       <slot />
     </main>
 
@@ -188,6 +188,10 @@ function handleBack() {
 </script>
 
 <style scoped>
+.auth-route-content {
+  padding: 0 !important;
+}
+
 /* Ensure touch targets meet accessibility guidelines (44px minimum) */
 .touch-target {
   min-height: 44px;
