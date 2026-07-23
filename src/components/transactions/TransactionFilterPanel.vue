@@ -473,7 +473,8 @@ const activeFilters = computed(() => {
 }
 
 .filter-input:focus {
-  @apply outline-none border-primary ring-2 ring-primary/20;
+  @apply outline-none border-primary;
+  box-shadow: 0 0 0 2px rgba(93, 63, 211, 0.2);
   transform: scale(1.02);
 }
 
