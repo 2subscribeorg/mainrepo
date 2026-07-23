@@ -64,7 +64,9 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       const snap = await getDoc(userRef)
       if (snap.exists()) {
         const data = snap.data()
-        onboardingCompleted.value = data.onboardingCompleted === true
+        // Legacy users may not have this field; only an explicit false means
+        // the account still needs the new onboarding flow.
+        onboardingCompleted.value = data.onboardingCompleted !== false
         if (data.displayName) displayName.value = data.displayName
         if (data.preferences?.currency) currency.value = data.preferences.currency
       }

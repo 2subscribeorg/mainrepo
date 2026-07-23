@@ -74,7 +74,7 @@
       </button>
       <button
         class="w-full text-text-secondary text-sm font-medium py-2"
-        @click="$emit('skip')"
+        @click="handleContinueFree"
       >
         Continue with Free
       </button>
@@ -91,7 +91,7 @@ import { Purchases } from '@revenuecat/purchases-capacitor'
 import type { PurchasesPackage } from '@revenuecat/purchases-typescript-internal-esm'
 import { useRouter } from 'vue-router'
 
-defineEmits<{
+const emit = defineEmits<{
   skip: []
 }>()
 
@@ -116,6 +116,10 @@ onMounted(async () => {
   }
 })
 
+function handleContinueFree() {
+  emit('skip')
+}
+
 async function handleUpgrade() {
   loading.value = true
   try {
@@ -127,8 +131,12 @@ async function handleUpgrade() {
       router.push('/platform-subscription')
       return
     }
+
+    // If Pro is unavailable, continue with the free plan instead of trapping the user.
+    handleContinueFree()
   } catch {
-    // User cancelled or purchase failed — fall through
+    // A cancelled or unavailable purchase should still let the user continue for free.
+    handleContinueFree()
   } finally {
     loading.value = false
   }

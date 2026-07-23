@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useOnboardingStore, ONBOARDING_STEPS } from '@/stores/onboarding'
+import { getDoc } from 'firebase/firestore'
 
 // Mock firebase firestore
 vi.mock('firebase/firestore', () => ({
@@ -18,6 +19,8 @@ vi.mock('@/stores/auth', () => ({
     user: { id: 'test-user-123', email: 'test@example.com' },
   })),
 }))
+
+const mockedGetDoc = vi.mocked(getDoc)
 
 describe('useOnboardingStore', () => {
   let pinia: ReturnType<typeof createPinia>
@@ -209,6 +212,36 @@ describe('useOnboardingStore', () => {
     it('returns false when localStorage is empty in Mock mode', async () => {
       const store = useOnboardingStore()
       await store.checkOnboardingStatus()
+      expect(store.onboardingCompleted).toBe(false)
+    })
+  })
+
+  describe('checkOnboardingStatus (Firebase mode)', () => {
+    beforeEach(() => {
+      vi.stubEnv('VITE_DATA_BACKEND', 'FIREBASE')
+    })
+
+    it('treats a legacy existing user without the field as already onboarded', async () => {
+      mockedGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ displayName: 'Existing User' }),
+      } as never)
+
+      const store = useOnboardingStore()
+      await store.checkOnboardingStatus()
+
+      expect(store.onboardingCompleted).toBe(true)
+    })
+
+    it('keeps onboarding required when a new user explicitly has false', async () => {
+      mockedGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ onboardingCompleted: false }),
+      } as never)
+
+      const store = useOnboardingStore()
+      await store.checkOnboardingStatus()
+
       expect(store.onboardingCompleted).toBe(false)
     })
   })
