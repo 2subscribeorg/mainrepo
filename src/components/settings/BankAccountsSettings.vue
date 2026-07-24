@@ -216,6 +216,13 @@
       @close="showReconnectionWizard = false"
       @success="handleReconnectionSuccess"
     />
+
+    <!-- Paywall Modal -->
+    <PaywallModal
+      :show="showPaywall"
+      :message="paywallMessage"
+      @close="showPaywall = false"
+    />
   </div>
 </template>
 
@@ -231,12 +238,16 @@ import { formatMoney } from '@/utils/formatters'
 import MockBankConnectionModal from '@/components/MockBankConnectionModal.vue'
 import PlaidLinkButton from '@/components/PlaidLinkButton.vue'
 import BankReconnectionWizard from '@/components/BankReconnectionWizard.vue'
+import PaywallModal from '@/components/ui/PaywallModal.vue'
+import { PLAN_LIMIT_ERROR } from '@/composables/usePlanLimits'
 
 const bankAccountsStore = useBankAccountsStore()
 const transactionsStore = useTransactionsStore()
 const showMockModal = ref(false)
 const showReconnectionWizard = ref(false)
 const reconnectionTarget = ref<any>(null)
+const showPaywall = ref(false)
+const paywallMessage = ref('')
 
 // Check if using Plaid backend
 const usePlaidBackend = import.meta.env.VITE_USE_PLAID_BACKEND === 'true'
@@ -296,7 +307,12 @@ async function handleMockComplete(publicToken: string) {
   try {
     await bankAccountsStore.completeConnection(publicToken)
   } catch (e) {
-    logger.error('Failed to complete connection:', e)
+    if (e instanceof Error && e.message === PLAN_LIMIT_ERROR) {
+      showPaywall.value = true
+      paywallMessage.value = 'You\'ve reached the free plan limit of 1 bank connection. Upgrade to Pro for unlimited bank connections.'
+    } else {
+      logger.error('Failed to complete connection:', e)
+    }
   }
 }
 
@@ -308,7 +324,12 @@ async function handlePlaidSuccess() {
 }
 
 function handlePlaidError(error: string) {
-  logger.error('❌ Plaid connection error:', error)
+  if (error === PLAN_LIMIT_ERROR) {
+    showPaywall.value = true
+    paywallMessage.value = 'You\'ve reached the free plan limit of 1 bank connection. Upgrade to Pro for unlimited bank connections.'
+  } else {
+    logger.error('❌ Plaid connection error:', error)
+  }
 }
 
 function openReconnectionWizard(connection: any) {

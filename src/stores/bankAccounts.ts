@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import type { ID, BankConnection, BankAccount } from '@/domain/models'
 import { repoFactory } from '@/data/repo/RepoFactory'
 import { useLoadingStates } from '@/composables/useLoadingStates'
+import { billingService } from '@/services/billingService'
+import { FREE_BANK_CONNECTION_LIMIT, PLAN_LIMIT_ERROR } from '@/composables/usePlanLimits'
 
 export const useBankAccountsStore = defineStore('bankAccounts', () => {
   const connections = ref<BankConnection[]>([])
@@ -32,6 +34,12 @@ export const useBankAccountsStore = defineStore('bankAccounts', () => {
       connectingBank.value = true
       error.value = null
       try {
+        if (!billingService.isPro()) {
+          const activeCount = connections.value.filter(c => c.status !== 'disconnected').length
+          if (activeCount >= FREE_BANK_CONNECTION_LIMIT) {
+            throw new Error(PLAN_LIMIT_ERROR)
+          }
+        }
         const { linkToken } = await repo.initializeConnection()
         return { linkToken }
       } catch (e) {

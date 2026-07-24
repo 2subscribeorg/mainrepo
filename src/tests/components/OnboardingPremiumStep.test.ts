@@ -67,18 +67,17 @@ describe('OnboardingPremiumStep', () => {
 
     test('lists free features', () => {
       const wrapper = mount(OnboardingPremiumStep)
-      expect(wrapper.text()).toContain('Track up to 5 subscriptions')
-      expect(wrapper.text()).toContain('Renewal reminders')
+      expect(wrapper.text()).toContain('Up to 5 subscriptions')
       expect(wrapper.text()).toContain('1 bank connection')
+      expect(wrapper.text()).toContain('Renewal reminders')
+      expect(wrapper.text()).toContain('Pattern detection')
     })
 
     test('lists pro features', () => {
       const wrapper = mount(OnboardingPremiumStep)
       expect(wrapper.text()).toContain('Unlimited subscriptions')
       expect(wrapper.text()).toContain('Unlimited bank connections')
-      expect(wrapper.text()).toContain('Advanced renewal warnings')
-      expect(wrapper.text()).toContain('Duplicate subscription detection')
-      expect(wrapper.text()).toContain('Spending insights')
+      expect(wrapper.text()).toContain('All features included')
     })
 
     test('renders Start Free Trial button', () => {

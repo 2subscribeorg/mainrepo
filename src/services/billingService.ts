@@ -17,34 +17,25 @@ const FREE_PLAN: PricingPlan = {
   price: 0,
   currency: 'GBP',
   interval: 'month',
-  features: ['Up to 5 subscriptions', 'Basic categorization', 'Manual transaction entry'],
+  features: ['Up to 5 subscriptions', '1 bank connection', 'Renewal reminders', 'Pattern detection'],
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
   '$rc_monthly': [
     'Unlimited subscriptions',
-    'Advanced categorization',
-    'Automatic sync',
-    'Budget tracking',
-    'Email notifications',
-    'Priority support',
+    'Unlimited bank connections',
+    'All features included',
   ],
   '$rc_annual': [
     'Unlimited subscriptions',
-    'Advanced categorization',
-    'Automatic sync',
-    'Budget tracking',
-    'Email notifications',
-    'Priority support',
+    'Unlimited bank connections',
+    'All features included',
     '2 months free (vs monthly)',
   ],
   '$rc_lifetime': [
     'Unlimited subscriptions',
-    'Advanced categorization',
-    'Automatic sync',
-    'Budget tracking',
-    'Email notifications',
-    'Priority support',
+    'Unlimited bank connections',
+    'All features included',
     'Lifetime access — pay once',
   ],
 }

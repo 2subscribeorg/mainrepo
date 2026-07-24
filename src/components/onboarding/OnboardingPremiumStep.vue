@@ -20,7 +20,11 @@
         <ul class="space-y-2">
           <li class="flex items-center gap-2 text-sm text-text-secondary">
             <Check :size="16" class="text-success flex-shrink-0" />
-            Track up to 5 subscriptions
+            Up to 5 subscriptions
+          </li>
+          <li class="flex items-center gap-2 text-sm text-text-secondary">
+            <Check :size="16" class="text-success flex-shrink-0" />
+            1 bank connection
           </li>
           <li class="flex items-center gap-2 text-sm text-text-secondary">
             <Check :size="16" class="text-success flex-shrink-0" />
@@ -28,7 +32,7 @@
           </li>
           <li class="flex items-center gap-2 text-sm text-text-secondary">
             <Check :size="16" class="text-success flex-shrink-0" />
-            1 bank connection
+            Pattern detection
           </li>
         </ul>
       </div>
@@ -49,15 +53,7 @@
           </li>
           <li class="flex items-center gap-2 text-sm text-text-primary">
             <Check :size="16" class="text-primary flex-shrink-0" />
-            Advanced renewal warnings (7 & 14 days)
-          </li>
-          <li class="flex items-center gap-2 text-sm text-text-primary">
-            <Check :size="16" class="text-primary flex-shrink-0" />
-            Duplicate subscription detection
-          </li>
-          <li class="flex items-center gap-2 text-sm text-text-primary">
-            <Check :size="16" class="text-primary flex-shrink-0" />
-            Spending insights & trends
+            All features included
           </li>
         </ul>
       </div>

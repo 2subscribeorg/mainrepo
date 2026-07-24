@@ -45,6 +45,13 @@
       <p v-if="bankError" class="mt-3 text-sm text-error-text text-center">{{ bankError }}</p>
     </div>
 
+    <!-- Paywall Modal -->
+    <PaywallModal
+      :show="showPaywall"
+      message="You've reached the free plan limit of 1 bank connection. Upgrade to Pro for unlimited bank connections."
+      @close="showPaywall = false"
+    />
+
     <!-- Actions -->
     <div class="space-y-3">
       <button
@@ -71,6 +78,8 @@ import { Building2, CheckCircle, Check } from 'lucide-vue-next'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useHaptics } from '@/composables/useHaptics'
 import PlaidLinkButton from '@/components/PlaidLinkButton.vue'
+import PaywallModal from '@/components/ui/PaywallModal.vue'
+import { PLAN_LIMIT_ERROR } from '@/composables/usePlanLimits'
 
 defineEmits<{
   next: []
@@ -81,6 +90,7 @@ const onboardingStore = useOnboardingStore()
 const { notification } = useHaptics()
 
 const bankError = ref('')
+const showPaywall = ref(false)
 
 function handleBankConnected() {
   onboardingStore.bankConnected = true
@@ -88,7 +98,11 @@ function handleBankConnected() {
 }
 
 function handleBankError(error: string) {
-  bankError.value = error
+  if (error === PLAN_LIMIT_ERROR) {
+    showPaywall.value = true
+  } else {
+    bankError.value = error
+  }
 }
 </script>
 

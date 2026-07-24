@@ -68,6 +68,13 @@
       />
     </ErrorBoundary>
 
+    <!-- Paywall Modal -->
+    <PaywallModal
+      :show="showPaywall"
+      :message="paywallMessage"
+      @close="showPaywall = false"
+    />
+
   </div>
 </template>
 
@@ -87,6 +94,8 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import CategorySelectionModal from '@/components/CategorySelectionModal.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import AsyncErrorBoundary from '@/components/ui/AsyncErrorBoundary.vue'
+import PaywallModal from '@/components/ui/PaywallModal.vue'
+import { PLAN_LIMIT_ERROR } from '@/composables/usePlanLimits'
 
 // Use the composable for all business logic
 const {
@@ -126,6 +135,8 @@ onMounted(() => {
 // Modal state
 const showCategoryModal = ref(false)
 const selectedTransaction = ref<Transaction | null>(null)
+const showPaywall = ref(false)
+const paywallMessage = ref('')
 
 
 async function handleCreateSubscription(transaction: Transaction) {
@@ -167,8 +178,13 @@ async function handleCategorySelected(categoryId: string) {
     
     alert(`✅ Subscription created for ${selectedTransaction.value.merchantName}!`)
     
-  } catch {
-    alert('❌ Failed to create subscription')
+  } catch (e) {
+    if (e instanceof Error && e.message === PLAN_LIMIT_ERROR) {
+      showPaywall.value = true
+      paywallMessage.value = 'You\'ve reached the free plan limit of 5 subscriptions. Upgrade to Pro for unlimited subscriptions.'
+    } else {
+      alert('❌ Failed to create subscription')
+    }
   } finally {
     showCategoryModal.value = false
     selectedTransaction.value = null
@@ -266,8 +282,13 @@ async function handleCreateCategoryAndConfirm(categoryData: { name: string; colo
     alert(`✅ New category "${categoryName}" created and subscription assigned!`)
     
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    alert(`❌ Failed to create category and subscription: ${errorMessage}`)
+    if (error instanceof Error && error.message === PLAN_LIMIT_ERROR) {
+      showPaywall.value = true
+      paywallMessage.value = 'You\'ve reached the free plan limit of 5 subscriptions. Upgrade to Pro for unlimited subscriptions.'
+    } else {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`❌ Failed to create category and subscription: ${errorMessage}`)
+    }
   }
 }
 

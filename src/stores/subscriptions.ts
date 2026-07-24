@@ -5,6 +5,8 @@ import type { SubscriptionFilter } from '@/data/repo/interfaces/ISubscriptionsRe
 import { repoFactory } from '@/data/repo/RepoFactory'
 import { useLoadingStates } from '@/composables/useLoadingStates'
 import { notificationScheduler } from '@/services/NotificationScheduler'
+import { billingService } from '@/services/billingService'
+import { FREE_SUBSCRIPTION_LIMIT, PLAN_LIMIT_ERROR } from '@/composables/usePlanLimits'
 
 export const useSubscriptionsStore = defineStore('subscriptions', () => {
   const subscriptions = ref<Subscription[]>([])
@@ -51,6 +53,14 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
     return await withLoading('subscriptions', async () => {
       error.value = null
       try {
+        const isExisting = subscriptions.value.some(s => s.id === subscription.id)
+        const isNewActive = !isExisting && subscription.status === 'active'
+        if (isNewActive && !billingService.isPro()) {
+          const activeCount = subscriptions.value.filter(s => s.status === 'active').length
+          if (activeCount >= FREE_SUBSCRIPTION_LIMIT) {
+            throw new Error(PLAN_LIMIT_ERROR)
+          }
+        }
         await repo.upsert(subscription)
         if (!unsubscribe) {
           await fetchAll(currentFilter)

@@ -21,6 +21,10 @@ vi.mock('@/components/PlaidLinkButton.vue', () => ({
   },
 }))
 
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}))
+
 describe('OnboardingBankStep', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
